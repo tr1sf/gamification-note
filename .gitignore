@@ -1,0 +1,14 @@
+node_modules
+dist
+.output
+.env
+.env.local
+.env.development.local
+.env.production
+*.db
+*.db-journal
+*.tsbuildinfo
+*.log
+.turbo
+.vinxi
+.opencode

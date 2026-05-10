@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String    @id @default(uuid()) @db.Uuid
+  email            String    @unique
+  username         String    @unique
+  passwordHash     String
+  avatarUrl        String?
+  level            Int       @default(1)
+  xp               Int       @default(0)
+  coins            Int       @default(0)
+  title            String    @default("Novice Scribe")
+  role             String    @default("user")
+  refreshTokenHash String?
+  lastLoginAt      DateTime?
+  emailVerifiedAt  DateTime?
+  isBanned         Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  notes           Note[]
+  attachments     NoteAttachment[]
+  userQuests      UserQuest[]
+  guildMemberships GuildMember[]
+  guildMessages   GuildMessage[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+  inventory       UserInventory[]
+  achievements    UserAchievement[]
+  ownedGuilds     Guild[]         @relation("GuildOwner")
+
+  @@index([level])
+}
+
+model Note {
+  id           String    @id @default(uuid()) @db.Uuid
+  title        String
+  content      String
+  category     String?
+  tags         String[]
+  isPublic     Boolean   @default(false)
+  isDeleted    Boolean   @default(false)
+  deletedAt    DateTime?
+  version      Int       @default(1)
+  wordCount    Int       @default(0)
+  aiSummary    String?
+  aiImageUrl   String?
+  // WARNING: Column is TEXT in Prisma but tsvector in PostgreSQL (managed by trigger).
+  // Run prisma/fts-setup.sql after prisma db push or new migrations.
+  searchVector String?
+  userId       String    @db.Uuid
+  guildId      String?   @db.Uuid
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id])
+  guild       Guild?            @relation(fields: [guildId], references: [id])
+  attachments NoteAttachment[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([category])
+  @@index([isPublic, createdAt(sort: Desc)])
+}
+
+model NoteAttachment {
+  id              String   @id @default(uuid()) @db.Uuid
+  noteId          String   @db.Uuid
+  userId          String   @db.Uuid
+  fileUrl         String
+  fileName        String
+  fileSize        Int
+  mimeType        String
+  storageProvider String   @default("supabase")
+  createdAt       DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Quest {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String
+  questType   String   @default("daily")
+  icon        String   @default("scroll")
+  criteria    Json     @default("{}")
+  xpReward    Int      @default(0)
+  coinReward  Int      @default(0)
+  resetCron   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  userQuests UserQuest[]
+
+  @@index([questType])
+}
+
+model UserQuest {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  questId     String    @db.Uuid
+  progress    Json      @default("{}")
+  status      String    @default("active")
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questId])
+  @@index([userId, status])
+  @@index([questId, userId])
+}
+
+model Guild {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  iconUrl     String?
+  inviteCode  String   @unique
+  maxMembers  Int      @default(50)
+  isPublic    Boolean  @default(true)
+  ownerId     String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  owner    User           @relation("GuildOwner", fields: [ownerId], references: [id])
+  members  GuildMember[]
+  notes    Note[]
+  messages GuildMessage[]
+}
+
+model GuildMember {
+  id       String   @id @default(uuid()) @db.Uuid
+  guildId  String   @db.Uuid
+  userId   String   @db.Uuid
+  role     String   @default("member")
+  joinedAt DateTime @default(now())
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+  @@index([guildId])
+  @@index([userId])
+}
+
+model GuildMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  guildId   String   @db.Uuid
+  userId    String   @db.Uuid
+  content   String
+  createdAt DateTime @default(now())
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, createdAt(sort: Desc)])
+}
+
+model CosmeticItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  type        String
+  imageUrl    String?
+  coinCost    Int
+  rarity      String   @default("common")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  inventory UserInventory[]
+}
+
+model UserInventory {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  cosmeticItemId String   @db.Uuid
+  isEquipped     Boolean  @default(false)
+  purchasedAt    DateTime @default(now())
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item CosmeticItem @relation(fields: [cosmeticItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cosmeticItemId])
+}
+
+model Achievement {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  icon        String   @default("trophy")
+  criteria    Json     @default("{}")
+  xpReward    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  achievementId String    @db.Uuid
+  progress      Json      @default("{}")
+  unlockedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  type      String
+  title     String
+  body      String?
+  isRead    Boolean  @default(false)
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  actionType String
+  xpChange   Int      @default(0)
+  coinChange Int      @default(0)
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([actionType, createdAt(sort: Desc)])
+}
