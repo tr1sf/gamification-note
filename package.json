@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vinxi dev",
+    "dev:socket": "tsx src/lib/socket/standalone.ts",
     "build": "vinxi build",
     "start": "vinxi start",
     "db:migrate": "prisma migrate dev",

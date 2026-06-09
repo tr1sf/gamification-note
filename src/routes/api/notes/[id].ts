@@ -1,6 +1,7 @@
 import { prisma } from "~/lib/db";
 import { updateNoteSchema } from "~/validators/note";
 import { success, error } from "~/lib/api-response";
+import { processAction } from "~/lib/gamification/engine";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
   const user = (request as any).locals?.user;
@@ -41,6 +42,9 @@ export async function PUT({ request, params }: { request: Request; params: { id:
     return error("CONFLICT", "Note was modified by another session", 409);
   }
 
+  const wasNotPublic = !existing.isPublic;
+  const isBecomingPublic = wasNotPublic && parsed.data.isPublic === true;
+
   const updateData: any = { ...parsed.data, version: existing.version + 1 };
   if (updateData.content) {
     updateData.wordCount = updateData.content.split(/\s+/).filter(Boolean).length;
@@ -51,7 +55,16 @@ export async function PUT({ request, params }: { request: Request; params: { id:
     data: updateData,
   });
 
-  return success(note);
+  let gamification = null;
+  if (isBecomingPublic) {
+    gamification = await processAction({
+      userId: user.userId,
+      actionType: "make_public",
+      metadata: { noteId: note.id },
+    });
+  }
+
+  return success({ note, gamification });
 }
 
 export async function DELETE({ request, params }: { request: Request; params: { id: string } }) {

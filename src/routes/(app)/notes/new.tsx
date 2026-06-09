@@ -1,7 +1,8 @@
 import { createSignal } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
-import { addToast } from "~/stores/ui";
+import { addToast, showReward } from "~/stores/ui";
+import { applyReward } from "~/stores/user";
 
 export default function NewNotePage() {
   const [title, setTitle] = createSignal("");
@@ -32,6 +33,23 @@ export default function NewNotePage() {
       const json = await res.json();
       if (json.success) {
         addToast("Scroll inscribed!", "success");
+        if (json.data?.gamification) {
+          applyReward(json.data.gamification);
+          showReward({
+            xp: json.data.gamification.xpGained,
+            coins: json.data.gamification.coinsGained,
+            leveledUp: json.data.gamification.leveledUp,
+            newLevel: json.data.gamification.newLevel,
+            newTitle: json.data.gamification.newTitle,
+          });
+          if (json.data.gamification.unlockedAchievements?.length > 0) {
+            json.data.gamification.unlockedAchievements.forEach(
+              (ach: { id: string; title: string }) => {
+                showReward({ achievement: ach.title });
+              }
+            );
+          }
+        }
         navigate(`/notes/${json.data.id}`);
       } else {
         addToast(json.error?.message || "Failed to create scroll", "error");

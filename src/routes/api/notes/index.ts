@@ -1,6 +1,7 @@
 import { prisma } from "~/lib/db";
 import { createNoteSchema } from "~/validators/note";
 import { success, error } from "~/lib/api-response";
+import { processAction } from "~/lib/gamification/engine";
 
 export async function GET({ request }: { request: Request }) {
   const user = (request as any).locals?.user;
@@ -57,5 +58,11 @@ export async function POST({ request }: { request: Request }) {
     select: { id: true, title: true, content: true, category: true, tags: true, isPublic: true, wordCount: true, version: true, createdAt: true, updatedAt: true },
   });
 
-  return success(note);
+  const gamification = await processAction({
+    userId: user.userId,
+    actionType: "create_note",
+    metadata: { noteId: note.id, wordCount: note.wordCount },
+  });
+
+  return success({ note, gamification });
 }

@@ -1,4 +1,5 @@
 import { createStore } from "solid-js/store";
+import { createSignal } from "solid-js";
 
 interface UIState {
   sidebarOpen: boolean;
@@ -60,4 +61,28 @@ export function dismissToast(id: string) {
   if (timer) clearTimeout(timer);
   toastTimers.delete(id);
   setUIStore("toasts", (t) => t.filter((x) => x.id !== id));
+}
+
+export interface RewardEntry {
+  id: string;
+  xp?: number;
+  coins?: number;
+  achievement?: string;
+  leveledUp?: boolean;
+  newLevel?: number;
+  newTitle?: string;
+}
+
+export const [rewardQueue, setRewardQueue] = createSignal<RewardEntry[]>([]);
+
+let rewardIdCounter = 0;
+
+export function showReward(reward: Omit<RewardEntry, "id">) {
+  const id = `reward-${++rewardIdCounter}`;
+  const entry: RewardEntry = { id, ...reward };
+  setRewardQueue((prev) => [...prev, entry]);
+  setTimeout(() => {
+    setRewardQueue((prev) => prev.filter((r) => r.id !== id));
+  }, 3500);
+  return id;
 }

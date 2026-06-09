@@ -1,6 +1,7 @@
 import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 import { verifyAccessToken } from '~/lib/auth/jwt';
+import { registerHandlers } from './handlers';
 
 let io: Server | null = null;
 
@@ -30,10 +31,7 @@ export function initSocket(server: HttpServer): Server {
   io.on('connection', (socket) => {
     const userId = socket.data.userId as string;
     socket.join(`user:${userId}`);
-
-    socket.on('disconnect', () => {
-      // Socket.io auto-leaves rooms on disconnect
-    });
+    registerHandlers(socket);
   });
 
   return io;
