@@ -3,7 +3,7 @@ import { updateGuildSchema } from "~/validators/guild";
 import { success, error } from "~/lib/api-response";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
 
   const guild = await prisma.guild.findUnique({
     where: { id: params.id },
@@ -29,7 +29,7 @@ export async function GET({ request, params }: { request: Request; params: { id:
 }
 
 export async function PUT({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const body = await request.json();
@@ -61,7 +61,7 @@ export async function PUT({ request, params }: { request: Request; params: { id:
 }
 
 export async function DELETE({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const guild = await prisma.guild.findUnique({ where: { id: params.id } });

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createNoteSchema = z.object({
   title: z.string().min(1).max(200),
-  content: z.string().min(1).max(100000),
+  content: z.string().min(1).max(50000),
   category: z.string().max(50).optional(),
   isPublic: z.boolean().default(false),
   tags: z.array(z.string().max(30)).max(10).optional(),
@@ -11,7 +11,7 @@ export const createNoteSchema = z.object({
 
 export const updateNoteSchema = z.object({
   title: z.string().min(1).max(200).optional(),
-  content: z.string().min(1).max(100000).optional(),
+  content: z.string().min(1).max(50000).optional(),
   category: z.string().max(50).nullable().optional(),
   isPublic: z.boolean().optional(),
   tags: z.array(z.string().max(30)).max(10).optional(),

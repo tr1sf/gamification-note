@@ -2,7 +2,7 @@ import { prisma } from "~/lib/db";
 import { success, error } from "~/lib/api-response";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const membership = await prisma.guildMember.findUnique({
@@ -50,7 +50,7 @@ export async function GET({ request, params }: { request: Request; params: { id:
 }
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const membership = await prisma.guildMember.findUnique({

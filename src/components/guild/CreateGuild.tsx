@@ -94,7 +94,7 @@ export default function CreateGuild(props: CreateGuildProps) {
               value={description()}
               onInput={(e) => setDescription(e.currentTarget.value)}
               placeholder="Describe your guild..."
-              maxLength={500}
+              maxLength={200}
               rows={3}
               class="w-full rounded-md border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent resize-none"
             />

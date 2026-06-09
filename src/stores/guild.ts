@@ -97,8 +97,9 @@ export async function fetchMembers(guildId: string): Promise<GuildMember[]> {
     const res = await authFetch(`/api/guilds/${guildId}/members`);
     const json = await res.json();
     if (json.success) {
-      setMembers(json.data || []);
-      return json.data;
+      const data = json.data?.items || json.data || [];
+      setMembers(data);
+      return data;
     }
     return [];
   } catch {
@@ -112,7 +113,10 @@ export async function fetchMessages(guildId: string, cursor?: string): Promise<C
     const res = await authFetch(`/api/guilds/${guildId}/messages${params}`);
     const json = await res.json();
     if (json.success) {
-      const msgs = json.data || [];
+      const msgs = (json.data?.items || []).sort(
+        (a: ChatMessage, b: ChatMessage) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
       setChatMessages((prev) => (cursor ? [...msgs, ...prev] : msgs));
       return msgs;
     }

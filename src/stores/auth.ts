@@ -98,11 +98,14 @@ export async function refreshToken(): Promise<boolean> {
 }
 
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  let res = await fetch(url, { ...options, credentials: "include" });
+  const requestUrl = (typeof window === "undefined" && !url.startsWith("http"))
+    ? `http://localhost:${process.env.PORT || "3000"}${url}`
+    : url;
+  let res = await fetch(requestUrl, { ...options, credentials: "include" });
   if (res.status === 401) {
     const refreshed = await refreshToken();
     if (refreshed) {
-      res = await fetch(url, { ...options, credentials: "include" });
+      res = await fetch(requestUrl, { ...options, credentials: "include" });
     } else {
       setUser(null);
       throw new Error("SESSION_EXPIRED");

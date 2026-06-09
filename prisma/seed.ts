@@ -8,6 +8,10 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({ adapter });
 
+// NOTE: Full-text search requires running prisma/fts-setup.sql after seeding:
+//   psql "$DATABASE_URL" -f prisma/fts-setup.sql
+// Without this, note search falls back to slower ILIKE pattern matching.
+
 async function main() {
   console.log('Seeding database...');
 

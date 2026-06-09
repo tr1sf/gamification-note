@@ -1,4 +1,17 @@
--- Alter Note.searchVector to tsvector type
+-- ============================================================================
+-- FULL-TEXT SEARCH SETUP
+-- ============================================================================
+-- Run this script AFTER `prisma db push` or `prisma migrate deploy` to enable
+-- PostgreSQL full-text search on the Note table.
+--
+-- Usage:
+--   psql "$DATABASE_URL" -f prisma/fts-setup.sql
+--   or: npx prisma db execute --file prisma/fts-setup.sql
+--
+-- Without this, the search endpoint falls back to ILIKE (slower, no ranking).
+-- ============================================================================
+
+-- Step 1: Alter Note.searchVector column type from TEXT (Prisma default) to tsvector
 ALTER TABLE "Note" ALTER COLUMN "searchVector" TYPE tsvector USING to_tsvector('simple', '');
 
 -- FTS trigger function

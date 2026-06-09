@@ -5,7 +5,7 @@ const leaderboardCache = new Map<string, { data: unknown; timestamp: number }>()
 const CACHE_TTL = 60000;
 
 export async function GET({ request }: { request: Request }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const url = new URL(request.url);

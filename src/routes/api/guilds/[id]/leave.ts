@@ -3,7 +3,7 @@ import { success, error } from "~/lib/api-response";
 import { getIO } from "~/lib/socket";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const membership = await prisma.guildMember.findUnique({
@@ -13,32 +13,34 @@ export async function POST({ request, params }: { request: Request; params: { id
 
   const isOwner = membership.role === "owner";
 
-  if (isOwner) {
-    const otherMembers = await prisma.guildMember.findMany({
-      where: { guildId: params.id, userId: { not: user.userId } },
-      orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
-    });
+  await prisma.$transaction(async (tx) => {
+    if (isOwner) {
+      const otherMembers = await tx.guildMember.findMany({
+        where: { guildId: params.id, userId: { not: user.userId } },
+        orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+      });
 
-    if (otherMembers.length === 0) {
-      await prisma.guild.delete({ where: { id: params.id } });
-    } else {
-      const newOwner = otherMembers[0];
-      await prisma.guild.update({
-        where: { id: params.id },
-        data: {
-          ownerId: newOwner.userId,
-          members: {
-            update: {
-              where: { id: newOwner.id },
-              data: { role: "owner" },
+      if (otherMembers.length === 0) {
+        await tx.guild.delete({ where: { id: params.id } });
+      } else {
+        const newOwner = otherMembers[0];
+        await tx.guild.update({
+          where: { id: params.id },
+          data: {
+            ownerId: newOwner.userId,
+            members: {
+              update: {
+                where: { id: newOwner.id },
+                data: { role: "owner" },
+              },
             },
           },
-        },
-      });
+        });
+      }
     }
-  }
 
-  await prisma.guildMember.delete({ where: { id: membership.id } });
+    await tx.guildMember.delete({ where: { id: membership.id } });
+  });
 
   try {
     const io = getIO();

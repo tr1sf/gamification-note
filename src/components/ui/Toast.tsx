@@ -1,21 +1,28 @@
-import { Show, For } from "solid-js";
+import { For } from "solid-js";
 import { uiStore, dismissToast } from "~/stores/ui";
+
+const ToastIcons: Record<string, string> = {
+  success: "✓",
+  error: "✕",
+  info: "ℹ",
+};
 
 export function ToastContainer() {
   return (
-    <div class="fixed top-4 right-4 z-50 space-y-2" role="status" aria-live="polite">
+    <div class="fixed top-4 right-4 z-50 space-y-2 max-w-sm" role="status" aria-live="polite">
       <For each={uiStore.toasts}>
         {(toast) => (
           <div
-            class={`px-4 py-2 rounded-md shadow-lg text-sm text-white flex items-center gap-2 ${
-              toast.type === "success" ? "bg-success" : toast.type === "error" ? "bg-error" : "bg-accent"
-            }`}
-            style="animation: slide-in 0.3s ease-out"
+            class={`pl-3 pr-4 py-2.5 rounded-lg text-sm text-white flex items-center gap-2.5 bg-surface-overlay/90 backdrop-blur-sm border border-white/10 border-l-4 ${toast.type === "success" ? "border-l-success" : toast.type === "error" ? "border-l-error" : "border-l-accent"}`}
+            style={`animation: fade-up 0.25s ease-out; box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);`}
             role="alert"
           >
-            <span>{toast.message}</span>
+            <span class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold bg-white/20" aria-hidden="true">
+              {ToastIcons[toast.type]}
+            </span>
+            <span class="flex-1 font-medium">{toast.message}</span>
             <button
-              class="ml-2 text-white/70 hover:text-white shrink-0"
+              class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors text-xs"
               onClick={() => dismissToast(toast.id)}
               aria-label="Dismiss"
             >

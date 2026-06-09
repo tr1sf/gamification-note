@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { createGuildSchema } from "~/validators/guild";
 import { success, error } from "~/lib/api-response";
 import { processAction, triggerActionNotifications } from "~/lib/gamification/engine";
+import { getUserFromRequest } from "~/lib/auth/get-user";
 
 export async function GET({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -36,7 +37,7 @@ export async function GET({ request }: { request: Request }) {
 }
 
 export async function POST({ request }: { request: Request }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const body = await request.json();
@@ -48,9 +49,10 @@ export async function POST({ request }: { request: Request }) {
   const inviteCode = Math.random().toString(36).slice(2, 10);
   let attempts = 0;
   let code = inviteCode;
-  while (attempts < 5) {
+  while (attempts < 10) {
     const existing = await prisma.guild.findUnique({ where: { inviteCode: code } });
     if (!existing) break;
+    if (attempts >= 9) return error("INTERNAL_ERROR", "Could not generate unique invite code", 500);
     code = Math.random().toString(36).slice(2, 10);
     attempts++;
   }

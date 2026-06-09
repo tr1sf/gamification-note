@@ -67,23 +67,25 @@ export function LoginForm() {
   };
 
   const inputClass = (field: string) =>
-    `mt-1 w-full rounded-md border px-3 py-2 text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent ${
-      fieldErrors()[field] ? "border-error" : "border-surface-border"
-    }`;
+    `w-full rounded-lg border px-4 py-2.5 text-ink-primary bg-surface placeholder:text-ink-secondary/40
+     transition-all duration-150
+     hover:border-ink-secondary/30
+     focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20
+     ${fieldErrors()[field] ? "border-error ring-1 ring-error/20" : "border-surface-border"}`;
 
   return (
     <form onSubmit={handleSubmit} class="space-y-4" novalidate>
-      <h2 class="text-2xl font-display font-bold text-ink-primary">Sign in to the Tavern</h2>
+      <h2 class="text-xl font-display font-bold text-ink-primary text-center">Sign in to the Tavern</h2>
       {generalError() && (
-        <p class="text-sm bg-error-bg text-error rounded-md px-3 py-2" role="alert">{generalError()}</p>
+        <p class="text-sm bg-error-bg text-error rounded-lg px-4 py-2.5" role="alert">{generalError()}</p>
       )}
       <div>
-        <label for="login-email" class="block text-sm font-medium text-ink-secondary">Email</label>
+        <label for="login-email" class="block text-sm font-medium text-ink-secondary mb-1.5">Email</label>
         <input id="login-email" type="email" value={email()} onInput={(e) => { setEmail(e.currentTarget.value); clearField("email"); }} class={inputClass("email")} required autocomplete="email" autofocus aria-describedby={fieldErrors().email ? "login-email-error" : undefined} aria-invalid={!!fieldErrors().email} />
         {fieldErrors().email && <p id="login-email-error" class="mt-1 text-xs text-error">{fieldErrors().email}</p>}
       </div>
       <div>
-        <label for="login-password" class="block text-sm font-medium text-ink-secondary">Password</label>
+        <label for="login-password" class="block text-sm font-medium text-ink-secondary mb-1.5">Password</label>
         <div class="relative mt-1">
           <input
             id="login-password"
@@ -108,7 +110,7 @@ export function LoginForm() {
         </div>
         {fieldErrors().password && <p id="login-password-error" class="mt-1 text-xs text-error">{fieldErrors().password}</p>}
       </div>
-      <button type="submit" disabled={submitting()} class="w-full rounded-md bg-accent px-4 py-2 text-white font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors">
+      <button type="submit" disabled={submitting()} class="w-full rounded-lg bg-accent px-4 py-2.5 text-white font-semibold hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150">
         {submitting() ? "Entering..." : "Enter Tavern"}
       </button>
       <p class="text-center text-sm text-ink-secondary">

@@ -2,7 +2,7 @@ import { prisma } from "~/lib/db";
 import { success, error } from "~/lib/api-response";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const membership = await prisma.guildMember.findUnique({
@@ -15,9 +15,10 @@ export async function POST({ request, params }: { request: Request; params: { id
 
   let code = Math.random().toString(36).slice(2, 10);
   let attempts = 0;
-  while (attempts < 5) {
+  while (attempts < 10) {
     const existing = await prisma.guild.findUnique({ where: { inviteCode: code } });
     if (!existing) break;
+    if (attempts >= 9) return error("INTERNAL_ERROR", "Could not generate unique invite code", 500);
     code = Math.random().toString(36).slice(2, 10);
     attempts++;
   }

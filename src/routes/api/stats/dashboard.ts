@@ -41,7 +41,7 @@ async function calculateStreak(userId: string): Promise<number> {
 }
 
 export async function GET({ request }: { request: Request }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const [totalNotes, wordsResult, questsCompleted, achievementsUnlocked, recentXP, streak] =

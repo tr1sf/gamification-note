@@ -1,6 +1,7 @@
 import { createSignal, For, Show, createEffect } from "solid-js";
 import type { ChatMessage } from "~/stores/guild";
 import { user } from "~/stores/auth";
+import { timeAgo } from "~/lib/time-ago";
 
 interface GuildChatProps {
   guildId: string;
@@ -31,16 +32,7 @@ export default function GuildChat(props: GuildChatProps) {
     setNewMessage("");
   };
 
-  const timeAgo = (dateStr: string) => {
-    const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (seconds < 60) return "just now";
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-  };
+  const timeAgoText = (dateStr: string) => timeAgo(dateStr);
 
   const currentUser = () => user();
 
@@ -92,7 +84,7 @@ export default function GuildChat(props: GuildChatProps) {
                         {msg.user.username}
                       </span>
                       <span class="text-xs text-ink-secondary">
-                        {timeAgo(msg.createdAt)}
+                        {timeAgoText(msg.createdAt)}
                       </span>
                     </div>
                     <div

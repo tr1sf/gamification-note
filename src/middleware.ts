@@ -16,7 +16,6 @@ export default createMiddleware({
 
       const url = new URL(event.request.url);
 
-      // Allow static assets, build artifacts, and public paths through
       if (
         url.pathname.startsWith('/_build') ||
         url.pathname.startsWith('/assets') ||
@@ -46,6 +45,11 @@ export default createMiddleware({
       try {
         const payload = verifyAccessToken(token);
         (event as any).locals = { ...(event as any).locals, user: payload };
+        Object.defineProperty(event.request, 'locals', {
+          value: { ...(event.request as any).locals, user: payload },
+          writable: true,
+          configurable: true,
+        });
       } catch {
         return new Response(
           JSON.stringify({

@@ -4,6 +4,7 @@ import GuildCard from "~/components/guild/GuildCard";
 import CreateGuild from "~/components/guild/CreateGuild";
 
 async function loadGuilds(): Promise<Guild[]> {
+  if (typeof document === "undefined") return []; // SSR — don't fetch
   return fetchGuilds();
 }
 
@@ -32,7 +33,7 @@ export default function GuildsPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          class="px-4 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover transition-colors shrink-0"
+          class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] transition-all duration-150 shrink-0"
         >
           + Create Guild
         </button>
@@ -46,7 +47,7 @@ export default function GuildsPage() {
           placeholder="Search guilds..."
           value={search()}
           onInput={(e) => setSearch(e.currentTarget.value)}
-          class="w-full rounded-md border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
+          class="w-full rounded-lg border border-surface-border px-4 py-2.5 text-sm text-ink-primary bg-surface placeholder:text-ink-secondary/40 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-150"
         />
       </div>
 
@@ -55,15 +56,18 @@ export default function GuildsPage() {
         fallback={
           <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div class="h-40 bg-surface-border rounded-lg animate-pulse" />
+              <div class="h-40 rounded-lg border border-surface-border animate-pulse" style="background: linear-gradient(90deg, rgb(var(--color-surface-elevated)) 25%, rgb(var(--color-surface-hover)) 50%, rgb(var(--color-surface-elevated)) 75%); background-size: 200% 100%;" />
             ))}
           </div>
         }
       >
         <Show when={guildsData.error}>
-          <div class="text-center py-12">
-            <p class="text-error mb-3">Failed to load guilds</p>
-            <button onClick={() => refetch()} class="text-accent hover:underline text-sm">Try again</button>
+          <div class="text-center py-16">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-error-bg mb-4" aria-hidden="true">
+              <span class="text-2xl">⚠</span>
+            </div>
+            <p class="text-error font-medium mb-3">Failed to load guilds</p>
+            <button onClick={() => refetch()} class="text-accent hover:underline text-sm font-medium">Try again</button>
           </div>
         </Show>
 
@@ -76,23 +80,29 @@ export default function GuildsPage() {
                   when={search()}
                   fallback={
                     <>
-                      <p class="text-4xl mb-3">🏛️</p>
-                      <p>No guilds found. Create the first one!</p>
+                      <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-surface-elevated border border-surface-border mb-4" aria-hidden="true">
+                        <span class="text-3xl">🏛️</span>
+                      </div>
+                      <p class="text-ink-primary font-medium mb-1">No guilds found</p>
+                      <p class="text-ink-secondary/60 text-sm mb-4">Create the first guild and start your fellowship</p>
                       <button
                         onClick={() => setShowCreate(true)}
-                        class="text-accent hover:underline text-sm mt-2 inline-block"
+                        class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
                       >
-                        Create a guild
+                        + Create Guild
                       </button>
                     </>
                   }
                 >
                   <>
-                    <p class="text-4xl mb-3">🔍</p>
-                    <p>No guilds match "{search()}"</p>
+                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-surface-elevated border border-surface-border mb-4" aria-hidden="true">
+                      <span class="text-3xl">🔍</span>
+                    </div>
+                    <p class="text-ink-primary font-medium mb-1">No guilds match "{search()}"</p>
+                    <p class="text-ink-secondary/60 text-sm mb-4">Try a different search term</p>
                     <button
                       onClick={() => setSearch("")}
-                      class="text-accent hover:underline text-sm mt-2 inline-block"
+                      class="text-accent hover:underline text-sm font-medium"
                     >
                       Clear search
                     </button>

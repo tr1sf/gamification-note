@@ -2,7 +2,7 @@ import { prisma } from "~/lib/db";
 import { success, error } from "~/lib/api-response";
 
 export async function GET({ request }: { request: Request }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const ownedItemIds = (

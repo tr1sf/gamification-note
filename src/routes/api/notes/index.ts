@@ -1,10 +1,11 @@
+import { getUserFromRequest } from "~/lib/auth/get-user";
 import { prisma } from "~/lib/db";
 import { createNoteSchema } from "~/validators/note";
 import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
 
 export async function GET({ request }: { request: Request }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const url = new URL(request.url);
@@ -37,7 +38,7 @@ export async function GET({ request }: { request: Request }) {
 }
 
 export async function POST({ request }: { request: Request }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const body = await request.json();

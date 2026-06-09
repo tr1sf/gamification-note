@@ -6,7 +6,7 @@ import { getIO } from "~/lib/socket";
 import { createNotification } from "~/lib/socket/notifications";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const body = await request.json().catch(() => ({}));

@@ -1,7 +1,8 @@
 import { createSignal, For, Show, onMount, onCleanup } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { notifications, unreadCount, fetchNotifications, markRead, markAllRead, addSocketNotification, type Notification } from "~/stores/notifications";
+import { Notification, notifications, unreadCount, fetchNotifications, markRead, markAllRead, addSocketNotification } from "~/stores/notifications";
 import { useSocket } from "~/lib/socket/client";
+import { timeAgo } from "~/lib/time-ago";
 
 export default function NotificationBell() {
   const [dropdownOpen, setDropdownOpen] = createSignal(false);
@@ -38,8 +39,8 @@ export default function NotificationBell() {
       await markRead(notification.id);
     }
     setDropdownOpen(false);
-    if (notification.data?.url) {
-      navigate(notification.data.url as string);
+    if (notification.metadata?.url) {
+      navigate(notification.metadata.url as string);
     }
   };
 
@@ -66,17 +67,7 @@ export default function NotificationBell() {
     }
   };
 
-  const timeAgo = (dateStr: string) => {
-    const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (seconds < 60) return "now";
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d`;
-    return new Date(dateStr).toLocaleDateString();
-  };
+  const timeAgoText = (dateStr: string) => timeAgo(dateStr);
 
   return (
     <div class="relative" ref={dropdownRef}>
@@ -146,7 +137,7 @@ export default function NotificationBell() {
                         {notification.body}
                       </p>
                       <span class="text-xs text-ink-secondary mt-1 block">
-                        {timeAgo(notification.createdAt)}
+                        {timeAgoText(notification.createdAt)}
                       </span>
                     </div>
                   </button>

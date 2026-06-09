@@ -3,7 +3,7 @@ import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const userQuest = await prisma.userQuest.findUnique({

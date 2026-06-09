@@ -12,6 +12,7 @@ interface LeaderboardEntry {
 }
 
 async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
+  if (typeof document === "undefined") return []; // SSR — don't fetch
   const res = await authFetch("/api/leaderboard");
   const json = await res.json();
   if (json.success) return json.data || [];

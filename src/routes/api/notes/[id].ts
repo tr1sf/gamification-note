@@ -2,16 +2,23 @@ import { prisma } from "~/lib/db";
 import { updateNoteSchema } from "~/validators/note";
 import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
+import { getUserFromRequest } from "~/lib/auth/get-user";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const note = await prisma.note.findUnique({
-    where: { id: params.id },
+    where: { id: params.id, isDeleted: false },
+    select: {
+      id: true, title: true, content: true, category: true, tags: true,
+      isPublic: true, wordCount: true, version: true,
+      aiSummary: true, aiImageUrl: true, userId: true, guildId: true,
+      createdAt: true, updatedAt: true,
+    },
   });
 
-  if (!note || note.isDeleted) {
+  if (!note) {
     return error("NOT_FOUND", "Note not found", 404);
   }
 
@@ -26,7 +33,7 @@ export async function GET({ request, params }: { request: Request; params: { id:
 }
 
 export async function PUT({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const body = await request.json();
@@ -35,7 +42,10 @@ export async function PUT({ request, params }: { request: Request; params: { id:
     return error("VALIDATION_ERROR", "Invalid input", 400, parsed.error.flatten());
   }
 
-  const existing = await prisma.note.findUnique({ where: { id: params.id } });
+  const existing = await prisma.note.findUnique({
+    where: { id: params.id },
+    select: { id: true, isDeleted: true, userId: true, version: true, isPublic: true },
+  });
   if (!existing || existing.isDeleted) return error("NOT_FOUND", "Note not found", 404);
   if (existing.userId !== user.userId) return error("FORBIDDEN", "Not your note", 403);
   if (existing.version !== parsed.data.version) {
@@ -53,6 +63,11 @@ export async function PUT({ request, params }: { request: Request; params: { id:
   const note = await prisma.note.update({
     where: { id: params.id },
     data: updateData,
+    select: {
+      id: true, title: true, content: true, category: true, tags: true,
+      isPublic: true, wordCount: true, version: true, aiSummary: true,
+      aiImageUrl: true, userId: true, guildId: true, createdAt: true, updatedAt: true,
+    },
   });
 
   let gamification = null;
@@ -68,16 +83,20 @@ export async function PUT({ request, params }: { request: Request; params: { id:
 }
 
 export async function DELETE({ request, params }: { request: Request; params: { id: string } }) {
-  const user = (request as any).locals?.user;
+  const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
-  const existing = await prisma.note.findUnique({ where: { id: params.id } });
+  const existing = await prisma.note.findUnique({
+    where: { id: params.id },
+    select: { id: true, userId: true },
+  });
   if (!existing) return error("NOT_FOUND", "Note not found", 404);
   if (existing.userId !== user.userId) return error("FORBIDDEN", "Not your note", 403);
 
   await prisma.note.update({
     where: { id: params.id },
     data: { isDeleted: true, deletedAt: new Date() },
+    select: { id: true },
   });
 
   return success(null);
