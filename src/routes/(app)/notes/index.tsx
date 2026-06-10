@@ -3,6 +3,7 @@ import { A } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 import { timeAgo } from "~/lib/time-ago";
+import Breadcrumb from "~/components/ui/Breadcrumb";
 
 interface NoteItem {
   id: string;
@@ -63,7 +64,7 @@ export default function NotesPage() {
 
   return (
     <div class="max-w-3xl mx-auto p-6">
-      {/* ── Header ────────────────────────────────────────────── */}
+      <Breadcrumb items={[{ label: "My Notes" }]} />
       <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-display font-bold text-ink-primary">My Notes</h1>
         <A href="/notes/new" class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] transition-all duration-150">

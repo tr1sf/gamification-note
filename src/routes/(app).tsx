@@ -1,10 +1,10 @@
-import { Show, onMount, createEffect } from "solid-js";
+import { Show, onMount, createEffect, type JSX } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
 import { user, loading, initAuth, logout } from "~/stores/auth";
 import { uiStore, toggleSidebar, setTheme } from "~/stores/ui";
 import { gamification, syncFromUser } from "~/stores/user";
 import { quests, fetchActiveQuests } from "~/stores/quests";
-import { addSocketNotification } from "~/stores/notifications";
+import { addSocketNotification, type Notification } from "~/stores/notifications";
 import { useSocket } from "~/lib/socket/client";
 import { ToastContainer } from "~/components/ui/Toast";
 import XPBar from "~/components/gamification/XPBar";
@@ -16,7 +16,7 @@ import RewardPopup from "~/components/gamification/RewardPopup";
 import LevelUpModal from "~/components/gamification/LevelUpModal";
 import NotificationBell from "~/components/shared/NotificationBell";
 
-export default function AppLayout(props: { children: unknown }) {
+export default function AppLayout(props: { children?: JSX.Element }) {
   const navigate = useNavigate();
   const { on, off, connected } = useSocket();
 
@@ -27,7 +27,7 @@ export default function AppLayout(props: { children: unknown }) {
   createEffect(() => {
     const u = user();
     if (u && connected()) {
-      const handleNotification = (data: { id: string; type: string; title: string; body: string; data: Record<string, unknown> | null; isRead: boolean; createdAt: string }) => {
+      const handleNotification = (data: Notification) => {
         addSocketNotification(data);
       };
       on("notification:new", handleNotification);
@@ -46,7 +46,7 @@ export default function AppLayout(props: { children: unknown }) {
   createEffect(() => {
     const u = user();
     if (u) {
-      syncFromUser({ xp: u.xp, coins: u.coins, level: u.level, title: u.title });
+      syncFromUser({ xp: u.xp, coins: u.coins, level: u.level, title: u.title, streak: u.streak });
       fetchActiveQuests();
     }
   });
@@ -55,7 +55,8 @@ export default function AppLayout(props: { children: unknown }) {
 
   return (
     <Show when={!loading() && user()} fallback={
-      <div class="min-h-screen flex bg-surface">
+      <div class="min-h-screen flex flex-col bg-surface">
+        <div class="min-h-screen flex">
         <div class="hidden lg:block w-64 bg-surface-elevated border-r border-surface-border p-4 space-y-4">
           <div class="h-7 w-32 bg-surface-border rounded animate-pulse" />
           <div class="space-y-3 mt-6">
@@ -82,6 +83,7 @@ export default function AppLayout(props: { children: unknown }) {
             </div>
           </div>
         </div>
+      </div>
       </div>
     }>
       <ToastContainer />
@@ -156,11 +158,9 @@ export default function AppLayout(props: { children: unknown }) {
               ☰
             </button>
 
-            <Show when={g().xp > 0}>
-              <div class="hidden sm:block">
-                <XPBar xp={g().xp} level={g().level} compact />
-              </div>
-            </Show>
+            <div class="hidden sm:block">
+              <XPBar xp={g().xp} level={g().level} compact />
+            </div>
 
             <div class="flex-1" />
 

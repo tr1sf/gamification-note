@@ -13,12 +13,14 @@ export async function checkQuestProgress(
 
   if (userQuests.length === 0) return [];
 
+  // Count-based quests (create_note, daily_login, make_public, …) advance by 1
+  // per matching action. Only word-count quests accumulate the action's
+  // wordCount — otherwise a single 500-word note would instantly complete a
+  // "create 10 notes" quest because the action carries wordCount in metadata.
   const increment =
-    typeof metadata?.wordCount === "number"
-      ? metadata.wordCount
-      : typeof metadata?.questProgress === "number"
-        ? metadata.questProgress
-        : 1;
+    actionType === "write_words"
+      ? (typeof metadata?.wordCount === "number" ? metadata.wordCount : 0)
+      : (typeof metadata?.questProgress === "number" ? metadata.questProgress : 1);
 
   const results: { questId: string; progress: number; target: number; completed: boolean }[] = [];
 

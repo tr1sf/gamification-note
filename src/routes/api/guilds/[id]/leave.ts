@@ -1,4 +1,5 @@
 import { prisma } from "~/lib/db";
+import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { getIO } from "~/lib/socket";
 

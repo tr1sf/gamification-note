@@ -63,12 +63,18 @@ async function rotateQuestType(
   const selected = shuffled.slice(0, 3);
 
   for (const quest of selected) {
-    await tx.userQuest.create({
-      data: {
+    await tx.userQuest.upsert({
+      where: { userId_questId: { userId, questId: quest.id } },
+      create: {
         userId,
         questId: quest.id,
         progress: { current: 0 },
         status: "active",
+      },
+      update: {
+        progress: { current: 0 },
+        status: "active",
+        completedAt: null,
       },
     });
   }

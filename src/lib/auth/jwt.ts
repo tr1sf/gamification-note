@@ -14,21 +14,23 @@ export type TokenPayload = z.infer<typeof tokenPayloadSchema>;
 const ACCESS_EXPIRY_SEC = 900; // 15 minutes
 const REFRESH_EXPIRY_SEC = 604800; // 7 days
 
+const JWT_ALG = "HS256" as const;
+
 export function signAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, env.JWT_ACCESS_SECRET, { expiresIn: ACCESS_EXPIRY_SEC });
+  return jwt.sign(payload, env.JWT_ACCESS_SECRET, { expiresIn: ACCESS_EXPIRY_SEC, algorithm: JWT_ALG });
 }
 
 export function verifyAccessToken(token: string): TokenPayload {
-  const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
+  const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, { algorithms: [JWT_ALG] });
   return tokenPayloadSchema.parse(decoded);
 }
 
 export function signRefreshToken(payload: TokenPayload): string {
-  return jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRY_SEC });
+  return jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRY_SEC, algorithm: JWT_ALG });
 }
 
 export function verifyRefreshToken(token: string): TokenPayload {
-  const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET);
+  const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET, { algorithms: [JWT_ALG] });
   return tokenPayloadSchema.parse(decoded);
 }
 

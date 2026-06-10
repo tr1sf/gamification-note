@@ -21,7 +21,8 @@ export async function fetchNotifications(): Promise<Notification[]> {
     const res = await authFetch("/api/notifications");
     const json = await res.json();
     if (json.success) {
-      const data = (json.data || []) as Notification[];
+      // API returns { items, nextCursor } — not a bare array.
+      const data = (json.data?.items || []) as Notification[];
       setNotifications(data);
       setUnreadCount(data.filter((n) => !n.isRead).length);
       return data;

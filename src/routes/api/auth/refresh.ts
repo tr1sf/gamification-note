@@ -24,6 +24,10 @@ export async function POST({ request }: { request: Request }) {
   if (!user || !user.refreshTokenHash) {
     return error("UNAUTHORIZED", "Session expired", 401);
   }
+  if (user.isBanned) {
+    await prisma.user.update({ where: { id: user.id }, data: { refreshTokenHash: null } });
+    return error("UNAUTHORIZED", "Account suspended", 401);
+  }
 
   const bcrypt = await import("bcryptjs");
   const isValid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
@@ -42,11 +46,13 @@ export async function POST({ request }: { request: Request }) {
     data: { refreshTokenHash: newHash },
   });
 
-  return new Response(JSON.stringify({ success: true, data: null, timestamp: new Date().toISOString() }), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Set-Cookie": setAuthCookies(newAccessToken, newRefreshToken).join(", "),
-    },
-  });
+  const headers = new Headers({ "Content-Type": "application/json" });
+  for (const cookie of setAuthCookies(newAccessToken, newRefreshToken)) {
+    headers.append("Set-Cookie", cookie);
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, data: null, timestamp: new Date().toISOString() }),
+    { status: 200, headers }
+  );
 }

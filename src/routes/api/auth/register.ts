@@ -6,11 +6,10 @@ import { success, error } from "~/lib/api-response";
 import { rateLimit } from "~/lib/rate-limit";
 
 export async function POST({ request }: { request: Request }) {
-  // Rate limit temporarily disabled for testing
-  // const ip = request.headers.get("x-forwarded-for") || "unknown";
-  // if (!rateLimit(`register:${ip}`, 5, 1800000)) {
-  //   return error("RATE_LIMITED", "Too many registration attempts. Try again in 30 minutes.", 429);
-  // }
+  const ip = request.headers.get("x-forwarded-for") || "unknown";
+  if (!rateLimit(`register:${ip}`, 5, 1800000)) {
+    return error("RATE_LIMITED", "Too many registration attempts. Try again in 30 minutes.", 429);
+  }
 
   const body = await request.json();
   const parsed = registerSchema.safeParse(body);
@@ -31,7 +30,7 @@ export async function POST({ request }: { request: Request }) {
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
     data: { email, username, passwordHash },
-    select: { id: true, email: true, username: true, level: true, xp: true, coins: true, title: true, createdAt: true },
+    select: { id: true, email: true, username: true, avatarUrl: true, level: true, xp: true, coins: true, streak: true, title: true, role: true, createdAt: true },
   });
 
   return success(user);

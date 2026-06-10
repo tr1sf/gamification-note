@@ -3,6 +3,7 @@ import { updateNoteSchema } from "~/validators/note";
 import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
 import { getUserFromRequest } from "~/lib/auth/get-user";
+import { computeWordCount } from "~/lib/blocks";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -57,7 +58,7 @@ export async function PUT({ request, params }: { request: Request; params: { id:
 
   const updateData: any = { ...parsed.data, version: existing.version + 1 };
   if (updateData.content) {
-    updateData.wordCount = updateData.content.split(/\s+/).filter(Boolean).length;
+    updateData.wordCount = computeWordCount(updateData.content);
   }
 
   const note = await prisma.note.update({

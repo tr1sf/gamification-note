@@ -77,29 +77,34 @@ export async function POST({ request }: { request: Request }) {
 
   const streak = await calculateLoginStreak(user.id);
 
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { streak: streak + 1 },
+  });
+
   const gamification = await processAction({
     userId: user.id,
     actionType: "daily_login",
-    metadata: { streak },
+    metadata: { streak: streak + 1 },
   });
 
   const updatedUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: {
       id: true, email: true, username: true, avatarUrl: true,
-      level: true, xp: true, coins: true, title: true, role: true,
+      level: true, xp: true, coins: true, streak: true, title: true, role: true,
+      createdAt: true,
     },
   });
+
+  const headers = new Headers({ "Content-Type": "application/json" });
+  for (const cookie of setAuthCookies(accessToken, refreshToken)) {
+    headers.append("Set-Cookie", cookie);
+  }
 
   return new Response(JSON.stringify({
     success: true,
     data: { ...updatedUser, gamification },
     timestamp: new Date().toISOString(),
-  }), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Set-Cookie": setAuthCookies(accessToken, refreshToken).join(", "),
-    },
-  });
+  }), { status: 200, headers });
 }

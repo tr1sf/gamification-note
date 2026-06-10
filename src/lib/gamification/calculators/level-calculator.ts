@@ -16,7 +16,8 @@ const TITLE_THRESHOLDS = Object.keys(LEVEL_TITLES)
   .sort((a, b) => b - a);
 
 export function calculateLevel(xp: number): number {
-  return Math.floor(Math.sqrt(xp / LEVEL_BASE_XP));
+  // Levels are 1-based: a brand-new user (0 XP) is level 1, not level 0.
+  return Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / LEVEL_BASE_XP)));
 }
 
 export function xpForNextLevel(currentLevel: number): number {

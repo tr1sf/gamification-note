@@ -1,4 +1,5 @@
 import { prisma } from "~/lib/db";
+import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 
 const leaderboardCache = new Map<string, { data: unknown; timestamp: number }>();
@@ -18,6 +19,18 @@ export async function GET({ request }: { request: Request }) {
 
   if (scope === "guild" && !guildId) {
     return error("VALIDATION_ERROR", "guildId is required for guild scope", 400);
+  }
+
+  // Authz must run BEFORE the cache lookup, otherwise a non-member could read
+  // a cached guild leaderboard (roster + XP).
+  if (scope === "guild" && guildId) {
+    const callerMembership = await prisma.guildMember.findUnique({
+      where: { guildId_userId: { guildId, userId: user.userId } },
+      select: { userId: true },
+    });
+    if (!callerMembership) {
+      return error("FORBIDDEN", "You are not a member of this guild", 403);
+    }
   }
 
   const cacheKey = scope === "global" ? "global" : `guild:${guildId}`;
@@ -54,7 +67,18 @@ export async function GET({ request }: { request: Request }) {
     },
   });
 
-  leaderboardCache.set(cacheKey, { data: users, timestamp: Date.now() });
+  // Shape to what the UI expects: a `userId` field and a 1-based `rank`.
+  const ranked = users.map((u, i) => ({
+    rank: i + 1,
+    userId: u.id,
+    username: u.username,
+    avatarUrl: u.avatarUrl,
+    level: u.level,
+    xp: u.xp,
+    title: u.title,
+  }));
 
-  return success(users);
+  leaderboardCache.set(cacheKey, { data: ranked, timestamp: Date.now() });
+
+  return success(ranked);
 }

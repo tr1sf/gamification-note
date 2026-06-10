@@ -18,20 +18,31 @@ const [gamification, setGamification] = createSignal<GamificationState>({
 
 export { gamification };
 
+// Must mirror the server: src/lib/gamification/constants.ts (LEVEL_BASE_XP)
+// and src/lib/gamification/calculators/level-calculator.ts:
+//   calculateLevel(xp) = max(1, floor(sqrt(xp / LEVEL_BASE_XP)))
+// => total XP required to *reach* level L is L² * LEVEL_BASE_XP (level 1 starts at 0).
+const LEVEL_BASE_XP = 100;
+
 export function xpForLevel(level: number): number {
-  return Math.floor(level * 500 + Math.pow(level, 2) * 50);
+  if (level <= 1) return 0;
+  return level * level * LEVEL_BASE_XP;
 }
 
 export function xpProgressInLevel(xp: number, level: number): { current: number; needed: number } {
-  const prevLevelXp = level > 1 ? xpForLevel(level - 1) : 0;
-  const nextLevelXp = xpForLevel(level);
-  const totalNeeded = nextLevelXp - prevLevelXp;
-  const current = xp - prevLevelXp;
-  return { current: Math.max(0, current), needed: totalNeeded };
+  const start = xpForLevel(level);
+  const next = xpForLevel(level + 1);
+  const needed = Math.max(1, next - start);
+  const current = Math.max(0, Math.min(xp - start, needed));
+  return { current, needed };
 }
 
 export function syncFromUser(userData: { xp: number; coins: number; level: number; title: string; streak?: number }) {
   setGamification((prev) => ({ ...prev, ...userData }));
+}
+
+export function setCoins(coins: number) {
+  setGamification((prev) => ({ ...prev, coins: Math.max(0, coins) }));
 }
 
 export function applyReward(result: {

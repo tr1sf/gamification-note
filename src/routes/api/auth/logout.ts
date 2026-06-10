@@ -21,11 +21,13 @@ export async function POST({ request }: { request: Request }) {
     }
   }
 
-  return new Response(JSON.stringify({ success: true, data: null, timestamp: new Date().toISOString() }), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Set-Cookie": clearAuthCookies().join(", "),
-    },
-  });
+  const headers = new Headers({ "Content-Type": "application/json" });
+  for (const cookie of clearAuthCookies()) {
+    headers.append("Set-Cookie", cookie);
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, data: null, timestamp: new Date().toISOString() }),
+    { status: 200, headers }
+  );
 }

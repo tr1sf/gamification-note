@@ -24,8 +24,8 @@ export async function GET({ request }: { request: Request }) {
     where: { id: payload.userId },
     select: {
       id: true, email: true, username: true, avatarUrl: true,
-      level: true, xp: true, coins: true, title: true, role: true,
-      createdAt: true,
+      level: true, xp: true, coins: true, streak: true, title: true, role: true,
+      createdAt: true, isBanned: true,
     },
   });
 

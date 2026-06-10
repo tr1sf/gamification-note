@@ -9,19 +9,28 @@ export default createMiddleware({
         '/api/auth/register',
         '/api/auth/refresh',
         '/api/auth/logout',
+        '/api/notes/public',
+        '/api/users',
         '/login',
         '/register',
+        '/share',
+        '/profile',
         '/favicon.ico',
       ];
 
       const url = new URL(event.request.url);
+      const pathname = url.pathname;
+
+      // Exact match or a proper sub-path (next char is "/"), never a bare prefix.
+      // Prevents e.g. "/login-as-admin" or "/profile-secret" from matching "/login"/"/profile".
+      const isPublic = (p: string) => pathname === p || pathname.startsWith(p + '/');
 
       if (
-        url.pathname.startsWith('/_build') ||
-        url.pathname.startsWith('/assets') ||
-        url.pathname.startsWith('/favicon') ||
-        url.pathname === '/' ||
-        publicPaths.some(p => url.pathname.startsWith(p))
+        pathname.startsWith('/_build/') ||
+        pathname.startsWith('/assets/') ||
+        pathname.startsWith('/favicon') ||
+        pathname === '/' ||
+        publicPaths.some(isPublic)
       ) {
         return;
       }

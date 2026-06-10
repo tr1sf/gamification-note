@@ -4,7 +4,11 @@ import { authFetch } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 import { timeAgo } from "~/lib/time-ago";
 import { renderMarkdown } from "~/lib/markdown";
+import { isBlockContent, parseBlocks, markdownToBlocks, blocksToMarkdown, blocksToHtml, computeBlockWordCount, type Block } from "~/lib/blocks";
+import BlockEditor from "~/components/editor/BlockEditor";
+import BlockRenderer from "~/components/editor/BlockRenderer";
 import ConfirmModal from "~/components/ui/ConfirmModal";
+import Breadcrumb from "~/components/ui/Breadcrumb";
 
 interface Note {
   id: string;
@@ -16,13 +20,14 @@ interface Note {
   wordCount: number;
   version: number;
   aiSummary: string | null;
+  aiImageUrl?: string | null;
   isOwner: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 async function fetchNote(id: string): Promise<Note> {
-  if (typeof document === "undefined") throw new Error("SSR"); // wait for client
+  if (typeof document === "undefined") throw new Error("SSR");
   const res = await authFetch(`/api/notes/${id}`);
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message || "Not found");
@@ -33,42 +38,65 @@ export default function NoteDetailPage() {
   const params = useParams();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = createSignal(false);
+  const [duplicating, setDuplicating] = createSignal(false);
   const [editTitle, setEditTitle] = createSignal("");
   const [editContent, setEditContent] = createSignal("");
+  const [editBlocks, setEditBlocks] = createSignal<Block[]>([]);
   const [editCategory, setEditCategory] = createSignal("");
   const [editTags, setEditTags] = createSignal<string[]>([]);
   const [editTagInput, setEditTagInput] = createSignal("");
   const [editIsPublic, setEditIsPublic] = createSignal(false);
   const [saving, setSaving] = createSignal(false);
   const [deleting, setDeleting] = createSignal(false);
+  const [useBlockEditor, setUseBlockEditor] = createSignal(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = createSignal(false);
+  const [copied, setCopied] = createSignal(false);
+  const [showExportMenu, setShowExportMenu] = createSignal(false);
 
   const [note, { refetch }] = createResource(() => params.id, fetchNote);
+
+  const isBlockMode = (content?: string) => content ? isBlockContent(content) : false;
 
   const startEditing = (n: Note) => {
     setEditTitle(n.title);
     setEditContent(n.content);
+    const isBlocks = isBlockContent(n.content);
+    setUseBlockEditor(isBlocks);
+    if (isBlocks) {
+      setEditBlocks(parseBlocks(n.content));
+    }
     setEditCategory(n.category ?? "");
     setEditTags([...n.tags]);
     setEditIsPublic(n.isPublic);
     setIsEditing(true);
   };
 
+  const convertToBlocks = () => {
+    setEditBlocks(markdownToBlocks(editContent()));
+    setUseBlockEditor(true);
+  };
+
   const saveEdit = async () => {
     if (!note()) return;
     setSaving(true);
     try {
+      const n = note()!;
+      const useBlocks = useBlockEditor();
+      const contentToSend = useBlocks ? JSON.stringify(editBlocks()) : editContent();
+      const wc = useBlocks ? computeBlockWordCount(editBlocks()) : editContent().split(/\s+/).filter(Boolean).length;
+
       const res = await authFetch(`/api/notes/${params.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: editTitle(),
-          content: editContent(),
+          content: contentToSend,
           category: editCategory() || undefined,
           tags: editTags().length > 0 ? editTags() : undefined,
           isPublic: editIsPublic(),
-          version: note()!.version,
+          version: n.version,
+          wordCount: wc,
         }),
       });
       const json = await res.json();
@@ -97,20 +125,24 @@ export default function NoteDetailPage() {
 
   const cancelEdit = () => {
     const n = note();
-    if (n && (
+    if (!n) return;
+    const useBlocks = useBlockEditor();
+    const contentChanged = useBlocks
+      ? JSON.stringify(editBlocks()) !== n.content
+      : editContent() !== n.content;
+    if (
       editTitle() !== n.title ||
-      editContent() !== n.content ||
+      contentChanged ||
       editCategory() !== (n.category ?? "") ||
       JSON.stringify(editTags()) !== JSON.stringify(n.tags) ||
       editIsPublic() !== n.isPublic
-    )) {
+    ) {
       setShowDiscardConfirm(true);
       return;
     }
     setIsEditing(false);
   };
 
-  // ── Tag helpers for edit mode ──────────────────────────────────
   const addEditTag = (raw: string) => {
     const t = raw.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
     if (t && !editTags().includes(t) && editTags().length < 10) setEditTags([...editTags(), t]);
@@ -148,6 +180,57 @@ export default function NoteDetailPage() {
     }
   };
 
+  const handleDuplicate = async () => {
+    setDuplicating(true);
+    try {
+      const res = await authFetch(`/api/notes/${params.id}/duplicate`, { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        addToast("Note duplicated!", "success");
+        navigate(`/notes/${json.data.id}`);
+      } else {
+        addToast(json.error?.message || "Duplicate failed", "error");
+      }
+    } catch {
+      addToast("Network error", "error");
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
+  const handleExport = (format: "md" | "txt" | "html") => {
+    const n = note();
+    if (!n) return;
+    const useBlocks = isBlockMode(n.content);
+    let content: string;
+    let type: string;
+    let ext: string;
+    if (format === "html") {
+      content = useBlocks ? blocksToHtml(parseBlocks(n.content)) : renderMarkdown(n.content);
+      content = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${n.title}</title><style>body{font-family:Georgia,serif;max-width:720px;margin:2rem auto;padding:0 1rem;line-height:1.7;color:#222}h1{font-size:2rem;margin-bottom:0.5rem}</style></head><body><h1>${n.title}</h1>${content}</body></html>`;
+      type = "text/html";
+      ext = "html";
+    } else if (format === "txt") {
+      content = useBlocks ? blocksToMarkdown(parseBlocks(n.content)) : n.content;
+      content = `${n.title}\n\n${content}`.replace(/[#*_>`\[\]()]/g, "");
+      type = "text/plain";
+      ext = "txt";
+    } else {
+      content = useBlocks ? blocksToMarkdown(parseBlocks(n.content)) : n.content;
+      content = `# ${n.title}\n\n${content}`;
+      type = "text/markdown";
+      ext = "md";
+    }
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${n.title.replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addToast(`Exported as ${ext.toUpperCase()}`, "success");
+  };
+
   return (
     <div class="max-w-3xl mx-auto p-6">
       <Show when={!note.loading} fallback={<div class="animate-pulse text-ink-secondary">Loading note...</div>}>
@@ -160,9 +243,17 @@ export default function NoteDetailPage() {
           <Show when={note()}>
             {(n) => (
               <Switch>
-                {/* ── View mode ───────────────────────────────── */}
                 <Match when={!isEditing()}>
                   <article>
+                    <Breadcrumb items={[
+                      { label: "Notes", href: "/notes", icon: "📜" },
+                      { label: n().title },
+                    ]} />
+
+                    <Show when={n().aiImageUrl}>
+                      <img src={n().aiImageUrl ?? undefined} alt="" class="w-full h-48 object-cover rounded-lg mb-6" />
+                    </Show>
+
                     <div class="flex items-start justify-between mb-6">
                       <div>
                         <h1 class="text-3xl font-display font-bold text-ink-primary">{n().title}</h1>
@@ -186,15 +277,52 @@ export default function NoteDetailPage() {
                         </div>
                       </div>
                       <Show when={n().isOwner}>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <button onClick={handleDuplicate} disabled={duplicating()} class="px-3 py-1.5 text-sm border border-surface-border text-ink-secondary rounded-md hover:bg-surface-hover transition-colors disabled:opacity-50">{duplicating() ? "Duplicating..." : "Duplicate"}</button>
+                          <div class="relative">
+                            <button onClick={() => setShowExportMenu(!showExportMenu())} class="px-3 py-1.5 text-sm border border-surface-border text-ink-secondary rounded-md hover:bg-surface-hover transition-colors">Export ▾</button>
+                            <Show when={showExportMenu()}>
+                              <div class="absolute right-0 mt-1 bg-surface-elevated border border-surface-border rounded-lg shadow-lg py-1 z-20 min-w-[120px]" onClick={() => setShowExportMenu(false)}>
+                                <button onClick={() => handleExport("md")} class="block w-full text-left px-3 py-1.5 text-sm text-ink-primary hover:bg-surface-hover transition-colors">Markdown (.md)</button>
+                                <button onClick={() => handleExport("txt")} class="block w-full text-left px-3 py-1.5 text-sm text-ink-primary hover:bg-surface-hover transition-colors">Plain text (.txt)</button>
+                                <button onClick={() => handleExport("html")} class="block w-full text-left px-3 py-1.5 text-sm text-ink-primary hover:bg-surface-hover transition-colors">HTML (.html)</button>
+                              </div>
+                            </Show>
+                          </div>
                           <button onClick={() => startEditing(n())} class="px-3 py-1.5 text-sm bg-accent/10 text-accent rounded-md hover:bg-accent/20 transition-colors">Edit</button>
                           <button onClick={() => setShowDeleteConfirm(true)} disabled={deleting()} class="px-3 py-1.5 text-sm text-error hover:bg-error-bg rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{deleting() ? "Trashing..." : "Trash"}</button>
                         </div>
                       </Show>
                     </div>
 
-                    {/* Rendered markdown content */}
-                    <div class="prose max-w-none text-sm" innerHTML={renderMarkdown(n().content)} />
+                    <Show when={n().isPublic}>
+                      <div class="mt-4 flex items-center gap-2 p-3 bg-accent/5 border border-accent/15 rounded-lg">
+                        <span class="text-sm text-ink-secondary">Share link:</span>
+                        <code class="flex-1 text-xs bg-surface border border-surface-border rounded px-2 py-1 text-ink-primary truncate select-all">{typeof window !== "undefined" ? `${window.location.origin}/share/${n().id}` : ""}</code>
+                        <button
+                          onClick={() => {
+                            const url = `${window.location.origin}/share/${n().id}`;
+                            navigator.clipboard.writeText(url);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                          class="shrink-0 px-3 py-1 text-xs bg-accent text-white rounded-md hover:bg-accent-hover transition-colors"
+                        >
+                          {copied() ? "Copied!" : "Copy link"}
+                        </button>
+                      </div>
+                    </Show>
+
+                    <div class="mt-6">
+                      <Show
+                        when={isBlockMode(n().content)}
+                        fallback={
+                          <div class="prose max-w-none text-sm" innerHTML={renderMarkdown(n().content)} />
+                        }
+                      >
+                        <BlockRenderer blocks={parseBlocks(n().content)} />
+                      </Show>
+                    </div>
 
                     <Show when={n().aiSummary}>
                       <div class="mt-8 p-4 bg-surface-elevated rounded-lg border border-surface-border">
@@ -208,7 +336,6 @@ export default function NoteDetailPage() {
                   </article>
                 </Match>
 
-                {/* ── Edit mode ────────────────────────────────── */}
                 <Match when={isEditing()}>
                   <div class="space-y-4">
                     <label for="edit-title" class="sr-only">Title</label>
@@ -220,7 +347,6 @@ export default function NoteDetailPage() {
                       class="w-full text-2xl font-display font-bold border-0 border-b-2 border-surface-border px-0 py-2 text-ink-primary bg-transparent focus:outline-none focus:border-accent"
                     />
 
-                    {/* Category + Public toggle */}
                     <div class="flex items-center gap-3">
                       <label for="edit-category" class="sr-only">Category</label>
                       <input
@@ -237,7 +363,6 @@ export default function NoteDetailPage() {
                       </label>
                     </div>
 
-                    {/* Tags */}
                     <div>
                       <label class="sr-only" for="edit-tags-input">Tags</label>
                       <div class="flex flex-wrap items-center gap-1.5 border border-surface-border rounded px-2 py-1.5 bg-surface min-h-[36px] focus-within:ring-1 focus-within:ring-accent transition-all">
@@ -262,14 +387,30 @@ export default function NoteDetailPage() {
                       </div>
                     </div>
 
-                    <label for="edit-content" class="sr-only">Content</label>
-                    <textarea
-                      id="edit-content"
-                      value={editContent()}
-                      onInput={(e) => setEditContent(e.currentTarget.value)}
-                      rows={25}
-                      class="w-full rounded-md border border-surface-border px-3 py-2 text-ink-primary bg-surface font-mono text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-y min-h-[400px]"
-                    />
+                    <Show
+                      when={useBlockEditor()}
+                      fallback={
+                        <>
+                          <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-ink-secondary">Markdown mode</span>
+                            <button type="button" onClick={convertToBlocks} class="text-xs text-accent hover:underline">Convert to Blocks</button>
+                          </div>
+                          <label for="edit-content" class="sr-only">Content</label>
+                          <textarea
+                            id="edit-content"
+                            value={editContent()}
+                            onInput={(e) => setEditContent(e.currentTarget.value)}
+                            rows={25}
+                            class="w-full rounded-md border border-surface-border px-3 py-2 text-ink-primary bg-surface font-mono text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-y min-h-[400px]"
+                          />
+                        </>
+                      }
+                    >
+                      <div class="rounded-md border border-surface-border bg-surface p-3 focus-within:ring-1 focus-within:ring-accent transition-all min-h-[400px]">
+                        <BlockEditor blocks={editBlocks()} onBlocksChange={setEditBlocks} />
+                      </div>
+                    </Show>
+
                     <div class="flex items-center gap-3">
                       <button onClick={saveEdit} disabled={saving()} class="px-4 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors">
                         {saving() ? "Saving..." : "Save Changes"}

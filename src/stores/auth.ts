@@ -8,6 +8,7 @@ export interface AuthUser {
   level: number;
   xp: number;
   coins: number;
+  streak: number;
   title: string;
   role: string;
   createdAt: string;
@@ -28,7 +29,7 @@ export { currentUser as user, loading };
 
 export async function fetchMe(): Promise<AuthUser | null> {
   try {
-    const res = await fetch("/api/auth/me", { credentials: "include" });
+    const res = await authFetch("/api/auth/me");
     if (!res.ok) return null;
     const json = await res.json();
     return json.data;
@@ -74,6 +75,7 @@ export async function register(email: string, username: string, password: string
     });
     const json = await res.json();
     if (!json.success) return { error: json.error };
+    setUser(json.data);
     return { user: json.data };
   } catch {
     return { error: { code: "NETWORK", message: "Network error. Please try again." } };

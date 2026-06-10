@@ -58,14 +58,24 @@ export function useSocket() {
   const [connected, setConnected] = createSignal(false);
 
   onMount(() => {
-    getSocket().then((s) => {
-      setConnected(s.connected);
-      s.on("connect", () => setConnected(true));
-      s.on("disconnect", () => setConnected(false));
-      s.on("connect_error", () => setConnected(false));
+    let s: Socket | undefined;
+    const onConnect = () => setConnected(true);
+    const onDisconnect = () => setConnected(false);
+    getSocket().then((sock) => {
+      s = sock;
+      setConnected(sock.connected);
+      sock.on("connect", onConnect);
+      sock.on("disconnect", onDisconnect);
+      sock.on("connect_error", onDisconnect);
     });
 
-    onCleanup(() => {});
+    // The socket is a module-level singleton; without removing these on unmount
+    // every navigation permanently accrues listeners (MaxListenersExceededWarning).
+    onCleanup(() => {
+      s?.off("connect", onConnect);
+      s?.off("disconnect", onDisconnect);
+      s?.off("connect_error", onDisconnect);
+    });
   });
 
   return {

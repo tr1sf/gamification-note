@@ -1,3 +1,22 @@
+// Only allow safe URL schemes in links/images. Blocks javascript:, data:,
+// vbscript:, etc. Permits http(s), mailto, and relative/anchor URLs. The
+// returned value is also attribute-escaped so it cannot break out of href/src.
+export function safeUrl(url: string): string {
+  const trimmed = url.trim();
+  // If the URL declares an explicit scheme, it must be in the allowlist.
+  // A scheme is a leading [a-z][a-z0-9.+-]* followed by ":".
+  const scheme = /^([a-z][a-z0-9.+-]*):/i.exec(trimmed)?.[1]?.toLowerCase();
+  if (scheme && scheme !== "http" && scheme !== "https" && scheme !== "mailto") {
+    return "#"; // blocks javascript:, data:, vbscript:, file:, ...
+  }
+  // No scheme => relative path / anchor, which is safe.
+  return trimmed.replace(/"/g, "%22").replace(/</g, "%3C").replace(/>/g, "%3E");
+}
+
+function escapeAttr(s: string): string {
+  return s.replace(/"/g, "&quot;");
+}
+
 // ── Compact inline markdown → HTML renderer ───────────────────
 // Shared across note create & detail pages.
 export function renderMarkdown(text: string): string {
@@ -15,15 +34,17 @@ export function renderMarkdown(text: string): string {
   html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   // Italic
   html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  // Images (before links — `![alt](url)` contains a `[alt](url)` link pattern)
+  html = html.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (_m, alt: string, url: string) =>
+      `<img src="${safeUrl(url)}" alt="${escapeAttr(alt)}" class="rounded-md max-w-full my-2" />`,
+  );
   // Links
   html = html.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" class="text-accent hover:underline" target="_blank" rel="noopener">$1</a>',
-  );
-  // Images
-  html = html.replace(
-    /!\[([^\]]*)\]\(([^)]+)\)/g,
-    '<img src="$2" alt="$1" class="rounded-md max-w-full my-2" />',
+    (_m, label: string, url: string) =>
+      `<a href="${safeUrl(url)}" class="text-accent hover:underline" target="_blank" rel="noopener">${label}</a>`,
   );
 
   // Block-level processing

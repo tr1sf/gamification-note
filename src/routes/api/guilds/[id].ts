@@ -1,4 +1,5 @@
 import { prisma } from "~/lib/db";
+import { getUserFromRequest } from "~/lib/auth/get-user";
 import { updateGuildSchema } from "~/validators/guild";
 import { success, error } from "~/lib/api-response";
 
@@ -17,15 +18,24 @@ export async function GET({ request, params }: { request: Request; params: { id:
     return error("NOT_FOUND", "Guild not found", 404);
   }
 
-  let isMember = false;
+  let membership: { role: string } | null = null;
   if (user) {
-    const membership = await prisma.guildMember.findUnique({
+    membership = await prisma.guildMember.findUnique({
       where: { guildId_userId: { guildId: params.id, userId: user.userId } },
+      select: { role: true },
     });
-    isMember = !!membership;
   }
+  const isMember = !!membership;
+  const canSeeInvite = membership?.role === "owner" || membership?.role === "admin";
 
-  return success({ ...guild, isMember });
+  // Never expose the inviteCode to non-members (it bypasses the invite-only gate).
+  const { inviteCode, ...safeGuild } = guild as typeof guild & { inviteCode: string | null };
+
+  return success({
+    ...safeGuild,
+    ...(canSeeInvite ? { inviteCode } : {}),
+    isMember,
+  });
 }
 
 export async function PUT({ request, params }: { request: Request; params: { id: string } }) {

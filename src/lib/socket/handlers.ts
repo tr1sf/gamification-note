@@ -119,6 +119,7 @@ export function registerHandlers(socket: Socket): void {
       const io = getIO();
       io.to(`guild:${guildId}`).emit("guild:message", {
         id: message.id,
+        guildId,
         user: { id: userId, username },
         content: message.content,
         createdAt: message.createdAt.toISOString(),
@@ -126,8 +127,23 @@ export function registerHandlers(socket: Socket): void {
     }
   );
 
-  socket.on("note:join", ({ noteId }: { noteId: string }) => {
+  socket.on("note:join", async ({ noteId }: { noteId: string }) => {
     if (!noteId) return;
+    // Mirror the REST access rule (api/notes/[id].ts): only the owner or a
+    // public note may be joined — otherwise presence/editing activity of a
+    // private note leaks to any authenticated user.
+    const note = await prisma.note.findUnique({
+      where: { id: noteId },
+      select: { userId: true, isPublic: true, isDeleted: true },
+    });
+    if (!note || note.isDeleted) {
+      socket.emit("error", { code: "NOT_FOUND", message: "Note not found" });
+      return;
+    }
+    if (!note.isPublic && note.userId !== userId) {
+      socket.emit("error", { code: "FORBIDDEN", message: "Access denied" });
+      return;
+    }
     const room = `note:${noteId}`;
     socket.join(room);
     socket.to(room).emit("note:user-joined", { userId, username });
@@ -140,8 +156,19 @@ export function registerHandlers(socket: Socket): void {
     socket.to(room).emit("note:user-left", { userId, username });
   });
 
-  socket.on("note:editing-start", ({ noteId }: { noteId: string }) => {
+  socket.on("note:editing-start", async ({ noteId }: { noteId: string }) => {
     if (!noteId) return;
+    // Only the note's owner may acquire the edit lock — otherwise any user
+    // could lock someone else's note for the full TTL (DoS) or signal a
+    // phantom editor on a public note.
+    const note = await prisma.note.findUnique({
+      where: { id: noteId },
+      select: { userId: true, isDeleted: true },
+    });
+    if (!note || note.isDeleted || note.userId !== userId) {
+      socket.emit("error", { code: "FORBIDDEN", message: "Access denied" });
+      return;
+    }
     const lock = noteEditingLocks.get(noteId);
     if (lock && lock.userId !== userId && Date.now() < lock.expiresAt) {
       socket.emit("error", {

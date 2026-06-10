@@ -1,4 +1,5 @@
 import { prisma } from "~/lib/db";
+import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
 
@@ -23,10 +24,15 @@ export async function POST({ request, params }: { request: Request; params: { id
     return error("NOT_COMPLETED", "Quest is not yet completed", 400);
   }
 
-  await prisma.userQuest.update({
-    where: { id: userQuest.id },
+  // Atomic guard against double-claim: only the request that actually flips
+  // "completed" -> "claimed" (count === 1) is allowed to grant the reward.
+  const claim = await prisma.userQuest.updateMany({
+    where: { id: userQuest.id, status: "completed" },
     data: { status: "claimed" },
   });
+  if (claim.count !== 1) {
+    return success({ claimed: true, gamification: null });
+  }
 
   const gamification = await processAction({
     userId: user.userId,

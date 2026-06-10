@@ -1,4 +1,5 @@
 import { prisma } from "~/lib/db";
+import { getUserFromRequest } from "~/lib/auth/get-user";
 import { joinGuildSchema } from "~/validators/guild";
 import { success, error } from "~/lib/api-response";
 import { processAction, triggerActionNotifications } from "~/lib/gamification/engine";

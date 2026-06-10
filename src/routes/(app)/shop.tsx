@@ -1,7 +1,7 @@
 import { createSignal, createResource, Show, onMount } from "solid-js";
 import { authFetch } from "~/stores/auth";
-import { gamification, applyReward } from "~/stores/user";
-import { addToast, showReward } from "~/stores/ui";
+import { gamification, setCoins } from "~/stores/user";
+import { addToast } from "~/stores/ui";
 import ShopGrid, { type ShopItem } from "~/components/shop/ShopGrid";
 
 async function fetchShop(): Promise<ShopItem[]> {
@@ -28,14 +28,9 @@ export default function ShopPage() {
       const json = await res.json();
       if (json.success) {
         addToast("Item purchased!", "success");
-        if (json.data?.gamification) {
-          applyReward(json.data.gamification);
-          if (json.data.gamification.xpGained > 0 || json.data.gamification.coinsGained > 0) {
-            showReward({
-              xp: json.data.gamification.xpGained,
-              coins: json.data.gamification.coinsGained,
-            });
-          }
+        // Purchase endpoint returns the new absolute coin balance.
+        if (typeof json.data?.coins === "number") {
+          setCoins(json.data.coins);
         }
         refetch();
       } else {

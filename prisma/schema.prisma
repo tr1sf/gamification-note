@@ -16,6 +16,7 @@ model User {
   xp               Int       @default(0)
   coins            Int       @default(0)
   title            String    @default("Novice Scribe")
+  streak           Int       @default(0)
   role             String    @default("user")
   refreshTokenHash String?
   lastLoginAt      DateTime?
