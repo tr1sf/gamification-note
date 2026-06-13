@@ -29,6 +29,10 @@ async function main() {
     { title: 'AI Scribe',        description: 'Use AI to summarize 1 note today', questType: 'daily',  icon: 'sparkle', criteria: { action: 'ai_summarize', count: 1 },   xpReward: 20,  coinReward: 5 },
     { title: 'Knowledge Keeper', description: 'Review 1 old note (>7 days)',     questType: 'daily',  icon: 'book',    criteria: { action: 'review_note',   count: 1 },   xpReward: 15,  coinReward: 3 },
     { title: 'Architect',        description: 'Create 5 structured notes',         questType: 'weekly', icon: 'layout',  criteria: { action: 'structured_note', count: 5 },  xpReward: 50,  coinReward: 15 },
+    // Monthly quests — Phase G
+    { title: 'Cartographer',     description: 'Create 20 notes this month',        questType: 'monthly', icon: 'map',     criteria: { action: 'create_note',   count: 20 },  xpReward: 200, coinReward: 50 },
+    { title: 'Chronicler',       description: 'Write 10000 words this month',       questType: 'monthly', icon: 'scroll',  criteria: { action: 'write_words',   count: 10000 }, xpReward: 300, coinReward: 80 },
+    { title: 'Archaeologist',    description: 'Review 15 old notes this month',     questType: 'monthly', icon: 'book',    criteria: { action: 'review_note',   count: 15 },  xpReward: 250, coinReward: 60 },
     { title: 'Scribe Weekly',    description: 'Review 5 old notes this week',     questType: 'weekly', icon: 'book',    criteria: { action: 'review_note',   count: 5 },   xpReward: 60,  coinReward: 15 },
   ];
 
@@ -87,6 +91,59 @@ async function main() {
       },
     }),
   ]);
+
+  // Themes
+  const themeDefs = [
+    {
+      name: "Tavern", description: "Classic medieval tavern — warm parchment tones", coinCost: 0, rarity: "common", isDefault: true,
+      cssVariables: { "--color-bg": "26 26 46", "--color-bg-elevated": "45 45 63", "--color-text-primary": "240 230 211", "--color-text-secondary": "160 147 125", "--color-accent": "212 165 116", "--color-xp": "251 191 36", "--color-coin": "226 185 111" },
+    },
+    {
+      name: "Scholar", description: "Bright academic theme", coinCost: 0, rarity: "common", isDefault: false,
+      cssVariables: { "--color-bg": "250 248 242", "--color-bg-elevated": "255 255 255", "--color-text-primary": "30 41 59", "--color-text-secondary": "100 116 139", "--color-accent": "44 82 130", "--color-xp": "34 197 94", "--color-coin": "234 179 8" },
+    },
+    {
+      name: "Journey", description: "Adventurer's path", coinCost: 50, rarity: "rare", isDefault: false,
+      cssVariables: { "--color-bg": "13 27 42", "--color-bg-elevated": "27 40 56", "--color-text-primary": "224 225 221", "--color-text-secondary": "119 141 169", "--color-accent": "226 185 111", "--color-xp": "74 222 128", "--color-coin": "234 179 8" },
+    },
+    {
+      name: "Night Owl", description: "Dark minimalist for late-night focus", coinCost: 50, rarity: "rare", isDefault: false,
+      cssVariables: { "--color-bg": "15 15 35", "--color-bg-elevated": "30 30 58", "--color-text-primary": "226 232 240", "--color-text-secondary": "148 163 184", "--color-accent": "124 58 237", "--color-xp": "52 211 153", "--color-coin": "250 204 21" },
+    },
+    {
+      name: "Forest", description: "Nature's tranquility", coinCost: 100, rarity: "epic", isDefault: false,
+      cssVariables: { "--color-bg": "26 37 24", "--color-bg-elevated": "36 51 34", "--color-text-primary": "226 232 220", "--color-text-secondary": "132 169 140", "--color-accent": "74 222 128", "--color-xp": "163 230 53", "--color-coin": "234 179 8" },
+    },
+    {
+      name: "Ember", description: "Fire and warmth", coinCost: 100, rarity: "epic", isDefault: false,
+      cssVariables: { "--color-bg": "45 26 14", "--color-bg-elevated": "61 42 24", "--color-text-primary": "245 235 220", "--color-text-secondary": "180 150 120", "--color-accent": "249 115 22", "--color-xp": "251 191 36", "--color-coin": "250 204 21" },
+    },
+    {
+      name: "Royal", description: "Regal purple and gold", coinCost: 200, rarity: "legendary", isDefault: false,
+      cssVariables: { "--color-bg": "26 10 46", "--color-bg-elevated": "42 26 62", "--color-text-primary": "240 225 255", "--color-text-secondary": "160 140 200", "--color-accent": "251 191 36", "--color-xp": "168 85 247", "--color-coin": "250 204 21" },
+    },
+  ];
+
+  let newThemes = 0;
+  for (const def of themeDefs) {
+    const exists = await prisma.theme.findFirst({ where: { name: def.name }, select: { id: true } });
+    if (!exists) { await prisma.theme.create({ data: def as any }); newThemes++; }
+  }
+
+  // Grant default themes to a test user if one exists
+  const testUser = await prisma.user.findFirst({ where: { username: "demo" }, select: { id: true } });
+  if (testUser) {
+    const defaults = await prisma.theme.findMany({ where: { isDefault: true } });
+    for (const t of defaults) {
+      await prisma.userTheme.upsert({
+        where: { userId_themeId: { userId: testUser.id, themeId: t.id } },
+        create: { userId: testUser.id, themeId: t.id },
+        update: {},
+      });
+    }
+  }
+
+  console.log(`Seeded: +${newThemes} new themes`);
 
   // Achievements — seeded idempotently by title
   const achievementDefs = [

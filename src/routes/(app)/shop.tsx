@@ -3,6 +3,7 @@ import { authFetch } from "~/stores/auth";
 import { gamification, setCoins } from "~/stores/user";
 import { addToast } from "~/stores/ui";
 import ShopGrid, { type ShopItem } from "~/components/shop/ShopGrid";
+import ThemePicker from "~/components/shop/ThemePicker";
 
 async function fetchShop(): Promise<ShopItem[]> {
   try {
@@ -81,6 +82,10 @@ export default function ShopPage() {
             onBuy={handleBuy}
             buyingId={buyingId()}
           />
+
+          <div class="mt-8">
+            <ThemePicker />
+          </div>
         </Show>
       </Show>
     </div>

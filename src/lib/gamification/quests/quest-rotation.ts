@@ -31,7 +31,7 @@ function endOfWeek(): Date {
 async function rotateQuestType(
   tx: Prisma.TransactionClient,
   userId: string,
-  questType: "daily" | "weekly",
+  questType: "daily" | "weekly" | "monthly",
   startOfPeriod: Date,
   endOfPeriod: Date
 ): Promise<void> {
@@ -86,4 +86,15 @@ export async function rotateQuestsIfNeeded(
 ): Promise<void> {
   await rotateQuestType(tx, userId, "daily", startOfToday(), endOfToday());
   await rotateQuestType(tx, userId, "weekly", startOfWeek(), endOfWeek());
+  await rotateQuestType(tx, userId, "monthly", startOfMonth(), endOfMonth());
+}
+
+function startOfMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+}
+
+function endOfMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 }
