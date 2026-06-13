@@ -1,6 +1,7 @@
 import type { Server, Socket } from "socket.io";
 import { prisma } from "~/lib/db";
 import { getIO } from "./index";
+import { track } from "~/lib/analytics/tracker";
 
 const guildMessageRateLimit = new Map<string, number[]>();
 const noteEditingLocks = new Map<string, { userId: string; expiresAt: number }>();
@@ -124,6 +125,12 @@ export function registerHandlers(socket: Socket): void {
         user: { id: userId, username },
         content: message.content,
         createdAt: message.createdAt.toISOString(),
+      });
+
+      track({
+        userId,
+        actionType: "guild_message",
+        metadata: { guildId, messageLength: content.length },
       });
     }
   );

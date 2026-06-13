@@ -5,6 +5,7 @@ import { success, error } from "~/lib/api-response";
 import { processAction, triggerActionNotifications } from "~/lib/gamification/engine";
 import { getIO } from "~/lib/socket";
 import { createNotification } from "~/lib/socket/notifications";
+import { track } from "~/lib/analytics/tracker";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -51,6 +52,12 @@ export async function POST({ request, params }: { request: Request; params: { id
     metadata: { guildId: params.id },
   });
   triggerActionNotifications(user.userId, result);
+
+  track({
+    userId: user.userId,
+    actionType: "guild_join",
+    metadata: { guildId: params.id, guildName: guild.name, role: "member" },
+  });
 
   createNotification(
     guild.ownerId,

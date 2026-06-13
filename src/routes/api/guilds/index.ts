@@ -3,6 +3,7 @@ import { createGuildSchema } from "~/validators/guild";
 import { success, error } from "~/lib/api-response";
 import { processAction, triggerActionNotifications } from "~/lib/gamification/engine";
 import { getUserFromRequest } from "~/lib/auth/get-user";
+import { track } from "~/lib/analytics/tracker";
 
 export async function GET({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -82,6 +83,12 @@ export async function POST({ request }: { request: Request }) {
     metadata: { guildId: guild.id },
   });
   triggerActionNotifications(user.userId, result);
+
+  track({
+    userId: user.userId,
+    actionType: "guild_join",
+    metadata: { guildId: guild.id, guildName: guild.name, role: "owner" },
+  });
 
   return success(guild);
 }

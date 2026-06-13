@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { grantReward, triggerActionNotifications } from "~/lib/gamification/engine";
+import { track } from "~/lib/analytics/tracker";
 
 function toUtcDate(key: string): Date {
   return new Date(`${key}T00:00:00.000Z`);
@@ -56,6 +57,12 @@ export async function POST({ request, params }: { request: Request; params: { id
     metadata: { habitId: habit.id, streak: newStreak },
   });
   triggerActionNotifications(user.userId, reward);
+
+  track({
+    userId: user.userId,
+    actionType: "habit_checkin",
+    metadata: { habitId: habit.id, habitTitle: habit.title, streakBefore: habit.streak, streakAfter: newStreak, maxStreak: bestStreak },
+  });
 
   return success({
     currentStreak: newStreak,

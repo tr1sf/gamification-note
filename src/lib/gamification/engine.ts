@@ -7,11 +7,13 @@ import { checkQuestProgress } from "./quests/quest-checker";
 import { rotateQuestsIfNeeded } from "./quests/quest-rotation";
 import { checkAchievements } from "./achievements/achievement-checker";
 import { createNotification } from "~/lib/socket/notifications";
+import type { AuditMetadata } from "~/lib/analytics/types";
 
 export interface ActionContext {
   userId: string;
   actionType: "create_note" | "update_note" | "make_public" | "daily_login" | "complete_quest" | "join_guild" | "create_guild" | "ai_summarize";
   metadata?: Record<string, unknown>;
+  analyticsMeta?: AuditMetadata;
 }
 
 export interface ActionResult {
@@ -47,13 +49,20 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
       },
     });
 
+    const enrichedMeta: Record<string, unknown> = {
+      ...(ctx.metadata ?? {}),
+      ...(ctx.analyticsMeta ?? {}),
+      levelBefore: user.level,
+      levelAfter: leveledUp ? newLevel : user.level,
+    };
+
     await tx.auditLog.create({
       data: {
         userId: ctx.userId,
         actionType: ctx.actionType,
         xpChange: xpGained,
         coinChange: coinsGained,
-        metadata: (ctx.metadata ?? {}) as Prisma.InputJsonValue,
+        metadata: enrichedMeta as Prisma.InputJsonValue,
       },
     });
 
@@ -112,7 +121,11 @@ export async function grantReward(opts: {
         actionType: opts.actionType,
         xpChange: xpGained,
         coinChange: coinsGained,
-        metadata: (opts.metadata ?? {}) as Prisma.InputJsonValue,
+        metadata: {
+          ...(opts.metadata ?? {}),
+          levelBefore: user.level,
+          levelAfter: leveledUp ? newLevel : user.level,
+        } as Prisma.InputJsonValue,
       },
     });
 

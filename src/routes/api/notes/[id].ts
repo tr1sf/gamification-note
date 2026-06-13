@@ -4,6 +4,7 @@ import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { computeWordCount } from "~/lib/blocks";
+import { track } from "~/lib/analytics/tracker";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -25,6 +26,29 @@ export async function GET({ request, params }: { request: Request; params: { id:
 
   if (!note.isPublic && note.userId !== user.userId) {
     return error("FORBIDDEN", "Access denied", 403);
+  }
+
+  const daysSinceCreated = Math.floor(
+    (Date.now() - note.createdAt.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  track({
+    userId: user.userId,
+    actionType: "note_view",
+    metadata: {
+      noteId: note.id,
+      noteTitle: note.title,
+      isOwnNote: note.userId === user.userId,
+      daysSinceCreated,
+    },
+  });
+
+  if (daysSinceCreated > 7 && note.userId === user.userId) {
+    track({
+      userId: user.userId,
+      actionType: "note_review",
+      metadata: { noteId: note.id, noteTitle: note.title, daysSinceCreated },
+    });
   }
 
   return success({
@@ -71,6 +95,12 @@ export async function PUT({ request, params }: { request: Request; params: { id:
     },
   });
 
+  track({
+    userId: user.userId,
+    actionType: "note_edit",
+    metadata: { noteId: note.id, noteTitle: note.title, wordCount: note.wordCount },
+  });
+
   let gamification = null;
   if (isBecomingPublic) {
     gamification = await processAction({
@@ -98,6 +128,12 @@ export async function DELETE({ request, params }: { request: Request; params: { 
     where: { id: params.id },
     data: { isDeleted: true, deletedAt: new Date() },
     select: { id: true },
+  });
+
+  track({
+    userId: user.userId,
+    actionType: "note_delete",
+    metadata: { noteId: params.id },
   });
 
   return success(null);

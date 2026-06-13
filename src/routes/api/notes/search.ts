@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { success, error } from "~/lib/api-response";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { isBlockContent, parseBlocks, blockExcerpt } from "~/lib/blocks";
+import { track } from "~/lib/analytics/tracker";
 
 function makeExcerpt(content: string): string {
   return isBlockContent(content) ? blockExcerpt(parseBlocks(content)) : content.slice(0, 200);
@@ -50,6 +51,12 @@ export async function GET({ request }: { request: Request }) {
       ORDER BY rank DESC
       LIMIT 30
     `;
+
+    track({
+      userId: user.userId,
+      actionType: "note_search",
+      metadata: { query: q, resultCount: results.length },
+    });
 
     return success(
       results.map((n) => ({

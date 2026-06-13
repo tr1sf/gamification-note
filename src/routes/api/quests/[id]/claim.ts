@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
+import { track } from "~/lib/analytics/tracker";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -38,6 +39,23 @@ export async function POST({ request, params }: { request: Request; params: { id
     userId: user.userId,
     actionType: "complete_quest",
     metadata: {
+      xpReward: userQuest.quest.xpReward,
+      coinReward: userQuest.quest.coinReward,
+    },
+    analyticsMeta: {
+      questId: params.id,
+      questTitle: userQuest.quest.title,
+      questType: userQuest.quest.questType,
+    },
+  });
+
+  track({
+    userId: user.userId,
+    actionType: "quest_complete",
+    metadata: {
+      questId: params.id,
+      questTitle: userQuest.quest.title,
+      questType: userQuest.quest.questType,
       xpReward: userQuest.quest.xpReward,
       coinReward: userQuest.quest.coinReward,
     },

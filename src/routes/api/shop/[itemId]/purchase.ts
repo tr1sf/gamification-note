@@ -1,6 +1,7 @@
 import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
+import { track } from "~/lib/analytics/tracker";
 
 export async function POST({ request, params }: { request: Request; params: { itemId: string } }) {
   const user = getUserFromRequest(request);
@@ -53,6 +54,12 @@ export async function POST({ request, params }: { request: Request; params: { it
       });
 
       return { inventoryItem, coins: updatedUser.coins };
+    });
+
+    track({
+      userId: user.userId,
+      actionType: "coin_spend",
+      metadata: { itemType: item.type, itemName: item.name, coinCost: item.coinCost, coinBalance: result.coins },
     });
 
     return success({

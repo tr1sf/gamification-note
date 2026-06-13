@@ -4,6 +4,7 @@ import { loginSchema } from "~/validators/auth";
 import { success, error } from "~/lib/api-response";
 import { rateLimit } from "~/lib/rate-limit";
 import { processAction } from "~/lib/gamification/engine";
+import { startSession } from "~/lib/analytics/session";
 
 async function calculateLoginStreak(userId: string): Promise<number> {
   const auditLogs = await prisma.auditLog.findMany({
@@ -96,6 +97,8 @@ export async function POST({ request }: { request: Request }) {
       createdAt: true,
     },
   });
+
+  startSession(user.id).catch(() => {});
 
   const headers = new Headers({ "Content-Type": "application/json" });
   for (const cookie of setAuthCookies(accessToken, refreshToken)) {

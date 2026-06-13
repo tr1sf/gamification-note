@@ -4,6 +4,8 @@ import { createNoteSchema } from "~/validators/note";
 import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
 import { computeWordCount, isBlockContent, parseBlocks, blockExcerpt } from "~/lib/blocks";
+import { track } from "~/lib/analytics/tracker";
+import { calculateStructureScore, scorePlainText } from "~/lib/analytics/quality-scorer";
 
 export async function GET({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
@@ -65,6 +67,29 @@ export async function POST({ request }: { request: Request }) {
     userId: user.userId,
     actionType: "create_note",
     metadata: { noteId: note.id, wordCount: note.wordCount },
+  });
+
+  const isBlock = isBlockContent(note.content);
+  let qualityMeta: Record<string, unknown> = {};
+  if (isBlock) {
+    const blocks = parseBlocks(note.content);
+    const { metadata } = calculateStructureScore(blocks, note.tags, note.category);
+    qualityMeta = metadata as Record<string, unknown>;
+  } else {
+    const { metadata } = scorePlainText(note.content, note.tags, note.category);
+    qualityMeta = metadata as Record<string, unknown>;
+  }
+
+  track({
+    userId: user.userId,
+    actionType: "note_create",
+    metadata: { noteId: note.id, noteTitle: note.title, wordCount: note.wordCount, ...qualityMeta },
+  });
+
+  track({
+    userId: user.userId,
+    actionType: "note_quality_score",
+    metadata: { noteId: note.id, noteTitle: note.title, ...qualityMeta },
   });
 
   return success({ note, gamification });

@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { getIO } from "~/lib/socket";
+import { track } from "~/lib/analytics/tracker";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -50,6 +51,12 @@ export async function POST({ request, params }: { request: Request; params: { id
       username: user.username,
     });
   } catch {}
+
+  track({
+    userId: user.userId,
+    actionType: "guild_leave",
+    metadata: { guildId: params.id },
+  });
 
   return success(null);
 }

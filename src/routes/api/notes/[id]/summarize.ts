@@ -4,6 +4,7 @@ import { success, error } from "~/lib/api-response";
 import { summarizeNote } from "~/lib/ai/summarize";
 import { isAiAvailable } from "~/lib/ai/openai";
 import { processAction, triggerActionNotifications } from "~/lib/gamification/engine";
+import { track } from "~/lib/analytics/tracker";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -15,7 +16,7 @@ export async function POST({ request, params }: { request: Request; params: { id
 
   const note = await prisma.note.findUnique({
     where: { id: params.id },
-    select: { id: true, userId: true, content: true, aiSummary: true },
+    select: { id: true, title: true, userId: true, content: true, aiSummary: true },
   });
 
   if (!note) return error("NOT_FOUND", "Note not found", 404);
@@ -51,6 +52,12 @@ export async function POST({ request, params }: { request: Request; params: { id
   });
 
   triggerActionNotifications(user.userId, gamification);
+
+  track({
+    userId: user.userId,
+    actionType: "note_ai_summarize",
+    metadata: { noteId: note.id, noteTitle: note.title },
+  });
 
   return success({ summary, gamification });
 }
