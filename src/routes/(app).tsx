@@ -115,11 +115,13 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             </div>
             <NavItem href="/quests" icon="📋" label="Quests" />
             <NavItem href="/challenges" icon="🏆" label="Challenges" />
+            <NavItem href="/ai-quests" icon="🎯" label="AI Quests" />
             <NavItem href="/habits" icon="🔥" label="Daily Rituals" />
             <Show when={!isSolo()}>
               <NavItem href="/guilds" icon="🏛️" label="Guilds" />
             </Show>
             <NavItem href="/progress" icon="📊" label="Progress" />
+            <NavItem href="/insights" icon="💡" label="Insights" />
             <div class="px-3 py-1.5 mb-1 mt-2">
               <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Account</p>
             </div>

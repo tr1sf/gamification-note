@@ -42,6 +42,7 @@ model User {
   tasksAssigned   GuildTask[]     @relation("TaskAssignee")
   challenges      Challenge[]
   userThemes      UserTheme[]
+  aiQuests        AIQuest[]
 
   @@index([level])
 }
@@ -142,6 +143,7 @@ model Guild {
   notes    Note[]
   messages GuildMessage[]
   tasks    GuildTask[]
+  goals    GuildGoal[]
 }
 
 model GuildMember {
@@ -410,4 +412,52 @@ model UserTheme {
   theme Theme @relation(fields: [themeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, themeId])
+}
+
+// ── Guild goals ──────────────────────────────────────────────────────────────
+model GuildGoal {
+  id           String   @id @default(uuid()) @db.Uuid
+  guildId      String   @db.Uuid
+  title        String
+  description  String?
+  targetCount  Int
+  currentCount Int      @default(0)
+  startDate    DateTime
+  endDate      DateTime
+  rewardXp     Int      @default(50)
+  rewardCoins  Int      @default(15)
+  isCompleted  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, endDate])
+  @@index([isCompleted])
+}
+
+// ── AI-generated quests ──────────────────────────────────────────────────────
+model AIQuest {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  title       String
+  description String
+  actionType  String
+  target      Int       @default(1)
+  xpReward    Int       @default(10)
+  coinReward  Int       @default(3)
+  source      String    @default("rule")
+  ruleId      String?
+  reason      String?
+  status      String    @default("active")
+  completedAt DateTime?
+  declinedAt  DateTime?
+  expiresAt   DateTime?
+  rewarded    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([status, expiresAt])
 }
