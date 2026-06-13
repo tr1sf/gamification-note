@@ -40,6 +40,7 @@ model User {
   habitCheckins   HabitCheckin[]
   tasksCreated    GuildTask[]     @relation("TaskCreator")
   tasksAssigned   GuildTask[]     @relation("TaskAssignee")
+  challenges      Challenge[]
 
   @@index([level])
 }
@@ -311,4 +312,72 @@ model GuildTask {
 
   @@index([guildId, status])
   @@index([assigneeId, status])
+}
+
+// ── Challenge system (user-defined goals) ────────────────────────────────────
+model Challenge {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  title           String
+  description     String?
+  theme           String   @default("growth")  // growth | journey | puzzle | star | museum | scholar
+  difficulty      String   @default("medium")  // easy | medium | hard | epic
+  iconEmoji       String?                      // e.g. "🌱"
+  iconImageUrl    String?
+  targetProgress  Int      @default(100)
+  currentProgress Int      @default(0)
+  status          String   @default("active")  // active | completed | paused | archived
+  isPublic        Boolean  @default(false)
+  rewardXp        Int      @default(50)
+  rewardCoins     Int      @default(10)
+  completedAt     DateTime?
+  pausedAt        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actions ChallengeAction[]
+
+  @@index([userId, status])
+  @@index([isPublic, status])
+}
+
+model ChallengeAction {
+  id              String   @id @default(uuid()) @db.Uuid
+  challengeId     String   @db.Uuid
+  title           String
+  description     String?
+  iconEmoji       String?
+  progressValue   Int      @default(10)
+  order           Int      @default(0)
+  linkedActionType String?                  // create_note | review_note | ai_summarize | make_public | null = manual
+  linkedTarget    Int?
+  linkedProgress  Int      @default(0)
+  isRepeatable    Boolean  @default(false)
+  maxRepeats      Int?
+  repeatCount     Int      @default(0)
+  status          String   @default("active") // active | completed | paused
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId, order])
+  @@index([status])
+}
+
+model ChallengeTemplate {
+  id              String   @id @default(uuid()) @db.Uuid
+  title           String
+  description     String
+  theme           String   @default("growth")
+  difficulty      String   @default("medium")
+  iconEmoji       String?
+  targetProgress  Int      @default(100)
+  rewardXp        Int      @default(50)
+  rewardCoins     Int      @default(10)
+  defaultActions  Json     @default("[]")
+  usageCount      Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
 }

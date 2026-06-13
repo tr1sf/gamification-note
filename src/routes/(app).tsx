@@ -114,6 +114,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
               <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Adventures</p>
             </div>
             <NavItem href="/quests" icon="📋" label="Quests" />
+            <NavItem href="/challenges" icon="🏆" label="Challenges" />
             <NavItem href="/habits" icon="🔥" label="Daily Rituals" />
             <Show when={!isSolo()}>
               <NavItem href="/guilds" icon="🏛️" label="Guilds" />

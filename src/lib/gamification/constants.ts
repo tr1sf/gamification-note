@@ -19,4 +19,9 @@ export const COIN_REVIEW_NOTE = 1;
 export const COIN_EXPORT_NOTE = 1;
 export const COIN_SHARE_NOTE = 2;
 
+// Challenge system
+export const XP_COMPLETE_CHALLENGE_ACTION = 5;
+export const XP_CREATE_CHALLENGE = 5;
+export const COIN_COMPLETE_CHALLENGE_ACTION = 1;
+
 export const LEVEL_BASE_XP = 100;

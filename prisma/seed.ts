@@ -109,6 +109,175 @@ async function main() {
   }
 
   console.log(`Seeded: +${newQuests} new quests (${quests.length} total), ${items.length} new items, +${newAchievements} new achievements`);
+
+  // Challenge Templates
+  const templateDefs = [
+    {
+      title: "Learn React",
+      description: "Master React fundamentals step by step",
+      theme: "growth",
+      difficulty: "medium",
+      iconEmoji: "🌱",
+      targetProgress: 100,
+      rewardXp: 150,
+      rewardCoins: 30,
+      defaultActions: [
+        { title: "Read React docs", description: "Official React tutorial", iconEmoji: "📖", progressValue: 20, linkedActionType: null },
+        { title: "Build a component", description: "Create your first component", iconEmoji: "⚛️", progressValue: 25, linkedActionType: "create_note" },
+        { title: "Style with CSS", description: "Add TailwindCSS styles", iconEmoji: "🎨", progressValue: 15, linkedActionType: null },
+        { title: "Add state management", description: "Implement useState/context", iconEmoji: "🔄", progressValue: 20, linkedActionType: null },
+        { title: "Deploy your app", description: "Deploy to production", iconEmoji: "🚀", progressValue: 20, linkedActionType: null },
+      ],
+    },
+    {
+      title: "Write a Thesis Chapter",
+      description: "Complete one chapter of your thesis",
+      theme: "scholar",
+      difficulty: "hard",
+      iconEmoji: "📚",
+      targetProgress: 100,
+      rewardXp: 250,
+      rewardCoins: 50,
+      defaultActions: [
+        { title: "Research outline", description: "Create chapter outline", iconEmoji: "📝", progressValue: 15, linkedActionType: "create_note" },
+        { title: "Literature review", description: "Review 5 papers", iconEmoji: "🔍", progressValue: 20, linkedActionType: "review_note" },
+        { title: "First draft", description: "Write 1000 words", iconEmoji: "✍️", progressValue: 30, linkedActionType: "create_note" },
+        { title: "Revise & edit", description: "Review and improve", iconEmoji: "📐", progressValue: 20, linkedActionType: "review_note" },
+        { title: "Final polish", description: "Proofread and format", iconEmoji: "✅", progressValue: 15, linkedActionType: null },
+      ],
+    },
+    {
+      title: "30-Day Writing Habit",
+      description: "Build a daily writing habit for a month",
+      theme: "journey",
+      difficulty: "epic",
+      iconEmoji: "🧭",
+      targetProgress: 300,
+      rewardXp: 500,
+      rewardCoins: 100,
+      defaultActions: [
+        { title: "Daily writing", description: "Write every day", iconEmoji: "📜", progressValue: 10, linkedActionType: "create_note", isRepeatable: true, maxRepeats: 30 },
+      ],
+    },
+    {
+      title: "Knowledge Organizer",
+      description: "Organize and structure your notes",
+      theme: "museum",
+      difficulty: "easy",
+      iconEmoji: "🏛️",
+      targetProgress: 100,
+      rewardXp: 80,
+      rewardCoins: 15,
+      defaultActions: [
+        { title: "Add tags to 5 notes", description: "Categorize your knowledge", iconEmoji: "🏷️", progressValue: 25, linkedActionType: null },
+        { title: "Create 3 structured notes", description: "Use headings and lists", iconEmoji: "📐", progressValue: 25, linkedActionType: "create_note" },
+        { title: "Review 5 old notes", description: "Refresh your memory", iconEmoji: "🔍", progressValue: 25, linkedActionType: "review_note" },
+        { title: "AI summarize 2 notes", description: "Extract key insights", iconEmoji: "✨", progressValue: 25, linkedActionType: "ai_summarize" },
+      ],
+    },
+    {
+      title: "Share Your Knowledge",
+      description: "Make your notes public and help others",
+      theme: "star",
+      difficulty: "easy",
+      iconEmoji: "⭐",
+      targetProgress: 100,
+      rewardXp: 100,
+      rewardCoins: 20,
+      defaultActions: [
+        { title: "Make 3 notes public", description: "Share with the world", iconEmoji: "🌍", progressValue: 34, linkedActionType: "make_public" },
+        { title: "Share a link", description: "Share with a friend", iconEmoji: "🔗", progressValue: 33, linkedActionType: null },
+        { title: "Get a view", description: "Someone reads your note", iconEmoji: "👁️", progressValue: 33, linkedActionType: null },
+      ],
+    },
+    {
+      title: "Study Session",
+      description: "A focused study block",
+      theme: "scholar",
+      difficulty: "medium",
+      iconEmoji: "📖",
+      targetProgress: 100,
+      rewardXp: 120,
+      rewardCoins: 25,
+      defaultActions: [
+        { title: "Create study notes", description: "Take notes on the topic", iconEmoji: "📝", progressValue: 30, linkedActionType: "create_note" },
+        { title: "Review topic", description: "Review yesterday's notes", iconEmoji: "🔍", progressValue: 25, linkedActionType: "review_note" },
+        { title: "Practice exercise", description: "Apply your knowledge", iconEmoji: "✏️", progressValue: 25, linkedActionType: null },
+        { title: "Summarize with AI", description: "Get AI key points", iconEmoji: "✨", progressValue: 20, linkedActionType: "ai_summarize" },
+      ],
+    },
+    {
+      title: "Portfolio Project",
+      description: "Build a complete project from scratch",
+      theme: "puzzle",
+      difficulty: "hard",
+      iconEmoji: "🧩",
+      targetProgress: 100,
+      rewardXp: 300,
+      rewardCoins: 60,
+      defaultActions: [
+        { title: "Plan architecture", description: "Design the system", iconEmoji: "📋", progressValue: 15, linkedActionType: "create_note" },
+        { title: "Set up project", description: "Initialize the codebase", iconEmoji: "⚙️", progressValue: 15, linkedActionType: null },
+        { title: "Build core features", description: "Implement main functionality", iconEmoji: "🔨", progressValue: 35, linkedActionType: "create_note" },
+        { title: "Write documentation", description: "Document your work", iconEmoji: "📄", progressValue: 20, linkedActionType: "create_note" },
+        { title: "Polish & deploy", description: "Final touches", iconEmoji: "🚀", progressValue: 15, linkedActionType: null },
+      ],
+    },
+    {
+      title: "Mindfulness Practice",
+      description: "Build a daily mindfulness routine",
+      theme: "growth",
+      difficulty: "easy",
+      iconEmoji: "🧘",
+      targetProgress: 70,
+      rewardXp: 80,
+      rewardCoins: 15,
+      defaultActions: [
+        { title: "Morning reflection", description: "Write a short journal entry", iconEmoji: "🌅", progressValue: 25, linkedActionType: "create_note", isRepeatable: true, maxRepeats: 7 },
+        { title: "Gratitude note", description: "Write what you're grateful for", iconEmoji: "🙏", progressValue: 25, linkedActionType: "create_note", isRepeatable: true, maxRepeats: 7 },
+        { title: "Review progress", description: "Look back at your journey", iconEmoji: "📊", progressValue: 20, linkedActionType: "review_note" },
+      ],
+    },
+    {
+      title: "Language Learning Sprint",
+      description: "Intensive language learning week",
+      theme: "journey",
+      difficulty: "medium",
+      iconEmoji: "🗣️",
+      targetProgress: 150,
+      rewardXp: 180,
+      rewardCoins: 35,
+      defaultActions: [
+        { title: "Learn vocabulary", description: "Study 20 new words", iconEmoji: "📝", progressValue: 15, linkedActionType: "create_note", isRepeatable: true, maxRepeats: 7 },
+        { title: "Practice writing", description: "Write a short paragraph", iconEmoji: "✍️", progressValue: 20, linkedActionType: "create_note", isRepeatable: true, maxRepeats: 5 },
+        { title: "Review past notes", description: "Review language notes", iconEmoji: "🔍", progressValue: 15, linkedActionType: "review_note", isRepeatable: true, maxRepeats: 3 },
+      ],
+    },
+    {
+      title: "Weekly Review Routine",
+      description: "Build a habit of weekly reflection",
+      theme: "star",
+      difficulty: "easy",
+      iconEmoji: "📊",
+      targetProgress: 400,
+      rewardXp: 200,
+      rewardCoins: 40,
+      defaultActions: [
+        { title: "Week in review", description: "Summarize your week", iconEmoji: "📋", progressValue: 10, linkedActionType: "create_note", isRepeatable: true, maxRepeats: 52 },
+      ],
+    },
+  ];
+
+  let newTemplates = 0;
+  for (const def of templateDefs) {
+    const exists = await prisma.challengeTemplate.findFirst({ where: { title: def.title }, select: { id: true } });
+    if (!exists) {
+      await prisma.challengeTemplate.create({ data: def as any });
+      newTemplates++;
+    }
+  }
+
+  console.log(`Seeded: +${newTemplates} new challenge templates`);
 }
 
 main()
