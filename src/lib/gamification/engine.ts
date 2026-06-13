@@ -8,15 +8,17 @@ import { rotateQuestsIfNeeded } from "./quests/quest-rotation";
 import { checkAchievements } from "./achievements/achievement-checker";
 import { createNotification } from "~/lib/socket/notifications";
 import type { AuditMetadata } from "~/lib/analytics/types";
+import { getActionMessage } from "./messages";
 
 export interface ActionContext {
   userId: string;
-  actionType: "create_note" | "update_note" | "make_public" | "daily_login" | "complete_quest" | "join_guild" | "create_guild" | "ai_summarize";
+  actionType: "create_note" | "update_note" | "make_public" | "daily_login" | "complete_quest" | "join_guild" | "create_guild" | "ai_summarize" | "review_note" | "structured_note" | "export_note" | "share_note" | "add_link";
   metadata?: Record<string, unknown>;
   analyticsMeta?: AuditMetadata;
 }
 
 export interface ActionResult {
+  message: string;
   xpGained: number;
   coinsGained: number;
   leveledUp: boolean;
@@ -73,6 +75,7 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
     const unlockedAchievements = await checkAchievements(tx, ctx.userId, ctx.actionType, ctx.metadata);
 
     return {
+      message: getActionMessage(ctx.actionType, { xp: xpGained, coins: coinsGained, ...ctx.metadata }),
       xpGained,
       coinsGained,
       leveledUp,
@@ -130,6 +133,7 @@ export async function grantReward(opts: {
     });
 
     return {
+      message: getActionMessage(opts.actionType, { xp: xpGained, coins: coinsGained, ...opts.metadata }),
       xpGained,
       coinsGained,
       leveledUp,

@@ -27,6 +27,9 @@ async function main() {
     { title: 'Tavern Regular',   description: 'Log in 5 days this week',         questType: 'weekly', icon: 'fire',    criteria: { action: 'daily_login',  count: 5 },   xpReward: 80,  coinReward: 20 },
     { title: 'Public Library',   description: 'Make 10 notes public this week',  questType: 'weekly', icon: 'share',   criteria: { action: 'make_public',  count: 10 },  xpReward: 120, coinReward: 40 },
     { title: 'AI Scribe',        description: 'Use AI to summarize 1 note today', questType: 'daily',  icon: 'sparkle', criteria: { action: 'ai_summarize', count: 1 },   xpReward: 20,  coinReward: 5 },
+    { title: 'Knowledge Keeper', description: 'Review 1 old note (>7 days)',     questType: 'daily',  icon: 'book',    criteria: { action: 'review_note',   count: 1 },   xpReward: 15,  coinReward: 3 },
+    { title: 'Architect',        description: 'Create 5 structured notes',         questType: 'weekly', icon: 'layout',  criteria: { action: 'structured_note', count: 5 },  xpReward: 50,  coinReward: 15 },
+    { title: 'Scribe Weekly',    description: 'Review 5 old notes this week',     questType: 'weekly', icon: 'book',    criteria: { action: 'review_note',   count: 5 },   xpReward: 60,  coinReward: 15 },
   ];
 
   let newQuests = 0;
@@ -94,6 +97,9 @@ async function main() {
     { title: 'Guild Leader',     description: 'Create a guild',            icon: 'crown',   criteria: { action: 'create_guild', count: 1 },     xpReward: 150 },
     { title: 'Quest Champion',   description: 'Complete 30 quests',        icon: 'trophy',  criteria: { action: 'complete_quest', count: 30 }, xpReward: 250 },
     { title: 'AI Scholar',       description: 'Use AI to summarize your first note', icon: 'sparkle', criteria: { action: 'ai_summarize', count: 1 }, xpReward: 50 },
+    { title: 'Historian',        description: 'Review 50 old notes',                icon: 'book',    criteria: { action: 'review_note',   count: 50 }, xpReward: 100 },
+    { title: 'Builder',          description: 'Create 100 structured notes',        icon: 'layout',  criteria: { action: 'structured_note', count: 100 }, xpReward: 200 },
+    { title: 'Ambassador',       description: 'Get 10 views on shared notes',       icon: 'share',   criteria: { action: 'share_note',   count: 10 }, xpReward: 150 },
   ];
 
   let newAchievements = 0;

@@ -29,6 +29,7 @@ export default function QuestBoard(props: QuestBoardProps) {
       applyReward(result.data.gamification);
       if (result.data.gamification.xpGained > 0 || result.data.gamification.coinsGained > 0) {
         showReward({
+          message: result.data.gamification.message,
           xp: result.data.gamification.xpGained,
           coins: result.data.gamification.coinsGained,
           leveledUp: result.data.gamification.leveledUp,

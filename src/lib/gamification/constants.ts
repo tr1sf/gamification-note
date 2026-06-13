@@ -6,7 +6,17 @@ export const XP_DAILY_LOGIN = 5;
 export const XP_DAILY_STREAK_MULTIPLIER = 5;
 export const XP_AI_SUMMARIZE = 15;
 
+// Phase B: Quality-based actions
+export const XP_REVIEW_NOTE = 5;
+export const XP_STRUCTURED_NOTE = 8;
+export const XP_EXPORT_NOTE = 3;
+export const XP_SHARE_NOTE = 5;
+export const XP_ADD_LINK = 3;
+
 export const COIN_DAILY_LOGIN = 5;
 export const COIN_AI_SUMMARIZE = 3;
+export const COIN_REVIEW_NOTE = 1;
+export const COIN_EXPORT_NOTE = 1;
+export const COIN_SHARE_NOTE = 2;
 
 export const LEVEL_BASE_XP = 100;

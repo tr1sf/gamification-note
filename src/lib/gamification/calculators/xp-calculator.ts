@@ -6,6 +6,11 @@ import {
   XP_DAILY_LOGIN,
   XP_DAILY_STREAK_MULTIPLIER,
   XP_AI_SUMMARIZE,
+  XP_REVIEW_NOTE,
+  XP_STRUCTURED_NOTE,
+  XP_EXPORT_NOTE,
+  XP_SHARE_NOTE,
+  XP_ADD_LINK,
 } from "../constants";
 
 export function calculateXP(actionType: string, metadata?: Record<string, unknown>): number {
@@ -35,6 +40,16 @@ export function calculateXP(actionType: string, metadata?: Record<string, unknow
       return 0;
     case "ai_summarize":
       return XP_AI_SUMMARIZE;
+    case "review_note":
+      return XP_REVIEW_NOTE;
+    case "structured_note":
+      return XP_STRUCTURED_NOTE;
+    case "export_note":
+      return XP_EXPORT_NOTE;
+    case "share_note":
+      return XP_SHARE_NOTE;
+    case "add_link":
+      return XP_ADD_LINK;
     default:
       return 0;
   }

@@ -6,6 +6,7 @@ export interface GamificationState {
   level: number;
   title: string;
   streak: number;
+  gamificationStyle: string;
 }
 
 const [gamification, setGamification] = createSignal<GamificationState>({
@@ -14,6 +15,7 @@ const [gamification, setGamification] = createSignal<GamificationState>({
   level: 1,
   title: "Novice Scribe",
   streak: 0,
+  gamificationStyle: "balanced",
 });
 
 export { gamification };
@@ -37,8 +39,16 @@ export function xpProgressInLevel(xp: number, level: number): { current: number;
   return { current, needed };
 }
 
-export function syncFromUser(userData: { xp: number; coins: number; level: number; title: string; streak?: number }) {
-  setGamification((prev) => ({ ...prev, ...userData }));
+export function syncFromUser(userData: { xp: number; coins: number; level: number; title: string; streak?: number; gamificationStyle?: string }) {
+  setGamification((prev) => ({
+    ...prev,
+    xp: userData.xp,
+    coins: userData.coins,
+    level: userData.level,
+    title: userData.title,
+    ...(userData.streak !== undefined ? { streak: userData.streak } : {}),
+    ...(userData.gamificationStyle ? { gamificationStyle: userData.gamificationStyle } : {}),
+  }));
 }
 
 export function setCoins(coins: number) {

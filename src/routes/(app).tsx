@@ -46,12 +46,15 @@ export default function AppLayout(props: { children?: JSX.Element }) {
   createEffect(() => {
     const u = user();
     if (u) {
-      syncFromUser({ xp: u.xp, coins: u.coins, level: u.level, title: u.title, streak: u.streak });
+      syncFromUser({ xp: u.xp, coins: u.coins, level: u.level, title: u.title, streak: u.streak, gamificationStyle: (u as any).gamificationStyle });
       fetchActiveQuests();
     }
   });
 
   const g = () => gamification();
+  const style = () => g().gamificationStyle ?? "balanced";
+  const isMinimal = () => style() === "minimal";
+  const isSolo = () => style() === "solo";
 
   return (
     <Show when={!loading() && user()} fallback={
@@ -112,8 +115,10 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             </div>
             <NavItem href="/quests" icon="📋" label="Quests" />
             <NavItem href="/habits" icon="🔥" label="Daily Rituals" />
-            <NavItem href="/guilds" icon="🏛️" label="Guilds" />
-            <NavItem href="/leaderboard" icon="🏆" label="Leaderboard" />
+            <Show when={!isSolo()}>
+              <NavItem href="/guilds" icon="🏛️" label="Guilds" />
+              <NavItem href="/leaderboard" icon="🏆" label="Leaderboard" />
+            </Show>
             <div class="px-3 py-1.5 mb-1 mt-2">
               <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Account</p>
             </div>
@@ -160,7 +165,9 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             </button>
 
             <div class="hidden sm:block">
-              <XPBar xp={g().xp} level={g().level} compact />
+              <Show when={!isMinimal()}>
+                <XPBar xp={g().xp} level={g().level} compact />
+              </Show>
             </div>
 
             <div class="flex-1" />

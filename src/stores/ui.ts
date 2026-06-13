@@ -65,6 +65,7 @@ export function dismissToast(id: string) {
 
 export interface RewardEntry {
   id: string;
+  message?: string;
   xp?: number;
   coins?: number;
   achievement?: string;

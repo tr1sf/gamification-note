@@ -94,7 +94,7 @@ export async function POST({ request }: { request: Request }) {
     select: {
       id: true, email: true, username: true, avatarUrl: true,
       level: true, xp: true, coins: true, streak: true, title: true, role: true,
-      createdAt: true,
+      gamificationStyle: true, createdAt: true,
     },
   });
 

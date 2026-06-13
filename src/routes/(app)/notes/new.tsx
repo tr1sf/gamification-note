@@ -72,6 +72,7 @@ export default function NewNotePage() {
         if (g) {
           applyReward(g);
           showReward({
+            message: g.message,
             xp: g.xpGained,
             coins: g.coinsGained,
             leveledUp: g.leveledUp,

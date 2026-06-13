@@ -18,6 +18,7 @@ model User {
   title            String    @default("Novice Scribe")
   streak           Int       @default(0)
   role             String    @default("user")
+  gamificationStyle String   @default("balanced") // competitive | collaborative | solo | minimal | balanced
   refreshTokenHash String?
   lastLoginAt      DateTime?
   emailVerifiedAt  DateTime?

@@ -15,6 +15,9 @@ export default function RewardPopup() {
               border: "1px solid var(--color-surface-border)",
             }}
           >
+            <Show when={reward.message}>
+              <p class="text-ink-primary text-sm leading-relaxed">{reward.message}</p>
+            </Show>
             <Show when={reward.achievement}>
               <div class="flex items-center gap-2">
                 <span class="text-xl">🏆</span>
