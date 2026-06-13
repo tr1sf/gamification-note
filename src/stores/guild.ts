@@ -6,12 +6,26 @@ export interface Guild {
   name: string;
   description: string;
   isPublic: boolean;
-  inviteCode: string;
+  inviteCode?: string; // only returned to owner/admin
   memberCount: number;
+  maxMembers?: number;
+  isMember?: boolean;
   createdAt: string;
   ownerId: string;
   owner?: { id: string; username: string };
   role?: "owner" | "admin" | "member";
+}
+
+export interface GuildNote {
+  id: string;
+  title: string;
+  excerpt: string;
+  category: string | null;
+  tags: string[];
+  wordCount: number;
+  isPublic: boolean;
+  updatedAt: string;
+  author: { id: string; username: string };
 }
 
 export interface GuildMember {
@@ -81,8 +95,12 @@ export async function fetchGuild(id: string): Promise<Guild | null> {
     const res = await authFetch(`/api/guilds/${id}`);
     const json = await res.json();
     if (json.success) {
-      setCurrentGuild(json.data);
-      return json.data;
+      const guild: Guild = {
+        ...json.data,
+        memberCount: json.data._count?.members ?? json.data.memberCount ?? 0,
+      };
+      setCurrentGuild(guild);
+      return guild;
     }
     return null;
   } catch {
@@ -178,6 +196,82 @@ export async function deleteGuild(guildId: string): Promise<boolean> {
     if (json.success) {
       setGuilds((prev) => prev.filter((g) => g.id !== guildId));
     }
+    return json.success;
+  } catch {
+    return false;
+  }
+}
+
+export async function regenerateInvite(guildId: string): Promise<string | null> {
+  try {
+    const res = await authFetch(`/api/guilds/${guildId}/invite`, { method: "POST" });
+    const json = await res.json();
+    return json.success ? (json.data?.inviteCode ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateMemberRole(
+  guildId: string,
+  userId: string,
+  role: "owner" | "admin" | "member"
+): Promise<boolean> {
+  try {
+    const res = await authFetch(`/api/guilds/${guildId}/members/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
+    const json = await res.json();
+    return json.success;
+  } catch {
+    return false;
+  }
+}
+
+export async function kickMember(guildId: string, userId: string): Promise<boolean> {
+  try {
+    const res = await authFetch(`/api/guilds/${guildId}/members/${userId}`, {
+      method: "DELETE",
+    });
+    const json = await res.json();
+    return json.success;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchGuildNotes(guildId: string): Promise<GuildNote[]> {
+  try {
+    const res = await authFetch(`/api/guilds/${guildId}/notes`);
+    const json = await res.json();
+    return json.success ? (json.data?.items ?? []) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function shareNoteToGuild(guildId: string, noteId: string): Promise<boolean> {
+  try {
+    const res = await authFetch(`/api/guilds/${guildId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ noteId }),
+    });
+    const json = await res.json();
+    return json.success;
+  } catch {
+    return false;
+  }
+}
+
+export async function unshareNoteFromGuild(guildId: string, noteId: string): Promise<boolean> {
+  try {
+    const res = await authFetch(`/api/guilds/${guildId}/notes/${noteId}`, {
+      method: "DELETE",
+    });
+    const json = await res.json();
     return json.success;
   } catch {
     return false;

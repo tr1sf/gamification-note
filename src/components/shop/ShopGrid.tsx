@@ -62,7 +62,7 @@ export default function ShopGrid(props: ShopGridProps) {
                   <button
                     onClick={() => props.onBuy(item.id)}
                     disabled={!canAfford() || isBuying()}
-                    class="px-3 py-1 text-xs font-semibold rounded-md bg-accent text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    class="px-3 py-1 text-xs font-semibold rounded-md bg-accent text-surface-overlay hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title={!canAfford() ? "Not enough coins" : "Buy item"}
                   >
                     {isBuying() ? "Buying..." : !canAfford() ? "Not enough coins" : "Buy"}

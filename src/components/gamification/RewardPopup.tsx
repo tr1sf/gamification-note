@@ -9,10 +9,10 @@ export default function RewardPopup() {
           <div
             class="flex flex-col gap-1 px-4 py-3 rounded-lg shadow-lg text-sm font-medium pointer-events-auto"
             style={{
-              background: "rgb(var(--color-surface-elevated))",
-              color: "rgb(var(--color-ink-primary))",
+              background: "var(--color-surface-elevated)",
+              color: "var(--color-ink-primary)",
               animation: "slide-in 0.4s ease-out",
-              border: "1px solid rgb(var(--color-surface-border))",
+              border: "1px solid var(--color-surface-border)",
             }}
           >
             <Show when={reward.achievement}>

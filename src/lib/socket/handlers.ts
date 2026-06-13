@@ -120,6 +120,7 @@ export function registerHandlers(socket: Socket): void {
       io.to(`guild:${guildId}`).emit("guild:message", {
         id: message.id,
         guildId,
+        userId,
         user: { id: userId, username },
         content: message.content,
         createdAt: message.createdAt.toISOString(),

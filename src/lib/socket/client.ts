@@ -10,6 +10,15 @@ async function getSocket(): Promise<Socket> {
 
   if (initPromise) return initPromise;
 
+  // Socket was created before but is currently disconnected (e.g. the socket
+  // server started after the page loaded and the client exhausted its retries).
+  // Reuse the existing instance and kick off a reconnect rather than building a
+  // second socket, which would orphan the listeners registered on the first.
+  if (socket) {
+    socket.connect();
+    return socket;
+  }
+
   initPromise = (async () => {
     const socketUrl = typeof window !== "undefined"
       ? `http://${window.location.hostname}:3001`
@@ -19,7 +28,9 @@ async function getSocket(): Promise<Socket> {
       autoConnect: false,
       transports: ["websocket", "polling"],
       reconnectionDelayMax: 10000,
-      reconnectionAttempts: 10,
+      // Keep retrying indefinitely so a socket server that comes up *after* the
+      // page loaded is eventually picked up (common in local dev).
+      reconnectionAttempts: Infinity,
     });
 
     const res = await authFetch("/api/auth/socket-token", { method: "POST" });
@@ -81,10 +92,18 @@ export function useSocket() {
   return {
     socket: () => socket,
     connected,
+    // Ensure the socket exists and a (re)connection is in flight, then resolve
+    // with the live connection state. Lets callers await connectivity before a
+    // critical emit instead of dropping it.
+    ensureConnected: async (): Promise<boolean> => {
+      const s = await getSocket();
+      return !!s?.connected;
+    },
+    // No `connected` guard: socket.io buffers emits made while disconnected and
+    // flushes them on (re)connect, so a message sent during a brief reconnect
+    // is delivered rather than silently dropped.
     emit: (event: string, data?: unknown) => {
-      if (socket?.connected) {
-        socket.emit(event, data);
-      }
+      socket?.emit(event, data);
     },
     on: (event: string, handler: (...args: any[]) => void) => {
       socket?.on(event, handler);

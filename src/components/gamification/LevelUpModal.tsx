@@ -91,7 +91,7 @@ export default function LevelUpModal() {
           </Show>
           <button
             onClick={dismiss}
-            class="mt-4 px-6 py-2 bg-accent text-white rounded-lg font-semibold hover:bg-accent-hover transition-colors"
+            class="mt-4 px-6 py-2 bg-accent text-surface-overlay rounded-lg font-semibold hover:bg-accent-hover transition-colors"
           >
             Continue
           </button>

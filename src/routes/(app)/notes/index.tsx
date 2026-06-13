@@ -67,7 +67,7 @@ export default function NotesPage() {
       <Breadcrumb items={[{ label: "My Notes" }]} />
       <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-display font-bold text-ink-primary">My Notes</h1>
-        <A href="/notes/new" class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] transition-all duration-150">
+        <A href="/notes/new" class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-surface-overlay rounded-lg text-sm font-medium hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] transition-all duration-150">
           + New Note
         </A>
       </div>
@@ -138,7 +138,7 @@ export default function NotesPage() {
                   </div>
                   <p class="text-ink-primary font-medium mb-1">No notes yet</p>
                   <p class="text-ink-secondary/60 text-sm mb-4">Start writing your first note</p>
-                  <A href="/notes/new" class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors">+ New Note</A>
+                  <A href="/notes/new" class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-surface-overlay rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors">+ New Note</A>
                 </>
               )}
             </div>

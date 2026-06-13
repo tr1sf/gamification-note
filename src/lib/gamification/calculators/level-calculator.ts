@@ -4,9 +4,12 @@ const LEVEL_TITLES: Record<number, string> = {
   1: "Novice Scribe",
   5: "Apprentice Scribe",
   10: "Scribe",
+  15: "Senior Scribe",
   20: "Scholar",
   30: "Archivist",
+  40: "Master Archivist",
   50: "Grand Archivist",
+  60: "Sage",
   75: "Lore Master",
   100: "Tavern Sage",
 };

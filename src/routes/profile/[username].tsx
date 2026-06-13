@@ -26,7 +26,7 @@ export default function PublicProfilePage() {
           <A href="/" class="text-lg font-display font-bold text-accent hover:text-accent-hover transition-colors">TavernoteX</A>
           <div class="flex items-center gap-3">
             <A href="/login" class="text-sm text-ink-secondary hover:text-accent transition-colors">Sign in</A>
-            <A href="/register" class="px-3 py-1.5 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover transition-colors">Join free</A>
+            <A href="/register" class="px-3 py-1.5 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover transition-colors">Join free</A>
           </div>
         </div>
       </header>

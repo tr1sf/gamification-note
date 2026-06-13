@@ -61,7 +61,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
           <div class="h-7 w-32 bg-surface-border rounded animate-pulse" />
           <div class="space-y-3 mt-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div class="h-8 bg-surface-hover rounded-md" style="animation: shimmer 1.5s infinite linear; background: linear-gradient(90deg, rgb(var(--color-surface-hover)) 25%, rgb(var(--color-surface-border)) 50%, rgb(var(--color-surface-hover)) 75%); background-size: 200% 100%;" />
+              <div class="h-8 bg-surface-hover rounded-md" style="animation: shimmer 1.5s infinite linear; background: linear-gradient(90deg, var(--color-surface-hover) 25%, var(--color-surface-border) 50%, var(--color-surface-hover) 75%); background-size: 200% 100%;" />
             ))}
           </div>
         </div>
@@ -91,7 +91,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
       <LevelUpModal />
       <div class="flex h-screen overflow-hidden bg-surface">
         {/* Sidebar */}
-        <aside class={`${uiStore.sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-surface-elevated border-r border-surface-border flex flex-col transition-transform duration-200`} style="box-shadow: inset -1px 0 0 rgb(var(--color-accent) / 0.06);">
+        <aside class={`${uiStore.sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-surface-elevated border-r border-surface-border flex flex-col transition-transform duration-200`} style="box-shadow: inset -1px 0 0 color-mix(in oklab, var(--color-accent) 6%, transparent);">
           <div class="relative p-4 border-b border-surface-border">
             <div class="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" aria-hidden="true" />
             <h1 class="text-xl font-display font-bold text-ink-primary">TavernoteX</h1>
@@ -111,6 +111,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
               <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Adventures</p>
             </div>
             <NavItem href="/quests" icon="📋" label="Quests" />
+            <NavItem href="/habits" icon="🔥" label="Daily Rituals" />
             <NavItem href="/guilds" icon="🏛️" label="Guilds" />
             <NavItem href="/leaderboard" icon="🏆" label="Leaderboard" />
             <div class="px-3 py-1.5 mb-1 mt-2">
@@ -208,7 +209,7 @@ function NavItem(props: { href: string; icon: string; label: string }) {
       <span
         class={`transition-transform duration-200 group-hover:scale-110 ${isActive() ? "text-accent" : "text-ink-secondary/60 group-hover:text-ink-secondary"}`}
         aria-hidden="true"
-        style={isActive() ? "filter: drop-shadow(0 0 4px rgb(var(--color-accent) / 0.3));" : ""}
+        style={isActive() ? "filter: drop-shadow(0 0 4px color-mix(in oklab, var(--color-accent) 30%, transparent));" : ""}
       >
         {props.icon}
       </span>

@@ -52,16 +52,42 @@ export function parseBlocks(content: string): Block[] {
   return [createBlock('text')];
 }
 
+const exportLines = (s: string) => s.split('\n').map(l => l.trim()).filter(Boolean);
+
+type ExportGroup =
+  | { kind: 'ul'; items: string[] }
+  | { kind: 'ol'; items: string[] }
+  | { kind: 'block'; block: Block };
+
+// Group consecutive bullet/numbered list blocks (each block is one item) so
+// exports render a single, correctly-numbered list instead of many 1-item lists.
+function groupForExport(blocks: Block[]): ExportGroup[] {
+  const groups: ExportGroup[] = [];
+  for (const b of blocks) {
+    if (b.type === 'bullet_list' || b.type === 'numbered_list') {
+      const kind: 'ul' | 'ol' = b.type === 'bullet_list' ? 'ul' : 'ol';
+      const items = exportLines(b.content);
+      const last = groups[groups.length - 1];
+      if (last && last.kind === kind) last.items.push(...items);
+      else groups.push(kind === 'ul' ? { kind: 'ul', items } : { kind: 'ol', items });
+    } else {
+      groups.push({ kind: 'block', block: b });
+    }
+  }
+  return groups;
+}
+
 export function blocksToMarkdown(blocks: Block[]): string {
-  return blocks.map(b => {
+  return groupForExport(blocks).map((g) => {
+    if (g.kind === 'ul') return g.items.map((l) => `- ${l}`).join('\n');
+    if (g.kind === 'ol') return g.items.map((l, i) => `${i + 1}. ${l}`).join('\n');
+    const b = g.block;
     switch (b.type) {
       case 'heading1': return `# ${b.content}`;
       case 'heading2': return `## ${b.content}`;
       case 'heading3': return `### ${b.content}`;
       case 'quote': return b.content.split('\n').map(l => `> ${l}`).join('\n');
       case 'divider': return '---';
-      case 'bullet_list': return b.content.split('\n').filter(l => l.trim()).map(l => `- ${l}`).join('\n');
-      case 'numbered_list': return b.content.split('\n').filter(l => l.trim()).map((l, i) => `${i + 1}. ${l}`).join('\n');
       case 'code': return '```' + (b.language || '') + '\n' + b.content + '\n```';
       case 'callout': return `> **${b.calloutIcon || '💡'} ${b.content}**`;
       case 'todo': return `- [${b.checked ? 'x' : ' '}] ${b.content}`;
@@ -71,7 +97,10 @@ export function blocksToMarkdown(blocks: Block[]): string {
 }
 
 export function blocksToHtml(blocks: Block[]): string {
-  return blocks.map(b => {
+  return groupForExport(blocks).map((g) => {
+    if (g.kind === 'ul') return `<ul class="list-disc pl-6 space-y-1 my-2 text-ink-primary">${g.items.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
+    if (g.kind === 'ol') return `<ol class="list-decimal pl-6 space-y-1 my-2 text-ink-primary">${g.items.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ol>`;
+    const b = g.block;
     const c = escapeHtml(b.content).replace(/\n/g, '<br/>');
     switch (b.type) {
       case 'heading1': return `<h1 class="text-2xl font-display font-bold text-ink-primary mt-6 mb-2">${c}</h1>`;
@@ -79,8 +108,6 @@ export function blocksToHtml(blocks: Block[]): string {
       case 'heading3': return `<h3 class="text-lg font-display font-semibold text-ink-primary mt-4 mb-1">${c}</h3>`;
       case 'quote': return `<blockquote class="border-l-3 border-accent pl-4 my-2 text-ink-secondary italic">${c}</blockquote>`;
       case 'divider': return '<hr class="my-4 border-surface-border" />';
-      case 'bullet_list': return `<ul class="list-disc pl-5 space-y-1 my-2 text-ink-primary">${b.content.split('\n').filter(l => l.trim()).map(l => `<li>${escapeHtml(l.trim())}</li>`).join('')}</ul>`;
-      case 'numbered_list': return `<ol class="list-decimal pl-5 space-y-1 my-2 text-ink-primary">${b.content.split('\n').filter(l => l.trim()).map((l, i) => `<li>${escapeHtml(l.trim())}</li>`).join('')}</ol>`;
       case 'code': return `<pre class="bg-surface-hover rounded-lg p-3 my-2 overflow-x-auto text-sm font-mono"><code>${c}</code></pre>`;
       case 'callout': return `<div class="flex items-start gap-3 bg-accent/10 border border-accent/20 rounded-lg p-3 my-2"><span class="text-lg shrink-0">${escapeHtml(b.calloutIcon || '💡')}</span><div class="text-sm text-ink-primary">${c}</div></div>`;
       case 'todo': return `<div class="flex items-start gap-2 my-1"><span class="mt-0.5 text-sm">${b.checked ? '☑' : '☐'}</span><span class="text-sm text-ink-primary ${b.checked ? 'line-through text-ink-secondary/50' : ''}">${c}</span></div>`;
@@ -138,4 +165,29 @@ export function computeWordCount(content: string): number {
     return computeBlockWordCount(parseBlocks(content));
   }
   return content.split(/\s+/).filter(Boolean).length;
+}
+
+// Notion-style editing treats each list item as its own block. Legacy notes
+// stored an entire list as one multiline `bullet_list`/`numbered_list` block,
+// so split those into per-item blocks when loading into the editor. Idempotent
+// and safe for the renderer (which already splits multiline content too).
+const LIST_TYPES: ReadonlySet<BlockType> = new Set<BlockType>(['bullet_list', 'numbered_list']);
+
+export function normalizeBlocks(blocks: Block[]): Block[] {
+  const out: Block[] = [];
+  for (const b of blocks) {
+    if (LIST_TYPES.has(b.type) && b.content.includes('\n')) {
+      const lines = b.content.split('\n').filter((l) => l.trim().length > 0);
+      if (lines.length === 0) {
+        out.push({ ...b, content: '' });
+      } else {
+        for (const line of lines) {
+          out.push({ id: crypto.randomUUID(), type: b.type, content: line.trim() });
+        }
+      }
+    } else {
+      out.push(b);
+    }
+  }
+  return out.length > 0 ? out : [createBlock('text')];
 }

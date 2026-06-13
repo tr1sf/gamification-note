@@ -10,7 +10,7 @@ import { createNotification } from "~/lib/socket/notifications";
 
 export interface ActionContext {
   userId: string;
-  actionType: "create_note" | "update_note" | "make_public" | "daily_login" | "complete_quest" | "join_guild" | "create_guild";
+  actionType: "create_note" | "update_note" | "make_public" | "daily_login" | "complete_quest" | "join_guild" | "create_guild" | "ai_summarize";
   metadata?: Record<string, unknown>;
 }
 
@@ -72,6 +72,59 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
       unlockedAchievements,
       questProgress,
     };
+  }) as Promise<ActionResult>;
+}
+
+// Grant an explicit XP/coin reward (e.g. habit check-in, approved guild task)
+// where the amount is configured per-item rather than derived from an action
+// type. Mirrors processAction's user update + level recalculation + audit log.
+export async function grantReward(opts: {
+  userId: string;
+  xp: number;
+  coins: number;
+  actionType: string;
+  metadata?: Record<string, unknown>;
+}): Promise<ActionResult> {
+  const xpGained = Math.max(0, Math.round(opts.xp || 0));
+  const coinsGained = Math.max(0, Math.round(opts.coins || 0));
+
+  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const rows = await tx.$queryRaw<Array<{ xp: number; level: number }>>`
+      SELECT xp, level FROM "User" WHERE id = ${opts.userId}::uuid FOR UPDATE
+    `;
+    const user = rows[0];
+    const newXp = user.xp + xpGained;
+    const newLevel = calculateLevel(newXp);
+    const leveledUp = newLevel > user.level;
+
+    await tx.user.update({
+      where: { id: opts.userId },
+      data: {
+        xp: { increment: xpGained },
+        coins: { increment: coinsGained },
+        ...(leveledUp ? { level: newLevel, title: getLevelTitle(newLevel) } : {}),
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        userId: opts.userId,
+        actionType: opts.actionType,
+        xpChange: xpGained,
+        coinChange: coinsGained,
+        metadata: (opts.metadata ?? {}) as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      xpGained,
+      coinsGained,
+      leveledUp,
+      newLevel: leveledUp ? newLevel : undefined,
+      newTitle: leveledUp ? getLevelTitle(newLevel) : undefined,
+      unlockedAchievements: [],
+      questProgress: [],
+    } as ActionResult;
   }) as Promise<ActionResult>;
 }
 

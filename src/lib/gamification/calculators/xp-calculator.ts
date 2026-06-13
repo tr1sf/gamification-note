@@ -5,6 +5,7 @@ import {
   XP_MAKE_PUBLIC,
   XP_DAILY_LOGIN,
   XP_DAILY_STREAK_MULTIPLIER,
+  XP_AI_SUMMARIZE,
 } from "../constants";
 
 export function calculateXP(actionType: string, metadata?: Record<string, unknown>): number {
@@ -32,6 +33,8 @@ export function calculateXP(actionType: string, metadata?: Record<string, unknow
       return 0;
     case "create_guild":
       return 0;
+    case "ai_summarize":
+      return XP_AI_SUMMARIZE;
     default:
       return 0;
   }

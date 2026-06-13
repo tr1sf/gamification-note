@@ -1,27 +1,32 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+/* Fonts are loaded via <link> in entry-server.tsx <head> (a CSS @import after
+   the Tailwind import is invalid ordering and can fail to load the fonts). */
 
 @theme {
-  --color-surface: 252 245 232;
-  --color-surface-elevated: 255 252 245;
-  --color-surface-overlay: 20 15 5;
-  --color-surface-border: 219 198 165;
-  --color-surface-hover: 243 230 208;
-  --color-ink-primary: 47 33 22;
-  --color-ink-secondary: 130 110 85;
-  --color-accent: 184 134 31;
-  --color-accent-hover: 200 150 35;
-  --color-xp: 46 139 87;
-  --color-coin: 218 160 35;
-  --color-error: 183 54 42;
-  --color-error-bg: 254 240 236;
-  --color-success: 47 133 62;
-  --color-success-bg: 237 248 234;
-  --color-rarity-common: 148 140 125;
-  --color-rarity-uncommon: 67 160 71;
-  --color-rarity-rare: 66 133 190;
-  --color-rarity-epic: 142 68 173;
-  --color-rarity-legendary: 243 156 18;
+  /* ── Light: clean warm parchment, high-contrast ink ──
+     Colors are wrapped in rgb() so Tailwind v4 generates valid utilities
+     (e.g. `.text-accent { color: var(--color-accent) }`). The `/opacity`
+     modifiers still work via color-mix. */
+  --color-surface: rgb(247 241 227);
+  --color-surface-elevated: rgb(255 253 246);
+  --color-surface-overlay: rgb(26 20 14);
+  --color-surface-border: rgb(214 196 160);
+  --color-surface-hover: rgb(240 232 214);
+  --color-ink-primary: rgb(41 31 20);
+  --color-ink-secondary: rgb(107 90 68);
+  --color-accent: rgb(156 110 26);
+  --color-accent-hover: rgb(176 128 36);
+  --color-xp: rgb(47 120 70);
+  --color-coin: rgb(168 122 28);
+  --color-error: rgb(176 42 32);
+  --color-error-bg: rgb(250 235 232);
+  --color-success: rgb(45 118 58);
+  --color-success-bg: rgb(234 246 232);
+  --color-rarity-common: rgb(122 112 96);
+  --color-rarity-uncommon: rgb(60 140 66);
+  --color-rarity-rare: rgb(52 116 176);
+  --color-rarity-epic: rgb(134 72 168);
+  --color-rarity-legendary: rgb(196 124 22);
   --font-display: 'Cinzel', serif;
   --font-body: 'Crimson Text', serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -52,63 +57,86 @@
 }
 
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgb(var(--color-accent) / 0.15); }
-  50% { box-shadow: 0 0 16px rgb(var(--color-accent) / 0.3); }
+  0%, 100% { box-shadow: 0 0 8px color-mix(in oklab, var(--color-accent) 15%, transparent); }
+  50% { box-shadow: 0 0 16px color-mix(in oklab, var(--color-accent) 30%, transparent); }
 }
 
 @variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @layer base {
+  html {
+    /* Slightly larger root so the serif body reads comfortably (scales rem utilities). */
+    font-size: 16.5px;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    background-color: rgb(var(--color-surface));
+    background-color: var(--color-surface);
     background-image:
-      repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(139, 119, 90, 0.02) 3px, rgba(139, 119, 90, 0.02) 4px);
+      repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(120, 96, 60, 0.012) 3px, rgba(120, 96, 60, 0.012) 4px);
     background-attachment: fixed;
+    color: var(--color-ink-primary);
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.25;
+    color: var(--color-ink-primary);
   }
 
   [data-theme="dark"] {
-    --color-surface: 20 15 8;
-    --color-surface-elevated: 32 24 14;
-    --color-surface-border: 65 50 30;
-    --color-surface-hover: 50 38 22;
-    --color-ink-primary: 238 225 200;
-    --color-ink-secondary: 170 150 118;
-    --color-accent: 205 155 40;
-    --color-accent-hover: 225 175 50;
-    --color-xp: 72 190 112;
-    --color-coin: 240 185 45;
-    --color-error: 210 70 55;
-    --color-error-bg: 45 18 15;
-    --color-success: 70 175 85;
-    --color-success-bg: 18 38 20;
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
-    --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.5);
+    /* ── Dark: warm candlelit espresso, readable near-white ink ── */
+    --color-surface: rgb(26 20 14);
+    --color-surface-elevated: rgb(38 29 19);
+    --color-surface-border: rgb(74 58 38);
+    --color-surface-hover: rgb(52 40 26);
+    --color-ink-primary: rgb(247 246 243);
+    --color-ink-secondary: rgb(202 194 182);
+    --color-accent: rgb(224 174 86);
+    --color-accent-hover: rgb(240 196 116);
+    --color-xp: rgb(126 184 104);
+    --color-coin: rgb(232 184 80);
+    --color-error: rgb(232 132 116);
+    --color-error-bg: rgb(48 22 18);
+    --color-success: rgb(120 188 120);
+    --color-success-bg: rgb(22 40 24);
+    --color-rarity-common: rgb(176 164 144);
+    --color-rarity-uncommon: rgb(118 196 126);
+    --color-rarity-rare: rgb(124 178 232);
+    --color-rarity-epic: rgb(198 150 232);
+    --color-rarity-legendary: rgb(240 184 88);
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 24px 56px rgba(0, 0, 0, 0.6);
   }
 
   [data-theme="dark"] body {
     background-image:
-      radial-gradient(ellipse at 50% 30%, rgba(50, 38, 22, 0.6) 0%, rgba(20, 15, 8, 0.9) 50%, rgba(12, 8, 4, 1) 100%),
-      repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(40, 30, 15, 0.04) 2px, rgba(40, 30, 15, 0.04) 4px);
+      radial-gradient(ellipse at 50% 22%, rgba(74, 56, 34, 0.45) 0%, rgba(30, 22, 14, 0.85) 48%, rgba(18, 13, 8, 1) 100%),
+      repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(60, 46, 26, 0.03) 3px, rgba(60, 46, 26, 0.03) 5px);
   }
 
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   textarea,
   select {
     border-radius: 0.5rem;
-    border: 1px solid rgb(var(--color-surface-border));
+    border: 1px solid var(--color-surface-border);
     padding: 0.625rem 0.875rem;
     font-size: 0.9375rem;
-    color: rgb(var(--color-ink-primary));
-    background-color: rgb(var(--color-surface));
+    color: var(--color-ink-primary);
+    background-color: var(--color-surface);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
 
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"])::placeholder,
   textarea::placeholder {
-    color: rgb(var(--color-ink-secondary) / 0.45);
+    color: color-mix(in oklab, var(--color-ink-secondary) 55%, transparent);
     font-style: italic;
   }
 
@@ -116,14 +144,14 @@
   textarea:focus-visible,
   select:focus-visible {
     outline: none;
-    border-color: rgb(var(--color-accent));
-    box-shadow: 0 0 0 3px rgb(var(--color-accent) / 0.2), inset 0 1px 3px rgb(0 0 0 / 0.04);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 22%, transparent), inset 0 1px 3px rgb(0 0 0 / 0.04);
   }
 
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):hover:not(:disabled):not(:focus-visible),
   textarea:hover:not(:disabled):not(:focus-visible),
   select:hover:not(:disabled):not(:focus-visible) {
-    border-color: rgb(var(--color-ink-secondary) / 0.35);
+    border-color: color-mix(in oklab, var(--color-ink-secondary) 40%, transparent);
   }
 
   ::-webkit-scrollbar {
@@ -136,14 +164,14 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgb(var(--color-surface-border));
+    background: var(--color-surface-border);
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--color-accent) / 0.5);
+    background: color-mix(in oklab, var(--color-accent) 55%, transparent);
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;

@@ -1,13 +1,14 @@
 ---
 title: "TavernoteX — Implementation Plan v2"
 description: "Gamified note-taking web app with tavern theme: SolidStart + PostgreSQL + Prisma + Socket.io + OpenAI"
-status: pending
+status: active
 priority: P1
 effort: 120h
 issue: null
 branch: main
 tags: [fullstack, gamification, solidstart, postgresql, prisma, socketio, openai]
 created: 2026-05-09
+updated: 2026-06-13
 ---
 
 # TavernoteX — Implementation Plan v2
@@ -44,13 +45,31 @@ Deploy target: **Railway.app** (WebSocket + PostgreSQL native support).
 
 | # | Phase | Priority | Effort | Status | Link |
 |---|-------|----------|--------|--------|------|
-| 0 | Prerequisites | P0 | 8h | Pending | [phase-00](./phase-00-prerequisites.md) |
-| 1 | Core MVP | P0 | 40h | Pending | [phase-01](./phase-01-core-mvp.md) |
-| 2 | Gamification | P0 | 30h | Pending | [phase-02](./phase-02-gamification.md) |
-| 3 | Social & Real-time | P1 | 25h | Pending | [phase-03](./phase-03-social-realtime.md) |
-| 4 | AI & Polish | P1 | 17h | Pending | [phase-04](./phase-04-ai-polish.md) |
+| 0 | Prerequisites | P0 | 8h | **Done** | [phase-00](./phase-00-prerequisites.md) |
+| 1 | Core MVP | P0 | 40h | **Done** | [phase-01](./phase-01-core-mvp.md) |
+| 2 | Gamification | P0 | 30h | **Done** | [phase-02](./phase-02-gamification.md) |
+| 3 | Social & Real-time | P1 | 25h | **Done** | [phase-03](./phase-03-social-realtime.md) |
+| 4 | AI & Polish | P1 | 17h | **In Progress** | [phase-04](./phase-04-ai-polish.md) |
 
 **Dependencies:** Sequential. Phase N blocks Phase N+1.
+
+## Future Plans (Post Phase 4)
+
+| # | Plan | Effort | Status | Link |
+|---|------|--------|--------|------|
+| F1 | Gamification v2 (multi-theme, quality actions, personal progress) | ~40h | Planned | [gamification-v2](./gamification-v2.md) |
+| F2 | AI Quest System (AI-driven personalized quests) | ~25h | Planned | [ai-quest-system](./ai-quest-system.md) |
+| F3 | Challenge System (user-defined goals + actions) | ~30h | Planned | [challenge-system](./challenge-system.md) |
+| F4 | Tracking & Analytics (thesis metrics) | ~20h | Planned | [tracking-analytics](./tracking-analytics.md) |
+
+## New Features (In Development)
+
+Features being added beyond the original scope:
+
+- **Habits** — Habit tracker (`src/routes/(app)/habits.tsx`, `src/stores/habits.ts`, `src/validators/habit.ts`)
+- **Guild Notes** — Share notes within guild (`src/components/guild/GuildNotes.tsx`, `src/routes/api/guilds/[id]/notes/`)
+- **Guild Tasks** — Task management within guild (`src/components/guild/GuildTasks.tsx`, `src/routes/api/guilds/[id]/tasks/`)
+- **AI Summarize** — OpenAI note summarization (`src/lib/ai/`, `src/routes/api/notes/[id]/summarize.ts`)
 
 ## Architecture Diagram
 

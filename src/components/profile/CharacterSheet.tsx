@@ -30,7 +30,7 @@ export default function CharacterSheet(props: CharacterSheetProps) {
             </Show>
           </div>
           <div
-            class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-accent text-white text-xs font-bold flex items-center justify-center border-2 border-surface-elevated"
+            class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-accent text-surface-overlay text-xs font-bold flex items-center justify-center border-2 border-surface-elevated"
             aria-label={`Level ${g().level}`}
           >
             {g().level}

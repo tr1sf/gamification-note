@@ -85,8 +85,9 @@ export default function RadarChart(props: RadarChartProps) {
             <polygon
               points={ringPoints(f)}
               fill="none"
-              stroke="#1f2a1f"
+              stroke="var(--color-surface-border)"
               stroke-width="1"
+              opacity="0.7"
             />
           )}
         </For>
@@ -101,8 +102,9 @@ export default function RadarChart(props: RadarChartProps) {
                 y1={cy()}
                 x2={outer.x}
                 y2={outer.y}
-                stroke="#1f2a1f"
+                stroke="var(--color-surface-border)"
                 stroke-width="1"
+                opacity="0.7"
               />
             );
           }}
@@ -111,8 +113,8 @@ export default function RadarChart(props: RadarChartProps) {
         {/* data polygon */}
         <polygon
           points={dataPoints()}
-          fill="rgba(74, 222, 128, 0.18)"
-          stroke="#4ade80"
+          fill="color-mix(in oklab, var(--color-accent) 20%, transparent)"
+          stroke="var(--color-accent)"
           stroke-width="2"
           stroke-linejoin="round"
         />
@@ -133,7 +135,7 @@ export default function RadarChart(props: RadarChartProps) {
               <text
                 x={lp.x}
                 y={lp.y}
-                fill="#86efac"
+                fill="var(--color-ink-secondary)"
                 font-size="12"
                 font-family="'JetBrains Mono', monospace"
                 text-anchor={anchorFor(i())}

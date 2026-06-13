@@ -28,6 +28,7 @@ export async function GET({ request, params }: { request: Request; params: { id:
           username: true,
           avatarUrl: true,
           level: true,
+          title: true,
         },
       },
     },
@@ -36,15 +37,21 @@ export async function GET({ request, params }: { request: Request; params: { id:
   const hasMore = members.length > take;
   if (hasMore) members.pop();
 
+  // Shape matches the GuildMember type / MemberList component: nested `user`.
   return success({
     items: members.map((m) => ({
       id: m.id,
       role: m.role,
       joinedAt: m.joinedAt,
+      guildId: params.id,
       userId: m.user.id,
-      username: m.user.username,
-      avatarUrl: m.user.avatarUrl,
-      level: m.user.level,
+      user: {
+        id: m.user.id,
+        username: m.user.username,
+        avatarUrl: m.user.avatarUrl,
+        level: m.user.level,
+        title: m.user.title,
+      },
     })),
     nextCursor: hasMore ? members[members.length - 1]?.id : null,
   });

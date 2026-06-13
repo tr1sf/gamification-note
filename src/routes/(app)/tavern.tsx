@@ -41,12 +41,13 @@ const derivePsyche = (questsDone: number) => Math.min(100, questsDone * 10);
 
 const DAILY_GOAL = 7;
 
+// Theme-aware stat colors (follow light/dark automatically via CSS vars).
 const STAT_COLORS = {
-  Physical: "#4ade80", // green
-  Psyche: "#f472b6", // pink/magenta
-  Intel: "#22d3ee", // cyan
-  Spiritual: "#a78bfa", // purple
-  Core: "#fbbf24", // gold
+  Physical: "var(--color-rarity-uncommon)", // green
+  Psyche: "var(--color-error)",             // red/rose
+  Intel: "var(--color-rarity-rare)",        // blue
+  Spiritual: "var(--color-rarity-epic)",    // purple
+  Core: "var(--color-accent)",              // gold
 };
 
 export default function TavernPage() {
@@ -126,39 +127,44 @@ export default function TavernPage() {
   };
 
   return (
-    <div class="min-h-full bg-[#0b0f0b] text-[#d6f5d6] font-body">
+    <div class="min-h-full bg-surface text-ink-primary">
       <div class="max-w-6xl mx-auto p-4 sm:p-6">
+        <header class="mb-5">
+          <h1 class="font-display text-2xl sm:text-3xl font-bold text-ink-primary">Tavern Hall</h1>
+          <p class="text-sm text-ink-secondary mt-0.5">Your adventurer's dashboard</p>
+        </header>
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
           {/* ─────────── LEFT: Avatar + Today ─────────── */}
           <section class="lg:col-span-3 space-y-4">
             {/* Avatar */}
             <div>
-              <span class="block h-px w-full bg-white/20 mb-3" aria-hidden="true" />
-              <div class="aspect-[3/4] rounded-2xl overflow-hidden border border-[#243024] bg-[#1a221a]">
+              <span class="block h-px w-full bg-accent/25 mb-3" aria-hidden="true" />
+              <div class="aspect-[3/4] rounded-2xl overflow-hidden border border-surface-border bg-surface-elevated shadow-md">
                 <Show
                   when={avatar()}
                   fallback={
                     <div
-                      class="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#16301f] via-[#0e1a12] to-[#1a221a]"
+                      class="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-hover via-surface to-surface-elevated"
                       aria-hidden="true"
                     >
-                      <span class="font-display text-7xl font-bold text-[#86efac]">{initial()}</span>
+                      <span class="font-display text-7xl font-bold text-accent">{initial()}</span>
                     </div>
                   }
                 >
                   <img src={avatar()!} alt={`${name()}'s portrait`} class="w-full h-full object-cover" />
                 </Show>
               </div>
-              <span class="block h-px w-full bg-white/20 mt-3" aria-hidden="true" />
+              <span class="block h-px w-full bg-accent/25 mt-3" aria-hidden="true" />
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1a221a] border border-[#243024] text-xs text-[#86efac]">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-elevated border border-surface-border text-xs text-accent">
                 <span aria-hidden="true">☀️</span> Today
               </span>
               <button
                 type="button"
-                class="text-[#4a5a4a] hover:text-[#86efac] transition-colors"
+                class="text-ink-secondary/60 hover:text-accent transition-colors"
                 aria-label="Filter today's view"
               >
                 <span aria-hidden="true">⌗</span>
@@ -166,13 +172,13 @@ export default function TavernPage() {
             </div>
 
             {/* Weekday / progress card */}
-            <div class="rounded-2xl border border-[#243024] bg-[#1a221a] p-4">
-              <h2 class="font-display text-lg text-[#d6f5d6] mb-3">{weekday()}</h2>
+            <div class="rounded-2xl border border-surface-border bg-surface-elevated p-4 shadow-sm">
+              <h2 class="font-display text-lg text-ink-primary mb-3">{weekday()}</h2>
 
               <div class="flex items-center gap-2 mb-3">
-                <span class="text-xs text-[#7a8a7a]">Progress:</span>
+                <span class="text-xs text-ink-secondary">Progress:</span>
                 <span
-                  class="font-mono tracking-tight text-[#4ade80]"
+                  class="font-mono tracking-tight text-accent"
                   role="progressbar"
                   aria-valuenow={progressPct()}
                   aria-valuemin={0}
@@ -183,30 +189,30 @@ export default function TavernPage() {
                     {(i) => <span aria-hidden="true">{i < filledSquares() ? "▰" : "▱"}</span>}
                   </For>
                 </span>
-                <span class="font-mono text-sm text-[#86efac]">{progressPct()}%</span>
+                <span class="font-mono text-sm text-accent">{progressPct()}%</span>
               </div>
 
-              <p class="text-sm italic text-[#9bbf9b]">
-                You've Gained <span class="font-mono not-italic text-[#86efac]">{xpToday()}</span> XPs Today.
+              <p class="text-sm italic text-ink-secondary">
+                You've gained <span class="font-mono not-italic text-accent">{xpToday()}</span> XP today.
               </p>
-              <p class="text-sm italic text-[#9bbf9b]">
-                You've Completed <span class="font-mono not-italic text-[#86efac]">{tasksToday()}</span> Tasks Today.
+              <p class="text-sm italic text-ink-secondary">
+                You've completed <span class="font-mono not-italic text-accent">{tasksToday()}</span> tasks today.
               </p>
-              <p class="text-sm italic text-[#fbbf24] mt-2">You got this!</p>
+              <p class="text-sm italic text-coin mt-2">You got this!</p>
 
               <a
                 href="/notes/new"
-                class="mt-4 w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#2a352a] py-2 text-sm text-[#6a7a6a] hover:text-[#86efac] hover:border-[#4ade80]/40 transition-colors"
+                class="mt-4 w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-surface-border py-2 text-sm text-ink-secondary/80 hover:text-accent hover:border-accent/40 transition-colors"
               >
-                <span aria-hidden="true">+</span> New page
+                <span aria-hidden="true">+</span> New scroll
               </a>
             </div>
           </section>
 
           {/* ─────────── MIDDLE: Stats Radar ─────────── */}
           <section class="lg:col-span-5">
-            <p class="text-xs italic text-[#6a7a6a] mb-1">Stats Radar</p>
-            <div class="rounded-2xl border border-[#243024] bg-[#1a221a] p-4 sm:p-6 flex items-center justify-center">
+            <p class="text-xs italic text-ink-secondary mb-1">Stats Radar</p>
+            <div class="rounded-2xl border border-surface-border bg-surface-elevated p-4 sm:p-6 flex items-center justify-center shadow-sm">
               <div class="w-full max-w-sm">
                 <RadarChart stats={radarStats()} />
               </div>
@@ -215,15 +221,15 @@ export default function TavernPage() {
 
           {/* ─────────── RIGHT: Player ID ─────────── */}
           <section class="lg:col-span-4">
-            <div class="rounded-2xl border border-[#243024] bg-[#1a221a] overflow-hidden">
+            <div class="rounded-2xl border border-surface-border bg-surface-elevated overflow-hidden shadow-sm">
               {/* header */}
-              <div class="flex items-center justify-between px-4 py-3 border-b border-[#243024]">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0e120e] border border-[#243024] text-xs text-[#86efac]">
+              <div class="flex items-center justify-between px-4 py-3 border-b border-surface-border">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-surface-border text-xs text-accent">
                   <span aria-hidden="true">🛡️</span> Player ID
                 </span>
                 <button
                   type="button"
-                  class="text-[#4a5a4a] hover:text-[#86efac] transition-colors"
+                  class="text-ink-secondary/60 hover:text-accent transition-colors"
                   aria-label="Player settings"
                 >
                   <span aria-hidden="true">⚙</span>
@@ -232,58 +238,58 @@ export default function TavernPage() {
 
               <div class="p-4 space-y-3">
                 <div>
-                  <h2 class="font-display text-xl font-bold text-[#d6f5d6] flex items-center gap-1.5">
+                  <h2 class="font-display text-xl font-bold text-ink-primary flex items-center gap-1.5">
                     <span aria-hidden="true">⭐</span> {name()}
                   </h2>
-                  <p class="text-xs text-[#6a7a6a]">Update Status</p>
+                  <p class="text-xs text-ink-secondary">Update Status</p>
                 </div>
 
                 {/* key/value rows */}
                 <dl class="space-y-1 text-sm">
                   <div class="flex justify-between">
-                    <dt class="text-[#7a8a7a]">Class:</dt>
-                    <dd class="font-mono text-[#d6f5d6]">{gamification().title}</dd>
+                    <dt class="text-ink-secondary">Class:</dt>
+                    <dd class="font-mono text-ink-primary">{gamification().title}</dd>
                   </div>
                   <div class="flex justify-between">
-                    <dt class="text-[#7a8a7a]">Streak:</dt>
-                    <dd class="font-mono text-[#d6f5d6]">🔥 {gamification().streak} days</dd>
+                    <dt class="text-ink-secondary">Streak:</dt>
+                    <dd class="font-mono text-ink-primary">🔥 {gamification().streak} days</dd>
                   </div>
                   <div class="flex justify-between">
-                    <dt class="text-[#7a8a7a]">Owned:</dt>
-                    <dd class="font-mono text-[#86efac]">{coins()} Coins</dd>
+                    <dt class="text-ink-secondary">Owned:</dt>
+                    <dd class="font-mono text-coin">{coins()} Coins</dd>
                   </div>
                 </dl>
 
                 {/* Level + XP bar */}
                 <div class="flex items-center gap-3">
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-[#fbbf24]/15 border border-[#fbbf24]/30 text-xs font-mono text-[#fbbf24] shrink-0">
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-accent/15 border border-accent/30 text-xs font-mono text-accent shrink-0">
                     Level {lvl()}
                   </span>
                   <div class="flex-1">
                     <div class="flex items-center justify-between text-xs mb-1">
-                      <span class="font-mono text-[#86efac]">{xpPct()}%</span>
-                      <span class="font-mono text-[#6a7a6a]">
+                      <span class="font-mono text-accent">{xpPct()}%</span>
+                      <span class="font-mono text-ink-secondary">
                         {xpProg().current}/{xpProg().needed}
                       </span>
                     </div>
                     <div
-                      class="h-1.5 rounded-full bg-[#0e120e] overflow-hidden"
+                      class="h-1.5 rounded-full bg-surface overflow-hidden"
                       role="progressbar"
                       aria-valuenow={xpPct()}
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-label={`Level ${lvl()} progress`}
                     >
-                      <div class="h-full rounded-full bg-[#4ade80]" style={{ width: `${xpPct()}%` }} />
+                      <div class="h-full rounded-full bg-accent" style={{ width: `${xpPct()}%` }} />
                     </div>
                   </div>
                 </div>
 
                 {/* divider */}
-                <div class="flex items-center justify-center gap-2 text-[#3a4a3a] text-xs py-1" aria-hidden="true">
-                  <span class="flex-1 border-t border-dotted border-[#2a352a]" />
+                <div class="flex items-center justify-center gap-2 text-ink-secondary/50 text-xs py-1" aria-hidden="true">
+                  <span class="flex-1 border-t border-dotted border-surface-border" />
                   <span>· Stats Summary ·</span>
-                  <span class="flex-1 border-t border-dotted border-[#2a352a]" />
+                  <span class="flex-1 border-t border-dotted border-surface-border" />
                 </div>
 
                 {/* stat rows, each own color */}
@@ -300,17 +306,17 @@ export default function TavernPage() {
                   </For>
                 </ul>
 
-                <p class="text-sm font-mono text-[#fb923c]">Total: {totalXP()} XPs</p>
+                <p class="text-sm font-mono text-coin">Total: {totalXP()} XP</p>
 
-                <p class="text-sm text-[#7a8a7a] flex items-center gap-1.5">
+                <p class="text-sm text-ink-secondary flex items-center gap-1.5">
                   <span aria-hidden="true">📊</span> Log Status
                 </p>
 
                 <a
-                  href="/notes/new"
-                  class="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#2a352a] py-2 text-sm text-[#6a7a6a] hover:text-[#86efac] hover:border-[#4ade80]/40 transition-colors"
+                  href="/profile"
+                  class="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-surface-border py-2 text-sm text-ink-secondary/80 hover:text-accent hover:border-accent/40 transition-colors"
                 >
-                  <span aria-hidden="true">+</span> New page
+                  <span aria-hidden="true">→</span> View full profile
                 </a>
               </div>
             </div>
@@ -318,8 +324,8 @@ export default function TavernPage() {
 
           {/* ─────────── BOTTOM: Today's Quests (spans middle+right) ─────────── */}
           <section class="lg:col-span-9 lg:col-start-4">
-            <div class="rounded-2xl border border-[#243024] bg-[#1a221a] p-4">
-              <h2 class="font-display text-lg text-[#2dd4bf] italic flex items-center gap-1.5 mb-3">
+            <div class="rounded-2xl border border-surface-border bg-surface-elevated p-4 shadow-sm">
+              <h2 class="font-display text-lg text-accent italic flex items-center gap-1.5 mb-3">
                 <span aria-hidden="true">🎮</span> Today's Quests <span class="text-xs" aria-hidden="true">▼</span>
               </h2>
 
@@ -340,8 +346,8 @@ export default function TavernPage() {
                       onClick={() => setQuestTab(t.id)}
                       class={`px-3 py-1 rounded-full transition-colors ${
                         questTab() === t.id
-                          ? "bg-[#0e120e] border border-[#4ade80]/40 text-[#86efac]"
-                          : "text-[#6a7a6a] hover:text-[#9bbf9b]"
+                          ? "bg-surface border border-accent/40 text-accent"
+                          : "text-ink-secondary hover:text-ink-primary"
                       }`}
                       aria-pressed={questTab() === t.id}
                     >
@@ -357,17 +363,17 @@ export default function TavernPage() {
                   {(q) => {
                     const done = () => q.status === "completed" || q.status === "claimed";
                     return (
-                      <div class="rounded-xl border border-[#243024] bg-[#0e120e] p-3 flex flex-col gap-2">
-                        <h3 class="text-sm font-semibold text-[#d6f5d6] line-clamp-2">{q.title}</h3>
+                      <div class="rounded-xl border border-surface-border bg-surface p-3 flex flex-col gap-2">
+                        <h3 class="text-sm font-semibold text-ink-primary line-clamp-2">{q.title}</h3>
                         <div class="flex flex-wrap gap-1.5">
-                          <span class="px-2 py-0.5 rounded-full bg-[#2dd4bf]/15 text-[#2dd4bf] text-[10px] font-mono">
+                          <span class="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-[10px] font-mono">
                             {q.questType}
                           </span>
-                          <span class="px-2 py-0.5 rounded-full bg-[#fbbf24]/15 text-[#fbbf24] text-[10px] font-mono">
+                          <span class="px-2 py-0.5 rounded-full bg-coin/15 text-coin text-[10px] font-mono">
                             {q.xpReward} XP
                           </span>
                           <Show when={q.coinReward > 0}>
-                            <span class="px-2 py-0.5 rounded-full bg-[#4ade80]/15 text-[#4ade80] text-[10px] font-mono">
+                            <span class="px-2 py-0.5 rounded-full bg-xp/15 text-xp text-[10px] font-mono">
                               +{q.coinReward} 🪙
                             </span>
                           </Show>
@@ -376,8 +382,8 @@ export default function TavernPage() {
                           href="/quests"
                           class={`mt-auto text-center text-xs font-semibold rounded-lg py-1.5 transition-colors ${
                             done()
-                              ? "bg-[#243024] text-[#6a7a6a] cursor-default"
-                              : "bg-[#4ade80]/15 text-[#86efac] hover:bg-[#4ade80]/25"
+                              ? "bg-surface-hover text-ink-secondary cursor-default"
+                              : "bg-accent/15 text-accent hover:bg-accent/25"
                           }`}
                           aria-disabled={done()}
                         >
@@ -391,9 +397,9 @@ export default function TavernPage() {
                 {/* empty placeholder card */}
                 <a
                   href="/quests"
-                  class="rounded-xl border border-dashed border-[#2a352a] flex items-center justify-center gap-1.5 p-6 text-sm text-[#6a7a6a] hover:text-[#86efac] hover:border-[#4ade80]/40 transition-colors min-h-[7rem]"
+                  class="rounded-xl border border-dashed border-surface-border flex items-center justify-center gap-1.5 p-6 text-sm text-ink-secondary/80 hover:text-accent hover:border-accent/40 transition-colors min-h-[7rem]"
                 >
-                  <span aria-hidden="true">+</span> New page
+                  <span aria-hidden="true">+</span> All quests
                 </a>
               </div>
             </div>

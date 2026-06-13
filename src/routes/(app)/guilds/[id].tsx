@@ -1,32 +1,78 @@
-import { createSignal, Show, onMount, onCleanup } from "solid-js";
-import { useParams } from "@solidjs/router";
-import { user, authFetch } from "~/stores/auth";
+import { createSignal, createMemo, Show, onMount, onCleanup } from "solid-js";
+import { useParams, useSearchParams } from "@solidjs/router";
+import { user } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
-import { fetchGuild, fetchMembers, fetchMessages, joinGuild, leaveGuild, addSocketMessage, updateMemberInList, removeMemberFromList, type Guild, type GuildMember, type ChatMessage } from "~/stores/guild";
+import {
+  fetchGuild,
+  fetchMembers,
+  fetchMessages,
+  joinGuild,
+  leaveGuild,
+  regenerateInvite,
+  updateMemberRole,
+  kickMember,
+  fetchGuildNotes,
+  shareNoteToGuild,
+  unshareNoteFromGuild,
+  addSocketMessage,
+  type Guild,
+  type GuildMember,
+  type ChatMessage,
+  type GuildNote,
+} from "~/stores/guild";
+import { fetchTasks, type GuildTask } from "~/stores/tasks";
 import { useSocket } from "~/lib/socket/client";
 import GuildChat from "~/components/guild/GuildChat";
 import MemberList from "~/components/guild/MemberList";
+import GuildNotes from "~/components/guild/GuildNotes";
+import GuildTasks from "~/components/guild/GuildTasks";
+
+type Role = "owner" | "admin" | "member";
 
 export default function GuildDetailPage() {
   const params = useParams();
   const guildId = () => params.id as string;
-  const { on, off, emit } = useSocket();
+  const [searchParams] = useSearchParams();
+  const { on, off, emit, ensureConnected } = useSocket();
 
   const [guild, setGuild] = createSignal<Guild | null>(null);
   const [members, setMembers] = createSignal<GuildMember[]>([]);
   const [messages, setMessages] = createSignal<ChatMessage[]>([]);
+  const [notes, setNotes] = createSignal<GuildNote[]>([]);
+  const [tasks, setTasks] = createSignal<GuildTask[]>([]);
   const [loading, setLoading] = createSignal(true);
-  const [tab, setTab] = createSignal<"chat" | "members">("chat");
+  const [tab, setTab] = createSignal<"chat" | "scrolls" | "tasks" | "members">("chat");
   const [joining, setJoining] = createSignal(false);
   const [leaving, setLeaving] = createSignal(false);
+  const [inviteInput, setInviteInput] = createSignal(
+    typeof searchParams.code === "string" ? searchParams.code : ""
+  );
+  const [copied, setCopied] = createSignal(false);
 
   const currentUser = () => user();
-  const isMember = () => {
-    const m = members();
+  const isMember = createMemo(() => {
     const u = currentUser();
-    return m.some((member) => member.userId === u?.id);
-  };
+    return members().some((m) => m.userId === u?.id);
+  });
   const isOwner = () => guild()?.ownerId === currentUser()?.id;
+  const myRole = createMemo<Role | undefined>(() => {
+    if (isOwner()) return "owner";
+    return members().find((m) => m.userId === currentUser()?.id)?.role as Role | undefined;
+  });
+  const canModerate = () => myRole() === "owner" || myRole() === "admin";
+
+  const refreshMembers = async () => setMembers(await fetchMembers(guildId()));
+  const refreshNotes = async () => setNotes(await fetchGuildNotes(guildId()));
+  const refreshTasks = async (): Promise<void> => {
+    setTasks(await fetchTasks(guildId()));
+  };
+
+  const enterSocketRoom = () => {
+    // Ensure a connection is in flight; the join is buffered and delivered once
+    // connected, so we don't have to gate on the current connection state.
+    ensureConnected();
+    emit("guild:join", { guildId: guildId() });
+  };
 
   onMount(async () => {
     setLoading(true);
@@ -40,17 +86,20 @@ export default function GuildDetailPage() {
         ]);
         setMembers(memberList);
         setMessages(msgList);
+        if (memberList.some((m) => m.userId === currentUser()?.id)) {
+          await Promise.all([refreshNotes(), refreshTasks()]);
+        }
       }
     } finally {
       setLoading(false);
     }
 
-    emit("guild:join", { guildId: guildId() });
+    enterSocketRoom();
 
     const handleNewMessage = (msg: ChatMessage) => {
       if (msg.guildId === guildId()) {
         addSocketMessage(msg);
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
       }
     };
 
@@ -67,51 +116,53 @@ export default function GuildDetailPage() {
       });
     };
 
-    const handleMemberLeft = (data: { userId: string; username: string }) => {
+    const handleMemberLeft = (data: { userId: string }) => {
       setMembers((prev) => prev.filter((m) => m.userId !== data.userId));
+    };
+
+    const handleRoleChanged = (data: { userId: string; role: Role }) => {
+      // A role change (incl. ownership transfer) can shift who can moderate — re-pull
+      // the authoritative member list and guild (ownerId) rather than patch locally.
+      refreshMembers();
+      if (data.role === "owner") fetchGuild(guildId()).then((g) => g && setGuild(g));
     };
 
     on("guild:message", handleNewMessage);
     on("guild:user-joined", handleMemberJoined);
     on("guild:user-left", handleMemberLeft);
+    on("guild:role-changed", handleRoleChanged);
 
     onCleanup(() => {
       emit("guild:leave", { guildId: guildId() });
       off("guild:message", handleNewMessage);
       off("guild:user-joined", handleMemberJoined);
       off("guild:user-left", handleMemberLeft);
+      off("guild:role-changed", handleRoleChanged);
     });
   });
 
   const handleSendMessage = async (content: string) => {
-    try {
-      const res = await authFetch(
-        `/api/guilds/${guildId()}/messages`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
-        }
-      );
-      const json = await res.json();
-      if (!json.success) {
-        addToast(json.error?.message || "Failed to send message", "error");
-      }
-    } catch {
-      addToast("Network error", "error");
-    }
+    // Make sure a connection is established/in-flight first; the emit itself is
+    // buffered by socket.io and flushed on connect, so the message isn't lost
+    // even if the socket is mid-reconnect.
+    const ok = await ensureConnected();
+    emit("guild:send-message", { guildId: guildId(), content });
+    if (!ok) addToast("Reconnecting to chat — your message will send shortly.", "info");
   };
 
   const handleJoin = async () => {
     setJoining(true);
     try {
-      const success = await joinGuild(guildId());
+      const code = inviteInput().trim() || undefined;
+      const success = await joinGuild(guildId(), code);
       if (success) {
         addToast("Joined guild!", "success");
-        const updatedMembers = await fetchMembers(guildId());
-        setMembers(updatedMembers);
+        await Promise.all([refreshMembers(), refreshNotes(), refreshTasks()]);
+        const g = await fetchGuild(guildId());
+        if (g) setGuild(g);
+        enterSocketRoom();
       } else {
-        addToast("Failed to join guild", "error");
+        addToast(guild()?.isPublic ? "Failed to join guild" : "Invalid or missing invite code", "error");
       }
     } catch {
       addToast("Network error", "error");
@@ -126,7 +177,9 @@ export default function GuildDetailPage() {
       const success = await leaveGuild(guildId());
       if (success) {
         addToast("Left guild", "info");
-        setMembers([]);
+        emit("guild:leave", { guildId: guildId() });
+        await refreshMembers();
+        setNotes([]);
         setMessages([]);
       } else {
         addToast("Failed to leave guild", "error");
@@ -135,6 +188,70 @@ export default function GuildDetailPage() {
       addToast("Network error", "error");
     } finally {
       setLeaving(false);
+    }
+  };
+
+  const handleRole = async (userId: string, role: Role, label: string) => {
+    const ok = await updateMemberRole(guildId(), userId, role);
+    if (ok) {
+      addToast(label, "success");
+      await refreshMembers();
+      if (role === "owner") {
+        const g = await fetchGuild(guildId());
+        if (g) setGuild(g);
+      }
+    } else {
+      addToast("Action failed", "error");
+    }
+  };
+
+  const handleKick = async (userId: string) => {
+    const ok = await kickMember(guildId(), userId);
+    if (ok) {
+      addToast("Member removed", "info");
+      await refreshMembers();
+    } else {
+      addToast("Failed to remove member", "error");
+    }
+  };
+
+  const handleShareNote = async (noteId: string) => {
+    const ok = await shareNoteToGuild(guildId(), noteId);
+    addToast(ok ? "Scroll shared with the guild" : "Failed to share scroll", ok ? "success" : "error");
+    if (ok) await refreshNotes();
+  };
+
+  const handleUnshareNote = async (noteId: string) => {
+    const ok = await unshareNoteFromGuild(guildId(), noteId);
+    addToast(ok ? "Scroll removed from guild" : "Failed to remove scroll", ok ? "info" : "error");
+    if (ok) await refreshNotes();
+  };
+
+  const inviteLink = () => {
+    const code = guild()?.inviteCode;
+    if (!code || typeof window === "undefined") return "";
+    return `${window.location.origin}/guilds/${guildId()}?code=${code}`;
+  };
+
+  const copyInvite = async () => {
+    const link = inviteLink();
+    if (!link || typeof navigator === "undefined" || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      addToast("Could not copy link", "error");
+    }
+  };
+
+  const handleRegenerate = async () => {
+    const code = await regenerateInvite(guildId());
+    if (code) {
+      setGuild((g) => (g ? { ...g, inviteCode: code } : g));
+      addToast("Invite code regenerated", "success");
+    } else {
+      addToast("Failed to regenerate code", "error");
     }
   };
 
@@ -170,10 +287,19 @@ export default function GuildDetailPage() {
             </span>
 
             <Show when={!isMember()}>
+              <Show when={!guild()!.isPublic}>
+                <input
+                  type="text"
+                  placeholder="Invite code"
+                  value={inviteInput()}
+                  onInput={(e) => setInviteInput(e.currentTarget.value)}
+                  class="w-28 rounded-md border border-surface-border px-2 py-1.5 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </Show>
               <button
                 onClick={handleJoin}
                 disabled={joining()}
-                class="px-4 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
+                class="px-4 py-2 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
               >
                 {joining() ? "Joining..." : "Join Guild"}
               </button>
@@ -201,6 +327,31 @@ export default function GuildDetailPage() {
           </span>
         </div>
 
+        {/* Invite code panel — only visible to owner/admin (the API only returns it to them). */}
+        <Show when={guild()!.inviteCode}>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg border border-surface-border bg-surface-elevated">
+            <div class="flex-1 min-w-0">
+              <p class="text-xs text-ink-secondary mb-0.5">Invite code</p>
+              <code class="text-sm font-mono text-accent">{guild()!.inviteCode}</code>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                onClick={copyInvite}
+                class="text-xs px-3 py-1.5 rounded-md border border-surface-border text-ink-secondary hover:border-accent hover:text-accent transition-colors"
+              >
+                {copied() ? "Copied!" : "Copy invite link"}
+              </button>
+              <button
+                onClick={handleRegenerate}
+                class="text-xs px-3 py-1.5 rounded-md border border-surface-border text-ink-secondary hover:border-accent hover:text-accent transition-colors"
+                title="Generate a new code (invalidates the old one)"
+              >
+                Regenerate
+              </button>
+            </div>
+          </div>
+        </Show>
+
         <div class="flex gap-1 border-b border-surface-border">
           <button
             onClick={() => setTab("chat")}
@@ -212,6 +363,28 @@ export default function GuildDetailPage() {
           >
             <span aria-hidden="true" class="mr-1.5">💬</span>
             Chat
+          </button>
+          <button
+            onClick={() => setTab("scrolls")}
+            class={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              tab() === "scrolls"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-secondary hover:text-ink-primary"
+            }`}
+          >
+            <span aria-hidden="true" class="mr-1.5">📜</span>
+            Scrolls
+          </button>
+          <button
+            onClick={() => setTab("tasks")}
+            class={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              tab() === "tasks"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-secondary hover:text-ink-primary"
+            }`}
+          >
+            <span aria-hidden="true" class="mr-1.5">📋</span>
+            Tasks
           </button>
           <button
             onClick={() => setTab("members")}
@@ -226,8 +399,16 @@ export default function GuildDetailPage() {
           </button>
         </div>
 
-        <Show when={isMember() || isOwner()}>
-          <Show when={tab() === "chat"}>
+        <Show when={tab() === "chat"}>
+          <Show
+            when={isMember()}
+            fallback={
+              <div class="text-center py-12 text-ink-secondary">
+                <p class="text-3xl mb-2">💬</p>
+                <p class="text-sm">Join the guild to read and send messages.</p>
+              </div>
+            }
+          >
             <GuildChat
               guildId={guildId()}
               messages={messages()}
@@ -236,10 +417,56 @@ export default function GuildDetailPage() {
           </Show>
         </Show>
 
+        <Show when={tab() === "scrolls"}>
+          <Show
+            when={isMember()}
+            fallback={
+              <div class="text-center py-12 text-ink-secondary">
+                <p class="text-3xl mb-2">📜</p>
+                <p class="text-sm">Join the guild to view and share scrolls.</p>
+              </div>
+            }
+          >
+            <GuildNotes
+              notes={notes()}
+              currentUserId={currentUser()?.id}
+              canModerate={canModerate()}
+              onShare={handleShareNote}
+              onUnshare={handleUnshareNote}
+            />
+          </Show>
+        </Show>
+
+        <Show when={tab() === "tasks"}>
+          <Show
+            when={isMember()}
+            fallback={
+              <div class="text-center py-12 text-ink-secondary">
+                <p class="text-3xl mb-2">📋</p>
+                <p class="text-sm">Join the guild to see assigned tasks.</p>
+              </div>
+            }
+          >
+            <GuildTasks
+              guildId={guildId()}
+              tasks={tasks()}
+              members={members()}
+              currentUserId={currentUser()?.id}
+              canManage={canModerate()}
+              onChanged={refreshTasks}
+            />
+          </Show>
+        </Show>
+
         <Show when={tab() === "members"}>
           <MemberList
             members={members()}
             currentUserId={currentUser()?.id}
+            currentUserRole={myRole()}
+            onPromote={(uid) => handleRole(uid, "admin", "Member promoted to admin")}
+            onDemote={(uid) => handleRole(uid, "member", "Admin demoted to member")}
+            onTransfer={(uid) => handleRole(uid, "owner", "Ownership transferred")}
+            onKick={handleKick}
           />
         </Show>
       </Show>

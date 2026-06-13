@@ -33,7 +33,7 @@ export default function PublicNotePage() {
           </A>
           <div class="flex items-center gap-3">
             <A href="/login" class="text-sm text-ink-secondary hover:text-accent transition-colors">Sign in</A>
-            <A href="/register" class="px-3 py-1.5 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover transition-colors">Join free</A>
+            <A href="/register" class="px-3 py-1.5 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover transition-colors">Join free</A>
           </div>
         </div>
       </header>
@@ -81,7 +81,7 @@ export default function PublicNotePage() {
 
                 <div class="mt-12 pt-6 border-t border-surface-border text-center">
                   <p class="text-sm text-ink-secondary mb-3">Created with <A href="/" class="text-accent hover:underline">TavernoteX</A></p>
-                  <A href="/register" class="inline-block px-5 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover transition-colors">
+                  <A href="/register" class="inline-block px-5 py-2 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover transition-colors">
                     Start your own journey
                   </A>
                 </div>

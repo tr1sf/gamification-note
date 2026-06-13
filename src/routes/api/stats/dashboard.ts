@@ -2,6 +2,29 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 
+// Stored icon names (see prisma/seed.ts) → emoji for display.
+const ACHIEVEMENT_ICONS: Record<string, string> = {
+  scroll: "📜",
+  book: "📖",
+  books: "📚",
+  fire: "🔥",
+  pen: "🖊️",
+  crown: "👑",
+  trophy: "🏆",
+  feather: "🪶",
+  banner: "🚩",
+  door: "🚪",
+  share: "🔗",
+};
+
+// Cosmetic item type → emoji for display.
+const ITEM_ICONS: Record<string, string> = {
+  badge: "🎖️",
+  avatar_frame: "🖼️",
+  theme: "🎨",
+  name_color: "🎨",
+};
+
 async function calculateStreak(userId: string): Promise<number> {
   const auditLogs = await prisma.auditLog.findMany({
     where: { userId, actionType: "daily_login" },
@@ -45,36 +68,108 @@ export async function GET({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
-  const [totalNotes, wordsResult, questsCompleted, achievementsUnlocked, recentXP, streak] =
-    await Promise.all([
-      prisma.note.count({
-        where: { userId: user.userId, isDeleted: false },
-      }),
-      prisma.note.aggregate({
-        where: { userId: user.userId, isDeleted: false },
-        _sum: { wordCount: true },
-      }),
-      prisma.userQuest.count({
-        where: { userId: user.userId, status: { in: ["completed", "claimed"] } },
-      }),
-      prisma.userAchievement.count({
-        where: { userId: user.userId, unlockedAt: { not: null } },
-      }),
-      prisma.auditLog.findMany({
-        where: { userId: user.userId, xpChange: { gt: 0 } },
-        orderBy: { createdAt: "desc" },
-        take: 30,
-        select: { actionType: true, xpChange: true, createdAt: true },
-      }),
-      calculateStreak(user.userId),
-    ]);
+  const [
+    userData,
+    totalNotes,
+    wordsResult,
+    questsCompleted,
+    allAchievements,
+    userAchievements,
+    inventory,
+    streak,
+    recentXP,
+  ] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { level: true, xp: true, coins: true },
+    }),
+    prisma.note.count({
+      where: { userId: user.userId, isDeleted: false },
+    }),
+    prisma.note.aggregate({
+      where: { userId: user.userId, isDeleted: false },
+      _sum: { wordCount: true },
+    }),
+    prisma.userQuest.count({
+      where: { userId: user.userId, status: { in: ["completed", "claimed"] } },
+    }),
+    prisma.achievement.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, title: true, description: true, icon: true },
+    }),
+    prisma.userAchievement.findMany({
+      where: { userId: user.userId },
+      select: { achievementId: true, unlockedAt: true },
+    }),
+    prisma.userInventory.findMany({
+      where: { userId: user.userId },
+      orderBy: { purchasedAt: "desc" },
+      select: {
+        isEquipped: true,
+        item: {
+          select: { id: true, name: true, description: true, type: true, imageUrl: true, rarity: true },
+        },
+      },
+    }),
+    calculateStreak(user.userId),
+    prisma.auditLog.findMany({
+      where: { userId: user.userId, xpChange: { gt: 0 } },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      select: { actionType: true, xpChange: true, createdAt: true },
+    }),
+  ]);
+
+  const totalWords = wordsResult._sum.wordCount ?? 0;
+
+  const unlockedMap = new Map(
+    userAchievements.map((ua) => [ua.achievementId, ua.unlockedAt])
+  );
+  const achievementsUnlocked = userAchievements.filter((ua) => ua.unlockedAt !== null).length;
+
+  const stats = [
+    { label: "Scrolls Written", value: totalNotes, icon: "📜" },
+    { label: "Total Words", value: totalWords.toLocaleString(), icon: "✍️" },
+    { label: "Day Streak", value: streak, icon: "🔥" },
+    { label: "Quests Done", value: questsCompleted, icon: "📋" },
+    { label: "Achievements", value: achievementsUnlocked, icon: "🏆" },
+    { label: "Coins", value: (userData?.coins ?? 0).toLocaleString(), icon: "🪙" },
+  ];
+
+  const achievements = allAchievements.map((a) => {
+    const unlockedAt = unlockedMap.get(a.id) ?? null;
+    return {
+      id: a.id,
+      title: a.title,
+      description: a.description ?? "",
+      icon: ACHIEVEMENT_ICONS[a.icon] ?? "🏆",
+      unlocked: unlockedAt !== null,
+      unlockedAt: unlockedAt ? unlockedAt.toISOString() : undefined,
+    };
+  });
+
+  const inventoryItems = inventory.map((inv) => ({
+    id: inv.item.id,
+    name: inv.item.name,
+    description: inv.item.description ?? "",
+    icon: inv.item.imageUrl || ITEM_ICONS[inv.item.type] || "🎁",
+    itemType: inv.item.type,
+    rarity: inv.item.rarity,
+    equipped: inv.isEquipped,
+    owned: true,
+  }));
 
   return success({
+    // ── Flat fields consumed by the Tavern Hall dashboard (tavern.tsx) ──
     totalNotes,
-    totalWords: wordsResult._sum.wordCount ?? 0,
+    totalWords,
     streak,
     questsCompleted,
     achievementsUnlocked,
     recentXP,
+    // ── Structured fields consumed by the Profile page (profile.tsx) ──
+    stats,
+    achievements,
+    inventory: inventoryItems,
   });
 }

@@ -22,10 +22,9 @@ export default function NewNotePage() {
   const navigate = useNavigate();
 
   const wordCount = createMemo(() => computeBlockWordCount(blocks()));
-  const charCount = createMemo(() => {
-    const json = JSON.stringify(blocks());
-    return blocks().reduce((c, b) => c + (b.type === 'divider' ? 0 : b.content.length), 0);
-  });
+  const charCount = createMemo(() =>
+    blocks().reduce((c, b) => c + (b.type === "divider" ? 0 : b.content.length), 0)
+  );
   const readingTime = createMemo(() => Math.max(1, Math.ceil(wordCount() / 200)));
   const renderedHTML = createMemo(() => blocksToHtml(blocks()));
   const markdownContent = createMemo(() => blocksToMarkdown(blocks()));
@@ -185,7 +184,7 @@ export default function NewNotePage() {
                 onClick={() => setViewMode(mode)}
                 class={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
                   viewMode() === mode
-                    ? "bg-accent text-white shadow-sm"
+                    ? "bg-accent text-surface-overlay shadow-sm"
                     : "text-ink-secondary hover:text-ink-primary"
                 }`}
               >
@@ -233,7 +232,7 @@ export default function NewNotePage() {
           <button
             type="submit"
             disabled={saving() || !title().trim() || blocks().length === 0 || !blocks().some(b => b.content.trim())}
-            class="px-5 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors"
+            class="px-5 py-2 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors"
           >
             {saving() ? "Saving..." : "Create Note"}
           </button>

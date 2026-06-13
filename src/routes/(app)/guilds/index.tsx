@@ -33,7 +33,7 @@ export default function GuildsPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] transition-all duration-150 shrink-0"
+          class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-surface-overlay rounded-lg text-sm font-medium hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] transition-all duration-150 shrink-0"
         >
           + Create Guild
         </button>
@@ -56,7 +56,7 @@ export default function GuildsPage() {
         fallback={
           <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div class="h-40 rounded-lg border border-surface-border animate-pulse" style="background: linear-gradient(90deg, rgb(var(--color-surface-elevated)) 25%, rgb(var(--color-surface-hover)) 50%, rgb(var(--color-surface-elevated)) 75%); background-size: 200% 100%;" />
+              <div class="h-40 rounded-lg border border-surface-border animate-pulse" style="background: linear-gradient(90deg, var(--color-surface-elevated) 25%, var(--color-surface-hover) 50%, var(--color-surface-elevated) 75%); background-size: 200% 100%;" />
             ))}
           </div>
         }
@@ -87,7 +87,7 @@ export default function GuildsPage() {
                       <p class="text-ink-secondary/60 text-sm mb-4">Create the first guild and start your fellowship</p>
                       <button
                         onClick={() => setShowCreate(true)}
-                        class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
+                        class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-surface-overlay rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
                       >
                         + Create Guild
                       </button>

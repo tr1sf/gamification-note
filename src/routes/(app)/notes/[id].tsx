@@ -4,7 +4,7 @@ import { authFetch } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 import { timeAgo } from "~/lib/time-ago";
 import { renderMarkdown } from "~/lib/markdown";
-import { isBlockContent, parseBlocks, markdownToBlocks, blocksToMarkdown, blocksToHtml, computeBlockWordCount, type Block } from "~/lib/blocks";
+import { isBlockContent, parseBlocks, markdownToBlocks, blocksToMarkdown, blocksToHtml, computeBlockWordCount, normalizeBlocks, type Block } from "~/lib/blocks";
 import BlockEditor from "~/components/editor/BlockEditor";
 import BlockRenderer from "~/components/editor/BlockRenderer";
 import ConfirmModal from "~/components/ui/ConfirmModal";
@@ -53,6 +53,7 @@ export default function NoteDetailPage() {
   const [showDiscardConfirm, setShowDiscardConfirm] = createSignal(false);
   const [copied, setCopied] = createSignal(false);
   const [showExportMenu, setShowExportMenu] = createSignal(false);
+  const [summarizing, setSummarizing] = createSignal(false);
 
   const [note, { refetch }] = createResource(() => params.id, fetchNote);
 
@@ -64,7 +65,7 @@ export default function NoteDetailPage() {
     const isBlocks = isBlockContent(n.content);
     setUseBlockEditor(isBlocks);
     if (isBlocks) {
-      setEditBlocks(parseBlocks(n.content));
+      setEditBlocks(normalizeBlocks(parseBlocks(n.content)));
     }
     setEditCategory(n.category ?? "");
     setEditTags([...n.tags]);
@@ -73,7 +74,7 @@ export default function NoteDetailPage() {
   };
 
   const convertToBlocks = () => {
-    setEditBlocks(markdownToBlocks(editContent()));
+    setEditBlocks(normalizeBlocks(markdownToBlocks(editContent())));
     setUseBlockEditor(true);
   };
 
@@ -231,6 +232,31 @@ export default function NoteDetailPage() {
     addToast(`Exported as ${ext.toUpperCase()}`, "success");
   };
 
+  const handleSummarize = async () => {
+    const n = note();
+    if (!n) return;
+    setSummarizing(true);
+    try {
+      const res = await authFetch(`/api/notes/${n.id}/summarize`, { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        addToast("AI summary generated!", "success");
+        refetch();
+      } else {
+        addToast(json.error?.message || "Summary failed", "error");
+      }
+    } catch (err: any) {
+      if (err.message === "SESSION_EXPIRED") {
+        addToast("Session expired", "error");
+        navigate("/login");
+      } else {
+        addToast("Network error", "error");
+      }
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
   return (
     <div class="max-w-3xl mx-auto p-6">
       <Show when={!note.loading} fallback={<div class="animate-pulse text-ink-secondary">Loading note...</div>}>
@@ -290,6 +316,9 @@ export default function NoteDetailPage() {
                             </Show>
                           </div>
                           <button onClick={() => startEditing(n())} class="px-3 py-1.5 text-sm bg-accent/10 text-accent rounded-md hover:bg-accent/20 transition-colors">Edit</button>
+                          <Show when={!n().aiSummary}>
+                            <button onClick={handleSummarize} disabled={summarizing()} class="px-3 py-1.5 text-sm bg-accent text-surface-overlay rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50">{summarizing() ? "Summarizing..." : "✨ Summarize"}</button>
+                          </Show>
                           <button onClick={() => setShowDeleteConfirm(true)} disabled={deleting()} class="px-3 py-1.5 text-sm text-error hover:bg-error-bg rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{deleting() ? "Trashing..." : "Trash"}</button>
                         </div>
                       </Show>
@@ -306,7 +335,7 @@ export default function NoteDetailPage() {
                             setCopied(true);
                             setTimeout(() => setCopied(false), 2000);
                           }}
-                          class="shrink-0 px-3 py-1 text-xs bg-accent text-white rounded-md hover:bg-accent-hover transition-colors"
+                          class="shrink-0 px-3 py-1 text-xs bg-accent text-surface-overlay rounded-md hover:bg-accent-hover transition-colors"
                         >
                           {copied() ? "Copied!" : "Copy link"}
                         </button>
@@ -412,7 +441,7 @@ export default function NoteDetailPage() {
                     </Show>
 
                     <div class="flex items-center gap-3">
-                      <button onClick={saveEdit} disabled={saving()} class="px-4 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors">
+                      <button onClick={saveEdit} disabled={saving()} class="px-4 py-2 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors">
                         {saving() ? "Saving..." : "Save Changes"}
                       </button>
                       <button onClick={cancelEdit} class="px-4 py-2 text-sm text-ink-secondary hover:text-ink-primary transition-colors">Cancel</button>

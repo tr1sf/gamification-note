@@ -80,7 +80,7 @@ export default function QuestCard(props: QuestCardProps) {
               <button
                 onClick={() => props.onClaim(q().id)}
                 disabled={props.claiming}
-                class="px-3 py-1 bg-accent text-white text-xs font-semibold rounded-md hover:bg-accent-hover disabled:opacity-50 transition-colors"
+                class="px-3 py-1 bg-accent text-surface-overlay text-xs font-semibold rounded-md hover:bg-accent-hover disabled:opacity-50 transition-colors"
               >
                 {props.claiming ? "Claiming..." : "Claim Reward"}
               </button>

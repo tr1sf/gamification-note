@@ -1,9 +1,16 @@
 import { For, Show } from "solid-js";
 import type { GuildMember } from "~/stores/guild";
 
+type Role = "owner" | "admin" | "member";
+
 interface MemberListProps {
   members: GuildMember[];
   currentUserId?: string;
+  currentUserRole?: Role;
+  onPromote?: (userId: string) => void;
+  onDemote?: (userId: string) => void;
+  onTransfer?: (userId: string) => void;
+  onKick?: (userId: string) => void;
 }
 
 export default function MemberList(props: MemberListProps) {
@@ -20,6 +27,18 @@ export default function MemberList(props: MemberListProps) {
       >
         <For each={props.members}>
           {(member) => {
+            const isSelf = () => member.userId === props.currentUserId;
+            const myRole = () => props.currentUserRole;
+            // Owner can manage everyone but themselves; admin can only kick plain members.
+            const canPromote = () => myRole() === "owner" && !isSelf() && member.role === "member";
+            const canDemote = () => myRole() === "owner" && !isSelf() && member.role === "admin";
+            const canTransfer = () => myRole() === "owner" && !isSelf() && member.role === "admin";
+            const canKick = () =>
+              !isSelf() &&
+              member.role !== "owner" &&
+              (myRole() === "owner" || (myRole() === "admin" && member.role === "member"));
+            const hasActions = () => canPromote() || canDemote() || canTransfer() || canKick();
+
             const roleBadge = () => {
               if (member.role === "owner") {
                 return (
@@ -41,7 +60,7 @@ export default function MemberList(props: MemberListProps) {
             return (
               <div
                 class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-surface-hover transition-colors"
-                classList={{ "bg-accent/5": member.userId === props.currentUserId }}
+                classList={{ "bg-accent/5": isSelf() }}
               >
                 <div
                   class="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center text-sm font-bold shrink-0"
@@ -54,7 +73,7 @@ export default function MemberList(props: MemberListProps) {
                     <span class="text-sm font-medium text-ink-primary truncate">
                       {member.user.username}
                     </span>
-                    {member.userId === props.currentUserId && (
+                    {isSelf() && (
                       <span class="text-xs text-ink-secondary">(you)</span>
                     )}
                     {roleBadge()}
@@ -68,6 +87,47 @@ export default function MemberList(props: MemberListProps) {
                     </span>
                   </div>
                 </div>
+
+                <Show when={hasActions()}>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <Show when={canPromote()}>
+                      <button
+                        onClick={() => props.onPromote?.(member.userId)}
+                        class="text-xs px-2 py-1 rounded border border-surface-border text-ink-secondary hover:border-accent hover:text-accent transition-colors"
+                        title="Promote to admin"
+                      >
+                        Promote
+                      </button>
+                    </Show>
+                    <Show when={canDemote()}>
+                      <button
+                        onClick={() => props.onDemote?.(member.userId)}
+                        class="text-xs px-2 py-1 rounded border border-surface-border text-ink-secondary hover:border-accent hover:text-accent transition-colors"
+                        title="Demote to member"
+                      >
+                        Demote
+                      </button>
+                    </Show>
+                    <Show when={canTransfer()}>
+                      <button
+                        onClick={() => props.onTransfer?.(member.userId)}
+                        class="text-xs px-2 py-1 rounded border border-surface-border text-coin hover:border-coin transition-colors"
+                        title="Transfer ownership"
+                      >
+                        Make owner
+                      </button>
+                    </Show>
+                    <Show when={canKick()}>
+                      <button
+                        onClick={() => props.onKick?.(member.userId)}
+                        class="text-xs px-2 py-1 rounded border border-surface-border text-ink-secondary hover:border-error hover:text-error transition-colors"
+                        title="Remove from guild"
+                      >
+                        Kick
+                      </button>
+                    </Show>
+                  </div>
+                </Show>
               </div>
             );
           }}
