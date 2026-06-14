@@ -23,10 +23,6 @@ export function calculateLevel(xp: number): number {
   return Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / LEVEL_BASE_XP)));
 }
 
-export function xpForNextLevel(currentLevel: number): number {
-  return (currentLevel + 1) * (currentLevel + 1) * LEVEL_BASE_XP;
-}
-
 export function getLevelTitle(level: number): string {
   for (const threshold of TITLE_THRESHOLDS) {
     if (level >= threshold) {

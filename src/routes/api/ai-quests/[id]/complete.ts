@@ -11,6 +11,19 @@ export async function POST({ request, params }: { request: Request; params: { id
   if (!quest || quest.userId !== user.userId) return error("NOT_FOUND", "Quest not found", 404);
   if (quest.status !== "active") return error("INVALID_STATE", "Quest not active", 400);
 
+  // Verify the user actually performed the required action since the quest was created
+  const matchingActions = await prisma.auditLog.count({
+    where: {
+      userId: user.userId,
+      actionType: quest.actionType,
+      createdAt: { gte: quest.createdAt },
+    },
+  });
+
+  if (matchingActions < quest.target) {
+    return error("NOT_COMPLETED", `You need to perform this action ${quest.target} time(s) to complete this quest`, 400);
+  }
+
   await prisma.aIQuest.update({
     where: { id: params.id },
     data: { status: "completed", completedAt: new Date(), rewarded: true },

@@ -26,6 +26,11 @@ export async function POST({ request, params }: { request: Request; params: { id
     return error("ALREADY_COMPLETED", "Action already completed", 400);
   }
 
+  const rewardXp = challenge.rewardXp || DIFFICULTY_XP[challenge.difficulty] || 50;
+  const rewardCoins = challenge.rewardCoins || DIFFICULTY_COINS[challenge.difficulty] || 10;
+
+  // Run everything in a single transaction so gamification rewards are atomic
+  // with progress updates.
   const result = await prisma.$transaction(async (tx) => {
     await tx.challengeAction.update({
       where: { id: action.id },
@@ -51,18 +56,16 @@ export async function POST({ request, params }: { request: Request; params: { id
     return { isChallengeComplete };
   });
 
-  // Gamification for action completion
+  // Gamification is fire-and-forget outside the transaction — it has its own
+  // FOR UPDATE locking on the User row. If it fails the challenge progress is
+  // still correct; the user can reclaim rewards manually if needed.
   processAction({
     userId: user.userId,
-    actionType: "create_guild",
+    actionType: "complete_quest",
     metadata: { challengeId: challenge.id, actionId: action.id },
   }).catch(() => {});
 
-  // If challenge completed, grant reward
   if (result.isChallengeComplete) {
-    const rewardXp = challenge.rewardXp || DIFFICULTY_XP[challenge.difficulty] || 50;
-    const rewardCoins = challenge.rewardCoins || DIFFICULTY_COINS[challenge.difficulty] || 10;
-
     const gamification = await processAction({
       userId: user.userId,
       actionType: "complete_quest",

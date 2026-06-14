@@ -51,8 +51,8 @@ export async function POST({ request }: { request: Request }) {
 
   processAction({
     userId: user.userId,
-    actionType: "create_guild",
-    metadata: { challengeId: challenge.id, challengeTitle: challenge.title },
+    actionType: "create_note",
+    metadata: { source: "challenge", challengeId: challenge.id, challengeTitle: challenge.title },
   }).catch(() => {});
 
   return success(challenge);

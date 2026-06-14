@@ -79,9 +79,30 @@ export function getSessionId(userId: string): string | undefined {
   return sessions.get(userId)?.sessionId;
 }
 
-// Background cleanup: end sessions that have been idle too long
+// Background cleanup: end sessions that have been idle too long.
+// Also evicts oldest entries when the map exceeds the max size guard.
+const MAX_SESSIONS = 5_000;
 setInterval(() => {
   const now = Date.now();
+
+  // Evict oversized Map before iterating
+  while (sessions.size > MAX_SESSIONS) {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+    for (const [userId, session] of sessions) {
+      if (session.lastActivity < oldestTime) {
+        oldestTime = session.lastActivity;
+        oldestKey = userId;
+      }
+    }
+    if (oldestKey) {
+      sessions.delete(oldestKey);
+    } else {
+      break;
+    }
+  }
+
+  // End idle sessions
   for (const [userId, session] of sessions) {
     if (now - session.lastActivity >= SESSION_IDLE_TIMEOUT) {
       track({
