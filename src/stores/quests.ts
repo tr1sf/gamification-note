@@ -3,6 +3,7 @@ import { authFetch } from "~/stores/auth";
 
 export interface Quest {
   id: string;
+  questId: string;
   title: string;
   description: string;
   questType: string;
@@ -12,6 +13,8 @@ export interface Quest {
   coinReward: number;
   progress?: { current: number };
   status?: string;
+  unlockQuestId?: string | null;
+  mechanic?: string;
 }
 
 const [quests, setQuests] = createSignal<Quest[]>([]);
@@ -25,7 +28,23 @@ export async function fetchActiveQuests() {
     const res = await authFetch("/api/quests/active");
     const json = await res.json();
     if (json.success) {
-      setQuests(json.data || []);
+      setQuests(
+        (json.data || []).map((item: any) => ({
+          id: item.quest?.id ?? item.userQuestId,
+          questId: item.quest?.id ?? item.id,
+          title: item.quest?.title ?? item.title,
+          description: item.quest?.description ?? item.description,
+          questType: item.quest?.questType ?? item.questType,
+          icon: item.quest?.icon ?? item.icon,
+          criteria: item.quest?.criteria ?? item.criteria,
+          xpReward: item.quest?.xpReward ?? item.xpReward,
+          coinReward: item.quest?.coinReward ?? item.coinReward,
+          progress: item.progress,
+          status: item.status,
+          unlockQuestId: item.quest?.unlockQuestId ?? item.unlockQuestId,
+          mechanic: item.quest?.mechanic ?? item.mechanic,
+        }))
+      );
     }
   } catch {
     setQuests([]);

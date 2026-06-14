@@ -5,6 +5,7 @@ import { processAction } from "~/lib/gamification/engine";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { computeWordCount } from "~/lib/blocks";
 import { track } from "~/lib/analytics/tracker";
+import { DELETE_PENALTY_XP, DELETE_PENALTY_MAX_WORDS, DELETE_PENALTY_MAX_AGE_MS } from "~/lib/gamification/constants";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -119,10 +120,24 @@ export async function DELETE({ request, params }: { request: Request; params: { 
 
   const existing = await prisma.note.findUnique({
     where: { id: params.id },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, wordCount: true, createdAt: true },
   });
   if (!existing) return error("NOT_FOUND", "Note not found", 404);
   if (existing.userId !== user.userId) return error("FORBIDDEN", "Not your note", 403);
+
+  const noteAge = Date.now() - existing.createdAt.getTime();
+  if (existing.wordCount < DELETE_PENALTY_MAX_WORDS && noteAge < DELETE_PENALTY_MAX_AGE_MS) {
+    await prisma.$executeRaw`UPDATE "User" SET xp = GREATEST(0, xp - ${DELETE_PENALTY_XP}) WHERE id = ${user.userId}::uuid`;
+    await prisma.auditLog.create({
+      data: {
+        userId: user.userId,
+        actionType: "delete_penalty",
+        xpChange: -DELETE_PENALTY_XP,
+        coinChange: 0,
+        metadata: { noteId: params.id, wordCount: existing.wordCount, noteAge },
+      },
+    });
+  }
 
   await prisma.note.update({
     where: { id: params.id },

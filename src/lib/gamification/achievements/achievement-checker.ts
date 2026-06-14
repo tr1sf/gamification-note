@@ -1,5 +1,13 @@
 import type { Prisma } from "@prisma/client";
 
+const ACHIEVEMENT_REWARDS: Record<string, string> = {
+  "First Scroll": "beginner_badge",
+  "Streak Master": "streak_freeze",
+  "Wordsmith": "effect_sparkle",
+  "Quest Champion": "gold_confetti",
+  "Guild Leader": "guild_master_nameplate",
+};
+
 export async function checkAchievements(
   tx: Prisma.TransactionClient,
   userId: string,
@@ -66,6 +74,31 @@ export async function checkAchievements(
 
     if (newlyUnlocked) {
       unlocked.push({ id: achievement.id, title: achievement.title });
+    }
+  }
+
+  if (unlocked.length > 0) {
+    const rewardNames = unlocked
+      .map((a) => ACHIEVEMENT_REWARDS[a.title])
+      .filter(Boolean);
+
+    if (rewardNames.length > 0) {
+      const items = await tx.cosmeticItem.findMany({
+        where: { name: { in: rewardNames } },
+      });
+
+      for (const achTitle of unlocked.map((a) => a.title)) {
+        const rewardType = ACHIEVEMENT_REWARDS[achTitle];
+        if (!rewardType) continue;
+        const item = items.find((i) => i.type === rewardType || i.name === rewardType);
+        if (item) {
+          await tx.userInventory.upsert({
+            where: { userId_cosmeticItemId: { userId, cosmeticItemId: item.id } },
+            create: { userId, cosmeticItemId: item.id },
+            update: {},
+          });
+        }
+      }
     }
   }
 

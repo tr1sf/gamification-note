@@ -3,7 +3,7 @@ import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { summarizeNote } from "~/lib/ai/summarize";
 import { isAiAvailable } from "~/lib/ai/openai";
-import { processAction, triggerActionNotifications } from "~/lib/gamification/engine";
+import { processAction } from "~/lib/gamification/engine";
 import { track } from "~/lib/analytics/tracker";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
@@ -50,8 +50,6 @@ export async function POST({ request, params }: { request: Request; params: { id
     actionType: "ai_summarize",
     metadata: { noteId: note.id },
   });
-
-  triggerActionNotifications(user.userId, gamification);
 
   track({
     userId: user.userId,

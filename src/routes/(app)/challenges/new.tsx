@@ -37,6 +37,9 @@ export default function ChallengeCreatePage() {
   const [theme, setTheme] = createSignal("growth");
   const [difficulty, setDifficulty] = createSignal("medium");
   const [iconEmoji, setIconEmoji] = createSignal("🌱");
+  const [iconImageUrl, setIconImageUrl] = createSignal<string | null>(null);
+  const [iconMode, setIconMode] = createSignal<"emoji" | "upload">("emoji");
+  const [imagePreviewUrl, setImagePreviewUrl] = createSignal<string | null>(null);
   const [rewardXp, setRewardXp] = createSignal(100);
   const [rewardCoins, setRewardCoins] = createSignal(20);
   const [actions, setActions] = createSignal<ActionDraft[]>([]);
@@ -63,16 +66,26 @@ export default function ChallengeCreatePage() {
     if (found) setIconEmoji(found.icon);
   };
 
+  const handleImageUpload = (e: Event) => {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreviewUrl(previewUrl);
+    setIconImageUrl(previewUrl);
+  };
+
   const handleSubmit = async () => {
     if (!title().trim()) return addToast("Title is required", "error");
     setSaving(true);
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         title: title().trim(),
         description: description().trim() || null,
         theme: theme(),
         difficulty: difficulty(),
-        iconEmoji: iconEmoji(),
+        iconEmoji: iconMode() === "emoji" ? iconEmoji() : null,
         rewardXp: rewardXp(),
         rewardCoins: rewardCoins(),
         actions: actions()
@@ -86,6 +99,10 @@ export default function ChallengeCreatePage() {
             maxRepeats: a.maxRepeats,
           })),
       };
+
+      if (iconMode() === "upload" && iconImageUrl()) {
+        body.iconImageUrl = iconImageUrl();
+      }
 
       const res = await authFetch("/api/challenges", {
         method: "POST",
@@ -154,6 +171,63 @@ export default function ChallengeCreatePage() {
             )}
           </For>
         </div>
+      </div>
+
+      {/* Icon — Emoji | Upload Image toggle */}
+      <div class="bg-surface-elevated rounded-xl p-6 border border-surface-border space-y-3">
+        <label class="block text-sm font-medium text-ink-primary">Challenge Icon</label>
+        <div class="flex gap-1 border-b border-surface-border mb-3">
+          <button
+            onClick={() => setIconMode("emoji")}
+            class={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              iconMode() === "emoji"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-secondary hover:text-ink-primary"
+            }`}
+          >
+            Emoji
+          </button>
+          <button
+            onClick={() => setIconMode("upload")}
+            class={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              iconMode() === "upload"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-secondary hover:text-ink-primary"
+            }`}
+          >
+            Upload Image
+          </button>
+        </div>
+
+        <Show when={iconMode() === "emoji"}>
+          <input
+            value={iconEmoji()}
+            onInput={(e) => setIconEmoji(e.currentTarget.value)}
+            placeholder="🌱"
+            class="w-full px-4 py-2 rounded-lg bg-surface border border-surface-border text-ink-primary placeholder:text-ink-secondary/50 focus:outline-none focus:border-accent/50 text-2xl text-center"
+          />
+        </Show>
+
+        <Show when={iconMode() === "upload"}>
+          <div class="space-y-3">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              class="w-full text-sm text-ink-secondary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent/10 file:text-accent hover:file:bg-accent/20"
+            />
+            <Show when={imagePreviewUrl()}>
+              <div class="flex items-center gap-3">
+                <img
+                  src={imagePreviewUrl()!}
+                  alt="Preview"
+                  class="w-16 h-16 rounded-lg object-cover border border-surface-border"
+                />
+                <span class="text-xs text-ink-secondary">Image preview</span>
+              </div>
+            </Show>
+          </div>
+        </Show>
       </div>
 
       {/* Difficulty */}

@@ -93,17 +93,22 @@ model NoteAttachment {
 }
 
 model Quest {
-  id          String   @id @default(uuid()) @db.Uuid
-  title       String
-  description String
-  questType   String   @default("daily")
-  icon        String   @default("scroll")
-  criteria    Json     @default("{}")
-  xpReward    Int      @default(0)
-  coinReward  Int      @default(0)
-  resetCron   String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id             String   @id @default(uuid()) @db.Uuid
+  title          String
+  description    String
+  questType      String   @default("daily")
+  icon           String   @default("scroll")
+  criteria       Json     @default("{}")
+  xpReward       Int      @default(0)
+  coinReward     Int      @default(0)
+  resetCron      String?
+  isActive       Boolean  @default(true)
+  narrativeText  String?                  // RPG-flavor intro text shown when quest appears
+  unlockQuestId  String?   @db.Uuid       // prerequisite quest that must be completed first
+  iconEmoji      String?                  // override icon
+  mechanic       String    @default("counter") // counter|time_limit|streak_guard|time_window|tag_variety|structure_score|social
+  mechanicConfig Json      @default("{}") // mechanic-specific params
+  createdAt      DateTime  @default(now())
 
   userQuests UserQuest[]
 
@@ -183,17 +188,19 @@ model CosmeticItem {
   coinCost    Int
   rarity      String   @default("common")
   isActive    Boolean  @default(true)
+  category    Json?
   createdAt   DateTime @default(now())
 
   inventory UserInventory[]
 }
 
 model UserInventory {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @db.Uuid
-  cosmeticItemId String   @db.Uuid
-  isEquipped     Boolean  @default(false)
-  purchasedAt    DateTime @default(now())
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  cosmeticItemId String    @db.Uuid
+  isEquipped     Boolean   @default(false)
+  purchasedAt    DateTime  @default(now())
+  expiresAt      DateTime?
 
   user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   item CosmeticItem @relation(fields: [cosmeticItemId], references: [id], onDelete: Cascade)
@@ -228,14 +235,16 @@ model UserAchievement {
 }
 
 model Notification {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
   type      String
   title     String
   body      String?
-  isRead    Boolean  @default(false)
-  metadata  Json     @default("{}")
-  createdAt DateTime @default(now())
+  isRead    Boolean   @default(false)
+  metadata  Json      @default("{}")
+  urgency   String    @default("normal") // normal|urgent|critical
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -1,6 +1,6 @@
 import { Show, onMount, createEffect, type JSX } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
-import { user, loading, initAuth, logout } from "~/stores/auth";
+import { user, loading, initAuth, logout, authFetch } from "~/stores/auth";
 import { uiStore, toggleSidebar, setTheme } from "~/stores/ui";
 import { gamification, syncFromUser } from "~/stores/user";
 import { quests, fetchActiveQuests } from "~/stores/quests";
@@ -48,6 +48,8 @@ export default function AppLayout(props: { children?: JSX.Element }) {
     if (u) {
       syncFromUser({ xp: u.xp, coins: u.coins, level: u.level, title: u.title, streak: u.streak, gamificationStyle: (u as any).gamificationStyle });
       fetchActiveQuests();
+      // Auto nudge after login
+      authFetch("/api/auth/nudge").catch(() => {});
     }
   });
 

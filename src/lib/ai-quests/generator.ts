@@ -95,6 +95,12 @@ export async function buildBehaviorProfile(userId: string): Promise<UserBehavior
   };
 }
 
+function getLevelMultiplier(level: number): { target: number; xpMult: number } {
+  if (level <= 5) return { target: 1, xpMult: 1 };
+  if (level <= 15) return { target: 2, xpMult: 2 };
+  return { target: 3, xpMult: 3 };
+}
+
 const QUEST_RULES: Array<{
   id: string;
   condition: (profile: UserBehaviorProfile) => boolean;
@@ -201,17 +207,41 @@ export async function generateQuests(userId: string): Promise<Array<{
   title: string; description: string; actionType: string; target: number;
   xpReward: number; coinReward: number; ruleId: string; source: string; reason: string;
 }>> {
-  const profile = await buildBehaviorProfile(userId);
+  const [profile, user] = await Promise.all([
+    buildBehaviorProfile(userId),
+    prisma.user.findUnique({ where: { id: userId }, select: { level: true } }),
+  ]);
+  const mult = getLevelMultiplier(user?.level ?? 1);
+
+  const recentCutoff = new Date(Date.now() - 86400000);
+  const recentRuleIds = await prisma.aIQuest.findMany({
+    where: {
+      userId,
+      ruleId: { not: null },
+      createdAt: { gte: recentCutoff },
+    },
+    select: { ruleId: true },
+  });
+  const recentSet = new Set(recentRuleIds.map((r) => r.ruleId).filter(Boolean) as string[]);
+
   const results: Array<any> = [];
 
   for (const rule of QUEST_RULES) {
+    if (results.length >= 3) break;
+    if (recentSet.has(rule.id)) continue;
     try {
       if (rule.condition(profile)) {
         const q = rule.quest(profile);
-        results.push({ ...q, ruleId: rule.id, source: "rule", reason: rule.reason(profile) });
+        results.push({
+          ...q,
+          target: q.target * mult.target,
+          xpReward: q.xpReward * mult.xpMult,
+          ruleId: rule.id,
+          source: "rule",
+          reason: rule.reason(profile),
+        });
       }
     } catch {}
-    if (results.length >= 3) break;
   }
 
   return results;

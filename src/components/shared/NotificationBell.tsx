@@ -1,6 +1,6 @@
 import { createSignal, For, Show, onMount, onCleanup } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Notification, notifications, unreadCount, fetchNotifications, markRead, markAllRead, addSocketNotification } from "~/stores/notifications";
+import { Notification, notifications, unreadCount, fetchNotifications, markRead, markAllRead, addSocketNotification, showDesktopNotification, requestDesktopPermission } from "~/stores/notifications";
 import { useSocket } from "~/lib/socket/client";
 import { timeAgo } from "~/lib/time-ago";
 
@@ -14,9 +14,14 @@ export default function NotificationBell() {
   onMount(async () => {
     await fetchNotifications();
     setLoaded(true);
+    requestDesktopPermission().catch(() => {});
 
     const handleNewNotification = (notification: Notification) => {
       addSocketNotification(notification);
+      const isUrgent = notification.urgency === "urgent" || notification.urgency === "critical" || notification.metadata?.urgency === "urgent" || notification.metadata?.urgency === "critical";
+      if (document.hidden && isUrgent) {
+        showDesktopNotification(notification.title, notification.body || undefined);
+      }
     };
     on("notification:new", handleNewNotification);
 
@@ -69,6 +74,8 @@ export default function NotificationBell() {
 
   const timeAgoText = (dateStr: string) => timeAgo(dateStr);
 
+  const hasUrgentUnread = () => notifications().some((n) => !n.isRead && (n.urgency === "urgent" || n.urgency === "critical" || n.metadata?.urgency === "urgent" || n.metadata?.urgency === "critical"));
+
   return (
     <div class="relative" ref={dropdownRef}>
       <button
@@ -76,7 +83,7 @@ export default function NotificationBell() {
         class="relative p-1.5 text-ink-secondary hover:text-ink-primary transition-colors"
         aria-label={`Notifications${unreadCount() > 0 ? `, ${unreadCount()} unread` : ""}`}
       >
-        <span aria-hidden="true" class="text-lg">🔔</span>
+        <span aria-hidden="true" class="text-lg" classList={{ "animate-pulse": hasUrgentUnread() }}>🔔</span>
         <Show when={unreadCount() > 0}>
           <span class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-error text-white text-[10px] font-bold px-1">
             {unreadCount() > 99 ? "99+" : unreadCount()}

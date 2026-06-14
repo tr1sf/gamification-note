@@ -2,7 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { joinGuildSchema } from "~/validators/guild";
 import { success, error } from "~/lib/api-response";
-import { processAction, triggerActionNotifications } from "~/lib/gamification/engine";
+import { processAction } from "~/lib/gamification/engine";
 import { getIO } from "~/lib/socket";
 import { createNotification } from "~/lib/socket/notifications";
 import { track } from "~/lib/analytics/tracker";
@@ -46,12 +46,11 @@ export async function POST({ request, params }: { request: Request; params: { id
     },
   });
 
-  const result = await processAction({
+  await processAction({
     userId: user.userId,
     actionType: "join_guild",
     metadata: { guildId: params.id },
   });
-  triggerActionNotifications(user.userId, result);
 
   track({
     userId: user.userId,

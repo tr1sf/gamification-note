@@ -2,7 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { reviewTaskSchema } from "~/validators/task";
-import { grantReward, triggerActionNotifications } from "~/lib/gamification/engine";
+import { grantReward } from "~/lib/gamification/engine";
 import { createNotification } from "~/lib/socket/notifications";
 
 // POST — owner/admin approves or rejects a submitted task.
@@ -46,7 +46,6 @@ export async function POST({ request, params }: { request: Request; params: { id
         actionType: "guild_task_approved",
         metadata: { guildId: params.id, taskId: task.id },
       });
-      triggerActionNotifications(task.assigneeId, reward);
     }
 
     createNotification(

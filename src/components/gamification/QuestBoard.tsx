@@ -9,17 +9,26 @@ interface QuestBoardProps {
   limit?: number;
 }
 
+const QUEST_TABS = ["daily", "weekly", "monthly", "chains"] as const;
+
 export default function QuestBoard(props: QuestBoardProps) {
   const [claimingId, setClaimingId] = createSignal<string | null>(null);
+  const [tab, setTab] = createSignal<"daily" | "weekly" | "monthly" | "chains">("daily");
+  const [claimingAll, setClaimingAll] = createSignal(false);
 
   onMount(() => {
     fetchActiveQuests();
   });
 
-  const dailyQuests = () =>
-    quests().filter((q) => q.questType === "daily").slice(0, props.limit);
-  const weeklyQuests = () =>
-    quests().filter((q) => q.questType === "weekly").slice(0, props.limit);
+  const filteredQuests = () => {
+    const all = quests();
+    return all
+      .filter((q) => q.questType === tab())
+      .slice(0, props.limit);
+  };
+
+  const completedQuests = () =>
+    quests().filter((q) => q.status === "completed");
 
   const handleClaim = async (questId: string) => {
     setClaimingId(questId);
@@ -38,6 +47,30 @@ export default function QuestBoard(props: QuestBoardProps) {
         });
       }
     }
+  };
+
+  const claimAll = async () => {
+    setClaimingAll(true);
+    const completed = completedQuests();
+    let totalXp = 0;
+    let totalCoins = 0;
+    for (const q of completed) {
+      const r = await claimQuest(q.questId);
+      if (r.data?.gamification) {
+        totalXp += r.data.gamification.xpGained;
+        totalCoins += r.data.gamification.coinsGained;
+      }
+    }
+    if (totalXp > 0 || totalCoins > 0) {
+      applyReward({ xpGained: totalXp, coinsGained: totalCoins, leveledUp: false });
+      showReward({
+        xp: totalXp,
+        coins: totalCoins,
+        message: `Claimed ${completed.length} quests!`,
+      });
+    }
+    setClaimingAll(false);
+    fetchActiveQuests();
   };
 
   return (
@@ -65,45 +98,47 @@ export default function QuestBoard(props: QuestBoardProps) {
             </div>
           }
         >
-          <section>
-            <h2 class="text-lg font-display font-bold text-ink-primary mb-3 flex items-center gap-2">
-              <span aria-hidden="true">☀️</span> Daily Quests
-            </h2>
-            <Show
-              when={dailyQuests().length > 0}
-              fallback={
-                <p class="text-sm text-ink-secondary py-4">No daily quests available</p>
-              }
-            >
-              <div class="grid gap-3 sm:grid-cols-2">
-                <For each={dailyQuests()}>
-                  {(quest) => (
-                    <QuestCard
-                      quest={quest}
-                      onClaim={handleClaim}
-                      claiming={claimingId() === quest.id}
-                    />
-                  )}
-                </For>
-              </div>
+          <div class="flex items-center justify-between flex-wrap gap-3">
+            <div class="flex gap-1 bg-surface-elevated rounded-lg p-1 border border-surface-border w-fit">
+              {QUEST_TABS.map((t) => (
+                <button
+                  onClick={() => setTab(t)}
+                  class={`px-4 py-1.5 rounded-md text-sm capitalize font-medium transition-colors ${
+                    tab() === t
+                      ? "bg-accent text-white shadow-sm"
+                      : "text-ink-secondary hover:text-ink-primary"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <Show when={completedQuests().length > 1}>
+              <button
+                onClick={claimAll}
+                disabled={claimingAll()}
+                class="px-4 py-1.5 bg-success text-surface-overlay text-sm font-semibold rounded-md hover:opacity-90 disabled:opacity-50 transition-colors"
+              >
+                {claimingAll() ? "Claiming..." : `Claim All (${completedQuests().length})`}
+              </button>
             </Show>
-          </section>
+          </div>
 
           <section>
-            <h2 class="text-lg font-display font-bold text-ink-primary mb-3 flex items-center gap-2">
-              <span aria-hidden="true">📅</span> Weekly Quests
-            </h2>
             <Show
-              when={weeklyQuests().length > 0}
+              when={filteredQuests().length > 0}
               fallback={
-                <p class="text-sm text-ink-secondary py-4">No weekly quests available</p>
+                <p class="text-sm text-ink-secondary py-4">
+                  No {tab()} quests available
+                </p>
               }
             >
               <div class="grid gap-3 sm:grid-cols-2">
-                <For each={weeklyQuests()}>
+                <For each={filteredQuests()}>
                   {(quest) => (
                     <QuestCard
                       quest={quest}
+                      quests={quests()}
                       onClaim={handleClaim}
                       claiming={claimingId() === quest.id}
                     />

@@ -3,6 +3,7 @@ import type { Quest } from "~/stores/quests";
 
 interface QuestCardProps {
   quest: Quest;
+  quests: Quest[];
   onClaim: (questId: string) => void;
   claiming?: boolean;
 }
@@ -22,6 +23,18 @@ export default function QuestCard(props: QuestCardProps) {
   const isCompleted = () => status() === "completed";
   const isClaimed = () => status() === "claimed";
 
+  const prerequisite = () => {
+    if (!q().unlockQuestId) return null;
+    return props.quests.find((oq) => oq.questId === q().unlockQuestId);
+  };
+  const isLocked = () => {
+    const pre = prerequisite();
+    if (!pre) return false;
+    return pre.status !== "completed" && pre.status !== "claimed";
+  };
+
+  const isNearlyDone = () => progressPct() > 80 && !isCompleted() && !isClaimed();
+
   return (
     <div
       class={`p-4 rounded-lg border transition-all ${
@@ -29,11 +42,15 @@ export default function QuestCard(props: QuestCardProps) {
           ? "border-surface-border bg-surface opacity-50"
           : isCompleted()
           ? "border-success/30 bg-success-bg"
+          : isLocked()
+          ? "border-surface-border bg-surface opacity-60"
           : "border-surface-border bg-surface-elevated hover:shadow-sm"
       }`}
     >
       <div class="flex items-start gap-3">
-        <span class="text-2xl shrink-0 mt-0.5" aria-hidden="true">{q().icon || "📜"}</span>
+        <span class="text-2xl shrink-0 mt-0.5" aria-hidden="true">
+          {isLocked() ? "🔒" : q().icon || "📜"}
+        </span>
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between gap-2">
             <h3 class="font-semibold text-ink-primary text-sm truncate">{q().title}</h3>
@@ -43,6 +60,11 @@ export default function QuestCard(props: QuestCardProps) {
             <Show when={isCompleted()}>
               <span class="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success font-medium shrink-0 flex items-center gap-1">
                 <span>✓</span> Complete
+              </span>
+            </Show>
+            <Show when={isLocked()}>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-surface-border text-ink-secondary font-medium shrink-0">
+                Locked
               </span>
             </Show>
           </div>
@@ -59,7 +81,7 @@ export default function QuestCard(props: QuestCardProps) {
               <div
                 class={`h-full rounded-full transition-all duration-500 ${
                   isCompleted() ? "bg-success" : "bg-accent"
-                }`}
+                } ${isNearlyDone() ? "animate-progress-pulse" : ""}`}
                 style={{ width: `${progressPct()}%` }}
               />
             </div>
@@ -76,7 +98,20 @@ export default function QuestCard(props: QuestCardProps) {
                 <span class="text-xs">🪙</span>
               </span>
             </div>
-            <Show when={isCompleted()}>
+            <Show when={isLocked()}>
+              <div class="relative group">
+                <button
+                  disabled
+                  class="px-3 py-1 bg-surface-border text-ink-secondary text-xs font-semibold rounded-md cursor-not-allowed"
+                >
+                  Locked
+                </button>
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-surface-overlay text-surface text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                  Complete quest: {prerequisite()?.title || "???"} first
+                </div>
+              </div>
+            </Show>
+            <Show when={isCompleted() && !isLocked()}>
               <button
                 onClick={() => props.onClaim(q().id)}
                 disabled={props.claiming}

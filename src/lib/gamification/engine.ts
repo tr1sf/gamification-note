@@ -29,13 +29,13 @@ export interface ActionResult {
 }
 
 export async function processAction(ctx: ActionContext): Promise<ActionResult> {
-  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+  const result = await (db.$transaction(async (tx: Prisma.TransactionClient) => {
     const rows = await tx.$queryRaw<Array<{ xp: number; coins: number; level: number }>>`
       SELECT xp, coins, level FROM "User" WHERE id = ${ctx.userId}::uuid FOR UPDATE
     `;
     const user = rows[0];
 
-    const xpGained = calculateXP(ctx.actionType, ctx.metadata);
+    const xpGained = calculateXP(ctx.actionType, ctx.metadata, ctx.metadata?.dailyNoteCount as number | undefined);
     const coinsGained = calculateCoins(ctx.actionType, ctx.metadata);
 
     const newXp = user.xp + xpGained;
@@ -84,7 +84,10 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
       unlockedAchievements,
       questProgress,
     };
-  }) as Promise<ActionResult>;
+  }) as Promise<ActionResult>);
+
+  triggerNotifications(ctx.userId, result);
+  return result;
 }
 
 // Grant an explicit XP/coin reward (e.g. habit check-in, approved guild task)
@@ -100,7 +103,7 @@ export async function grantReward(opts: {
   const xpGained = Math.max(0, Math.round(opts.xp || 0));
   const coinsGained = Math.max(0, Math.round(opts.coins || 0));
 
-  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+  const result = await (db.$transaction(async (tx: Prisma.TransactionClient) => {
     const rows = await tx.$queryRaw<Array<{ xp: number; level: number }>>`
       SELECT xp, level FROM "User" WHERE id = ${opts.userId}::uuid FOR UPDATE
     `;
@@ -142,11 +145,10 @@ export async function grantReward(opts: {
       unlockedAchievements: [],
       questProgress: [],
     } as ActionResult;
-  }) as Promise<ActionResult>;
-}
+  }) as Promise<ActionResult>);
 
-export function triggerActionNotifications(userId: string, result: ActionResult): void {
-  triggerNotifications(userId, result);
+  triggerNotifications(opts.userId, result);
+  return result;
 }
 
 function triggerNotifications(userId: string, result: {

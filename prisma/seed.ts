@@ -34,6 +34,13 @@ async function main() {
     { title: 'Chronicler',       description: 'Write 10000 words this month',       questType: 'monthly', icon: 'scroll',  criteria: { action: 'write_words',   count: 10000 }, xpReward: 300, coinReward: 80 },
     { title: 'Archaeologist',    description: 'Review 15 old notes this month',     questType: 'monthly', icon: 'book',    criteria: { action: 'review_note',   count: 15 },  xpReward: 250, coinReward: 60 },
     { title: 'Scribe Weekly',    description: 'Review 5 old notes this week',     questType: 'weekly', icon: 'book',    criteria: { action: 'review_note',   count: 5 },   xpReward: 60,  coinReward: 15 },
+    // Mechanic-based quests (Phase P2)
+    { title: 'Speed Writer',     description: 'Write a note within 15 min of quest assignment', questType: 'daily', icon: 'clock', mechanic: 'time_limit', mechanicConfig: { timeWindowMinutes: 15 }, criteria: { action: 'create_note', count: 1 }, xpReward: 25, coinReward: 8 },
+    { title: 'Streak Guardian',  description: 'Keep your streak alive today', questType: 'daily', icon: 'fire', mechanic: 'streak_guard', mechanicConfig: { minStreak: 1 }, criteria: { action: 'daily_login', count: 1 }, xpReward: 15, coinReward: 5 },
+    { title: 'Night Owl Bonus',  description: 'Write a note between 21:00-24:00', questType: 'daily', icon: 'moon', mechanic: 'time_window', mechanicConfig: { startHour: 21, endHour: 24 }, criteria: { action: 'create_note', count: 1 }, xpReward: 20, coinReward: 8 },
+    { title: 'Tag Explorer',     description: 'Use 5 different tags this week', questType: 'weekly', icon: 'tag', mechanic: 'tag_variety', mechanicConfig: {}, criteria: { action: 'any', count: 5 }, xpReward: 60, coinReward: 20 },
+    { title: 'Quality Craftsman',description: 'Create 3 notes with structure score ≥ 7', questType: 'weekly', icon: 'star', mechanic: 'structure_score', mechanicConfig: { minScore: 7 }, criteria: { action: 'create_note', count: 3 }, xpReward: 80, coinReward: 25 },
+    { title: 'Guild Chatter',    description: 'Send 5 messages in guild chat', questType: 'weekly', icon: 'chat', mechanic: 'social', mechanicConfig: {}, criteria: { action: 'guild_message', count: 5 }, xpReward: 40, coinReward: 15 },
   ];
 
   let newQuests = 0;
@@ -88,6 +95,56 @@ async function main() {
         type: 'avatar_frame',
         coinCost: 150,
         rarity: 'rare',
+      },
+    }),
+    prisma.cosmeticItem.create({
+      data: {
+        name: 'XP Booster (1h)',
+        description: 'Double XP for 1 hour',
+        type: 'consumable',
+        coinCost: 30,
+        rarity: 'common',
+        category: { usageType: 'xp_boost', durationMin: 60 },
+      },
+    }),
+    prisma.cosmeticItem.create({
+      data: {
+        name: 'Focus Potion',
+        description: 'Double word-count bonus for 30 min',
+        type: 'consumable',
+        coinCost: 20,
+        rarity: 'common',
+        category: { usageType: 'focus_potion', durationMin: 30 },
+      },
+    }),
+    prisma.cosmeticItem.create({
+      data: {
+        name: 'Streak Freeze',
+        description: 'Miss 1 day without breaking streak',
+        type: 'consumable',
+        coinCost: 50,
+        rarity: 'rare',
+        category: { usageType: 'streak_freeze' },
+      },
+    }),
+    prisma.cosmeticItem.create({
+      data: {
+        name: 'Quest Reroll',
+        description: 'Replace 1 active quest',
+        type: 'consumable',
+        coinCost: 15,
+        rarity: 'common',
+        category: { usageType: 'quest_reroll' },
+      },
+    }),
+    prisma.cosmeticItem.create({
+      data: {
+        name: 'Loot Box',
+        description: 'Random badge or effect',
+        type: 'consumable',
+        coinCost: 75,
+        rarity: 'epic',
+        category: { usageType: 'loot_box' },
       },
     }),
   ]);
@@ -335,6 +392,49 @@ async function main() {
   }
 
   console.log(`Seeded: +${newTemplates} new challenge templates`);
+
+  // ── Quest chains (Phase P2) ────────────────────────────────────────────────
+
+  // Chain 1: Path of Scribe — Daily Scribe → Apprentice Writer
+  const dailyScribeId = (await prisma.quest.findFirst({ where: { title: 'Daily Scribe' }, select: { id: true } }))?.id;
+  if (dailyScribeId) {
+    const apprentice = await prisma.quest.findFirst({ where: { title: 'Apprentice Writer' }, select: { id: true } });
+    if (!apprentice) {
+      await prisma.quest.create({ data: { title: 'Apprentice Writer', description: 'Chain step 2: Create 10 notes', questType: 'weekly', icon: 'scroll', narrativeText: 'The quill grows heavier with ink. You are no longer a novice.', mechanic: 'counter', unlockQuestId: dailyScribeId, criteria: { action: 'create_note', count: 10 }, xpReward: 80, coinReward: 25 } });
+    } else {
+      await prisma.quest.update({ where: { id: apprentice.id }, data: { unlockQuestId: dailyScribeId, narrativeText: 'The quill grows heavier with ink. You are no longer a novice.' } });
+    }
+  }
+
+  // Chain 2: Wisdom Seeker — Knowledge Keeper → Insight Miner → Sage's Archive
+  const knowledgeKeeperId = (await prisma.quest.findFirst({ where: { title: 'Knowledge Keeper' }, select: { id: true } }))?.id;
+  if (knowledgeKeeperId) {
+    let insightMiner = await prisma.quest.findFirst({ where: { title: 'Insight Miner' }, select: { id: true } });
+    if (!insightMiner) {
+      insightMiner = await prisma.quest.create({ data: { title: 'Insight Miner', description: 'Chain step 2: Review 10 old notes', questType: 'weekly', icon: 'gem', narrativeText: 'The deeper you dig, the brighter the gems.', mechanic: 'counter', unlockQuestId: knowledgeKeeperId, criteria: { action: 'review_note', count: 10 }, xpReward: 100, coinReward: 30 } });
+    } else {
+      await prisma.quest.update({ where: { id: insightMiner.id }, data: { unlockQuestId: knowledgeKeeperId } });
+    }
+    const sageArchive = await prisma.quest.findFirst({ where: { title: "Sage's Archive" }, select: { id: true } });
+    if (!sageArchive) {
+      await prisma.quest.create({ data: { title: "Sage's Archive", description: 'Chain step 3: Review 25 old notes', questType: 'monthly', icon: 'library', narrativeText: 'You have become a keeper of lost knowledge.', mechanic: 'counter', unlockQuestId: insightMiner.id, criteria: { action: 'review_note', count: 25 }, xpReward: 250, coinReward: 80 } });
+    } else {
+      await prisma.quest.update({ where: { id: sageArchive.id }, data: { unlockQuestId: insightMiner.id, narrativeText: 'You have become a keeper of lost knowledge.' } });
+    }
+  }
+
+  // Chain 3: Community Builder — Guild Founder → Guild Leader
+  const guildFounderId = (await prisma.quest.findFirst({ where: { title: 'Guild Founder' }, select: { id: true } }))?.id;
+  if (guildFounderId) {
+    const guildLeader = await prisma.quest.findFirst({ where: { title: 'Guild Leader' }, select: { id: true } });
+    if (!guildLeader) {
+      await prisma.quest.create({ data: { title: 'Guild Leader', description: 'Chain step 2: Send 20 messages in guild chat', questType: 'weekly', icon: 'crown', narrativeText: 'A true leader speaks and others listen.', mechanic: 'social', unlockQuestId: guildFounderId, criteria: { action: 'guild_message', count: 20 }, xpReward: 150, coinReward: 50 } });
+    } else {
+      await prisma.quest.update({ where: { id: guildLeader.id }, data: { unlockQuestId: guildFounderId, narrativeText: 'A true leader speaks and others listen.' } });
+    }
+  }
+
+  console.log('Quest chains seeded.');
 }
 
 main()

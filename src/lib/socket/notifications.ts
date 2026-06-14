@@ -9,6 +9,9 @@ export async function createNotification(
   body?: string,
   metadata?: Record<string, unknown>
 ): Promise<void> {
+  const urgency = (metadata?.urgency as string) || undefined;
+  const expiresAt = (metadata?.expiresAt as string) ? new Date(metadata?.expiresAt as string) : undefined;
+
   const notification = await prisma.notification.create({
     data: {
       userId,
@@ -16,10 +19,13 @@ export async function createNotification(
       title,
       body,
       metadata: (metadata ?? {}) as Prisma.InputJsonValue,
+      ...(urgency ? { urgency } : {}),
+      ...(expiresAt ? { expiresAt } : {}),
     },
     select: {
       id: true, type: true, title: true, body: true,
       metadata: true, isRead: true, createdAt: true,
+      urgency: true, expiresAt: true,
     },
   });
 

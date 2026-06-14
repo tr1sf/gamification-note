@@ -25,3 +25,19 @@ export const XP_CREATE_CHALLENGE = 5;
 export const COIN_COMPLETE_CHALLENGE_ACTION = 1;
 
 export const LEVEL_BASE_XP = 100;
+
+// Anti-spam: diminishing returns per daily note count
+export const XP_CREATE_NOTE_TIERS: Array<{ max: number; xp: number }> = [
+  { max: 3, xp: 10 },
+  { max: 6, xp: 7 },
+  { max: 10, xp: 5 },
+  { max: 15, xp: 3 },
+  { max: 50, xp: 1 },
+];
+export const XP_QUALITY_BONUS = 5;
+export const QUALITY_SCORE_THRESHOLD = 3;
+export const QUALITY_BONUS_THRESHOLD = 7;
+export const DUPLICATE_SIMILARITY_THRESHOLD = 0.8;
+export const DELETE_PENALTY_XP = 5;
+export const DELETE_PENALTY_MAX_WORDS = 50;
+export const DELETE_PENALTY_MAX_AGE_MS = 5 * 60 * 1000;

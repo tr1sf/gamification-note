@@ -8,6 +8,8 @@ export interface Notification {
   body: string;
   metadata: Record<string, unknown> | null;
   isRead: boolean;
+  urgency?: string;
+  expiresAt?: string;
   createdAt: string;
 }
 
@@ -67,5 +69,19 @@ export function addSocketNotification(notification: Notification) {
   setNotifications((prev) => [notification, ...prev]);
   if (!notification.isRead) {
     setUnreadCount((prev) => prev + 1);
+  }
+}
+
+export async function requestDesktopPermission(): Promise<boolean> {
+  if (!("Notification" in window)) return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  const result = await Notification.requestPermission();
+  return result === "granted";
+}
+
+export function showDesktopNotification(title: string, body?: string): void {
+  if (Notification.permission === "granted") {
+    new Notification(title, { body, icon: "/favicon.ico" });
   }
 }

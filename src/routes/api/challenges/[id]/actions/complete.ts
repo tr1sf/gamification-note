@@ -1,7 +1,7 @@
 import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
-import { processAction, triggerActionNotifications } from "~/lib/gamification/engine";
+import { processAction } from "~/lib/gamification/engine";
 
 const DIFFICULTY_XP: Record<string, number> = { easy: 50, medium: 100, hard: 200, epic: 500 };
 const DIFFICULTY_COINS: Record<string, number> = { easy: 10, medium: 20, hard: 50, epic: 100 };

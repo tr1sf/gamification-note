@@ -28,6 +28,16 @@ function endOfWeek(): Date {
   return d;
 }
 
+function startOfMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+}
+
+function endOfMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+}
+
 async function rotateQuestType(
   tx: Prisma.TransactionClient,
   userId: string,
@@ -87,14 +97,35 @@ export async function rotateQuestsIfNeeded(
   await rotateQuestType(tx, userId, "daily", startOfToday(), endOfToday());
   await rotateQuestType(tx, userId, "weekly", startOfWeek(), endOfWeek());
   await rotateQuestType(tx, userId, "monthly", startOfMonth(), endOfMonth());
-}
 
-function startOfMonth(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-}
-
-function endOfMonth(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const activeAiQuests = await tx.aIQuest.findFirst({
+    where: { userId, status: "active" },
+  });
+  if (!activeAiQuests) {
+    const lastGen = await tx.aIQuest.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    if (!lastGen || (Date.now() - lastGen.createdAt.getTime()) > 86400000) {
+      const { generateQuests } = await import("~/lib/ai-quests/generator");
+      const generated = await generateQuests(userId);
+      for (const q of generated) {
+        await tx.aIQuest.create({
+          data: {
+            userId,
+            title: q.title,
+            description: q.description,
+            actionType: q.actionType,
+            target: q.target,
+            xpReward: q.xpReward,
+            coinReward: q.coinReward,
+            source: q.source,
+            ruleId: q.ruleId,
+            reason: q.reason,
+          },
+        });
+      }
+    }
+  }
 }

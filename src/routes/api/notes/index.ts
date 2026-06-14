@@ -6,6 +6,7 @@ import { processAction } from "~/lib/gamification/engine";
 import { computeWordCount, isBlockContent, parseBlocks, blockExcerpt } from "~/lib/blocks";
 import { track } from "~/lib/analytics/tracker";
 import { calculateStructureScore, scorePlainText } from "~/lib/analytics/quality-scorer";
+import { DUPLICATE_SIMILARITY_THRESHOLD } from "~/lib/gamification/constants";
 
 export async function GET({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
@@ -41,6 +42,15 @@ export async function GET({ request }: { request: Request }) {
   });
 }
 
+function tokenize(text: string): Set<string> {
+  return new Set(text.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+}
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+  const intersection = new Set([...a].filter(x => b.has(x)));
+  const union = new Set([...a, ...b]);
+  return union.size === 0 ? 0 : intersection.size / union.size;
+}
+
 export async function POST({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
@@ -52,6 +62,32 @@ export async function POST({ request }: { request: Request }) {
   }
 
   const wordCount = computeWordCount(parsed.data.content);
+
+  const contentTokens = tokenize(parsed.data.content);
+  const recentNotes = await prisma.note.findMany({
+    where: { userId: user.userId, isDeleted: false },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: { content: true },
+  });
+  const isSpam = recentNotes.some((n) => jaccardSimilarity(contentTokens, tokenize(n.content)) >= DUPLICATE_SIMILARITY_THRESHOLD);
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const dailyNoteCount = await prisma.auditLog.count({
+    where: { userId: user.userId, actionType: "create_note", createdAt: { gte: todayStart } },
+  });
+
+  const isBlock = isBlockContent(parsed.data.content);
+  let structureScore: number | undefined;
+  if (isBlock) {
+    const blocks = parseBlocks(parsed.data.content);
+    const { score } = calculateStructureScore(blocks, parsed.data.tags ?? [], parsed.data.category ?? null);
+    structureScore = score;
+  } else {
+    const { score } = scorePlainText(parsed.data.content, parsed.data.tags ?? [], parsed.data.category ?? null);
+    structureScore = score;
+  }
 
   const note = await prisma.note.create({
     data: {
@@ -66,10 +102,9 @@ export async function POST({ request }: { request: Request }) {
   const gamification = await processAction({
     userId: user.userId,
     actionType: "create_note",
-    metadata: { noteId: note.id, wordCount: note.wordCount },
+    metadata: { noteId: note.id, wordCount: note.wordCount, structureScore, dailyNoteCount, isSpam },
   });
 
-  const isBlock = isBlockContent(note.content);
   let qualityMeta: Record<string, unknown> = {};
   if (isBlock) {
     const blocks = parseBlocks(note.content);
