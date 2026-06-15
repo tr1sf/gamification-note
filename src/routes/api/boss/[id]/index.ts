@@ -14,6 +14,7 @@ export async function GET({
 
   const boss = await prisma.challenge.findUnique({ where: { id: params.id } });
   if (!boss) return error("NOT_FOUND", "Boss not found", 404);
+  if (boss.userId !== user.userId) return error("FORBIDDEN", "Not your boss", 403);
 
   const attacks = await prisma.auditLog.findMany({
     where: {

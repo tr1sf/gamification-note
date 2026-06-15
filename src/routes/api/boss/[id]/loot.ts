@@ -14,11 +14,20 @@ export async function GET({
 
   const boss = await prisma.challenge.findUnique({ where: { id: params.id } });
   if (!boss) return error("NOT_FOUND", "Boss not found", 404);
+  if (boss.userId !== user.userId)
+    return error("FORBIDDEN", "Not your boss", 403);
   if (boss.status !== "completed")
     return error("INVALID_STATE", "Boss not defeated yet", 400);
-  if (boss.lootClaimed)
+
+  // Atomic claim: only the request that flips lootClaimed from false→true succeeds
+  const claim = await prisma.challenge.updateMany({
+    where: { id: params.id, lootClaimed: false },
+    data: { lootClaimed: true },
+  });
+  if (claim.count === 0)
     return error("ALREADY_CLAIMED", "Loot already claimed", 400);
 
+  // Cumulative probability: items with lower dropChance can actually drop
   const roll = Math.random();
   const lootTable = (boss.lootTable as any[]) || [
     { itemType: "coins", dropChance: 0.7, amount: 20 },
@@ -26,13 +35,16 @@ export async function GET({
   ];
 
   let loot: any = { type: "coins", amount: 5 };
+  let cumulative = 0;
   for (const entry of lootTable) {
-    if (roll <= entry.dropChance) {
+    cumulative += entry.dropChance;
+    if (roll <= cumulative) {
       loot = entry;
       break;
     }
   }
 
+  // Grant rewards
   if (loot.type === "coins") {
     const { grantReward } = await import("~/lib/gamification/engine");
     await grantReward({
@@ -43,11 +55,6 @@ export async function GET({
       metadata: { bossId: boss.id, bossName: boss.bossName },
     });
   }
-
-  await prisma.challenge.update({
-    where: { id: params.id },
-    data: { lootClaimed: true },
-  });
 
   return success({
     loot,

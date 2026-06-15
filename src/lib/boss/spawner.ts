@@ -19,8 +19,18 @@ export async function spawnDailyBoss(
   userId: string,
   level: number
 ): Promise<string | null> {
+  // One daily boss per calendar day, regardless of completion status
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
   const existing = await prisma.challenge.findFirst({
-    where: { userId, bossType: "daily", status: "active" },
+    where: {
+      userId,
+      bossType: "daily",
+      createdAt: { gte: todayStart, lt: todayEnd },
+    },
   });
   if (existing) return existing.id;
 
