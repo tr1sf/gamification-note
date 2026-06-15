@@ -131,9 +131,9 @@ export async function POST({ request }: { request: Request }) {
   if (note.wordCount >= 100) {
     generateQuiz(note.content, note.wordCount)
       .then(questions => {
-        prisma.quiz.create({ data: { noteId: note.id, userId: user.userId, questions: questions as any } }).catch(() => {});
+        prisma.quiz.create({ data: { noteId: note.id, userId: user.userId, questions: questions as any } }).catch(e => console.error("[quiz] db create failed:", e));
       })
-      .catch(() => {});
+      .catch(e => console.error("[quiz] auto-generation failed:", e?.message || e));
   }
 
   BOSS_DAMAGE(user.userId, structureScore ?? 5).catch(() => {});

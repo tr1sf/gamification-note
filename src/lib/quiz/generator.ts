@@ -17,11 +17,24 @@ export function isQuizAiAvailable(): boolean {
 
 function cleanJsonResponse(text: string): string {
   let cleaned = text.trim();
+  // Remove markdown code fences
   cleaned = cleaned.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
+  // Try to find JSON array
   const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
   if (arrayMatch) return arrayMatch[0];
+  // Try to find JSON object with questions key
   const objMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (objMatch) return `[${objMatch[0]}]`;
+  if (objMatch) {
+    try {
+      const obj = JSON.parse(objMatch[0]);
+      if (Array.isArray(obj.questions)) return JSON.stringify(obj.questions);
+      if (Array.isArray(obj.quizzes)) return JSON.stringify(obj.quizzes);
+      // If it's an object with numeric keys, extract values
+      const values = Object.values(obj).filter(v => typeof v === "object" && v !== null);
+      if (values.length > 0) return JSON.stringify(values);
+    } catch {}
+    return objMatch[0];
+  }
   return cleaned;
 }
 
@@ -70,7 +83,6 @@ Format: [{"question": "...", "options": ["A","B","C","D"], "correctIndex": 0, "e
     ],
     temperature: 0.7,
     max_tokens: 1500,
-    response_format: { type: "json_object" },
   });
 
   const text = response.choices[0]?.message?.content || "";
@@ -81,7 +93,9 @@ Format: [{"question": "...", "options": ["A","B","C","D"], "correctIndex": 0, "e
     const parsed = JSON.parse(cleaned);
     const arr = Array.isArray(parsed) ? parsed : [parsed];
     questions = arr.map((q, i) => validateQuestion(q, i)).filter(Boolean) as QuizQuestion[];
-  } catch {
+  } catch (e) {
+    console.error("[quiz] JSON parse failed. Raw response:", text.slice(0, 500));
+    console.error("[quiz] Cleaned:", cleaned.slice(0, 500));
     throw new Error("AI_PARSE_ERROR");
   }
 
