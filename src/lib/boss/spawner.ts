@@ -1,11 +1,11 @@
 import { prisma } from "~/lib/db";
 
 const DAILY_BOSS_NAMES = [
-  { name: "Shadow Procrastinator", emoji: "👻" },
-  { name: "Ink Blotter", emoji: "🖋️" },
-  { name: "Dust Mite", emoji: "🐛" },
-  { name: "Blank Page Specter", emoji: "📄" },
-  { name: "Fog Wraith", emoji: "🌫️" },
+  { name: "Shadow Procrastinator", emoji: "👻", image: "/assets/images/bosses/shadow-procrastinator.png" },
+  { name: "Ink Blotter", emoji: "🖋️", image: "/assets/images/bosses/ink-blotter.png" },
+  { name: "Dust Mite", emoji: "🐛", image: "/assets/images/bosses/dust-mite.png" },
+  { name: "Blank Page Specter", emoji: "📄", image: "/assets/images/bosses/blank-page-specter.png" },
+  { name: "Fog Wraith", emoji: "🌫️", image: "/assets/images/bosses/fog-wraith.png" },
 ];
 
 const WEEKLY_BOSS_NAMES = [
@@ -54,6 +54,7 @@ export async function spawnDailyBoss(
       targetProgress: 100,
       rewardXp: 20,
       rewardCoins: 10,
+      iconImageUrl: boss.image || null,
     },
   });
   return challenge.id;

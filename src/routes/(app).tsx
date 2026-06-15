@@ -139,11 +139,15 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             <QuestProgress quests={quests()} />
           </div>
           <div class="p-4 border-t border-surface-border bg-surface-hover/20">
-            <Show when={user()}>
+              <Show when={user()}>
               {(u) => (
                 <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center text-sm font-bold text-accent ring-2 ring-accent/10" aria-label={u().username}>
-                    {u().username.charAt(0).toUpperCase()}
+                  <div class="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center text-sm font-bold text-accent ring-2 ring-accent/10 overflow-hidden" aria-label={u().username}>
+                    {u().avatarUrl ? (
+                      <img src={u().avatarUrl!} alt={u().username} class="w-full h-full object-cover" />
+                    ) : (
+                      <img src="/assets/images/default-avatar.png" alt="Default avatar" class="w-full h-full object-cover" />
+                    )}
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-ink-primary truncate">{u().username}</p>

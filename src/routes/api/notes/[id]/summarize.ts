@@ -5,6 +5,7 @@ import { summarizeNote } from "~/lib/ai/summarize";
 import { isAiAvailable } from "~/lib/ai/openai";
 import { processAction } from "~/lib/gamification/engine";
 import { track } from "~/lib/analytics/tracker";
+import { rateLimit } from "~/lib/rate-limit";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -12,6 +13,11 @@ export async function POST({ request, params }: { request: Request; params: { id
 
   if (!isAiAvailable()) {
     return error("AI_NOT_CONFIGURED", "AI features are not configured. Set GEMINI_API_KEY in environment.", 400);
+  }
+
+  // Rate limit: 10 summarize requests per minute per user
+  if (!rateLimit(`summarize:${user.userId}`, 10, 60000)) {
+    return error("RATE_LIMITED", "Too many summarize requests. Try again shortly.", 429);
   }
 
   const note = await prisma.note.findUnique({

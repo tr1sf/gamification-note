@@ -61,7 +61,9 @@ export default function BossPage() {
               }`}
             >
               <div class="flex items-center gap-4 mb-4">
-                <span class="text-5xl">{b().bossEmoji ?? "👻"}</span>
+                <Show when={b().iconImageUrl} fallback={<span class="text-5xl">{b().bossEmoji ?? "👻"}</span>}>
+                  <img src={b().iconImageUrl} alt={b().bossName} class="w-24 h-24 object-cover rounded-xl ring-2 ring-error/20" />
+                </Show>
                 <div>
                   <h1 class="text-2xl font-display font-bold text-ink-primary">
                     {b().bossName ?? b().title}

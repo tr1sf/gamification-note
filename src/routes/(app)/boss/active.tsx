@@ -39,7 +39,9 @@ export default function BossActivePage() {
                   class="block bg-surface-elevated rounded-xl p-5 border border-surface-border hover:border-error/30 transition-all"
                 >
                   <div class="flex items-center gap-4">
-                    <span class="text-4xl">{boss.bossEmoji || "\u{1F47B}"}</span>
+                    <Show when={boss.iconImageUrl} fallback={<span class="text-4xl">{boss.bossEmoji || "\u{1F47B}"}</span>}>
+                      <img src={boss.iconImageUrl} alt={boss.bossName} class="w-16 h-16 object-cover rounded-xl ring-2 ring-error/20" />
+                    </Show>
                     <div class="flex-1">
                       <div class="flex items-center justify-between mb-2">
                         <h3 class="font-bold text-ink-primary">{boss.bossName || boss.title}</h3>
