@@ -14,6 +14,7 @@ import StreakTracker from "~/components/gamification/StreakTracker";
 import QuestProgress from "~/components/gamification/QuestProgress";
 import RewardPopup from "~/components/gamification/RewardPopup";
 import LevelUpModal from "~/components/gamification/LevelUpModal";
+import SurveyWidget from "~/components/survey/SurveyWidget";
 import NotificationBell from "~/components/shared/NotificationBell";
 
 export default function AppLayout(props: { children?: JSX.Element }) {
@@ -94,6 +95,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
       <ToastContainer />
       <RewardPopup />
       <LevelUpModal />
+      <SurveyWidget />
       <div class="flex h-screen overflow-hidden bg-surface">
         {/* Sidebar */}
         <aside class={`${uiStore.sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-surface-elevated border-r border-surface-border flex flex-col transition-transform duration-200`} style="box-shadow: inset -1px 0 0 color-mix(in oklab, var(--color-accent) 6%, transparent);">
@@ -115,10 +117,12 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             <div class="px-3 py-1.5 mb-1 mt-2">
               <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Adventures</p>
             </div>
-            <NavItem href="/quests" icon="📋" label="Quests" />
+            <NavItem href="/boss/active" icon="⚔️" label="Boss Fight" />
             <NavItem href="/challenges" icon="🏆" label="Challenges" />
-            <NavItem href="/ai-quests" icon="🎯" label="AI Quests" />
+            <NavItem href="/quiz" icon="🧠" label="Quiz Review" />
             <NavItem href="/habits" icon="🔥" label="Daily Rituals" />
+            <NavItem href="/quests" icon="📋" label="Quests" />
+            <NavItem href="/ai-quests" icon="🎯" label="AI Quests" />
             <Show when={!isSolo()}>
               <NavItem href="/guilds" icon="🏛️" label="Guilds" />
             </Show>
@@ -129,6 +133,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             </div>
             <NavItem href="/profile" icon="🛡️" label="Profile" />
             <NavItem href="/shop" icon="🏪" label="Shop" />
+            <NavItem href="/analytics" icon="📊" label="Analytics" />
           </nav>
           <div class="p-3 border-t border-surface-border space-y-2 bg-surface-hover/30">
             <QuestProgress quests={quests()} />

@@ -435,6 +435,40 @@ async function main() {
   }
 
   console.log('Quest chains seeded.');
+
+  // Surveys
+  const surveyDefs = [
+    {
+      title: "Initial Experience Survey",
+      surveyType: "post_signup",
+      triggerDaysAfterSignup: 7,
+      questions: [
+        { id: "q1", text: "I feel more motivated to take notes using TavernoteX", type: "likert", required: true },
+        { id: "q2", text: "I enjoy the freedom to choose how I take notes", type: "likert", required: true },
+        { id: "q3", text: "I feel I am making progress in my note-taking", type: "likert", required: true },
+        { id: "q4", text: "The XP/quest system helps me maintain a note-taking habit", type: "likert", required: true },
+        { id: "q5", text: "Any feedback or suggestions?", type: "text", required: false },
+      ],
+    },
+    {
+      title: "AI & Boss Fight Survey",
+      surveyType: "post_signup",
+      triggerDaysAfterSignup: 14,
+      questions: [
+        { id: "q1", text: "AI-generated quizzes help me review and remember my notes better", type: "likert", required: true },
+        { id: "q2", text: "The Boss Fight system motivates me to write more notes", type: "likert", required: true },
+        { id: "q3", text: "I feel engaged and want to return to the app daily", type: "likert", required: true },
+        { id: "q4", text: "What feature do you use the most?", type: "text", required: false },
+      ],
+    },
+  ];
+
+  let newSurveys = 0;
+  for (const def of surveyDefs) {
+    const exists = await prisma.survey.findFirst({ where: { title: def.title } });
+    if (!exists) { await prisma.survey.create({ data: def as any }); newSurveys++; }
+  }
+  console.log(`Seeded: +${newSurveys} new surveys`);
 }
 
 main()

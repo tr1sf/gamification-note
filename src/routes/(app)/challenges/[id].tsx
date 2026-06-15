@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from "solid-js";
+import { createResource, createSignal, createEffect, For, Show } from "solid-js";
 import { useParams, useNavigate, A } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
 import { showReward, addToast } from "~/stores/ui";
@@ -18,6 +18,7 @@ interface ChallengeDetail {
   rewardCoins: number;
   isPublic: boolean;
   createdAt: string;
+  bossType: string | null;
   actions: ChallengeAction[];
 }
 
@@ -63,6 +64,13 @@ export default function ChallengeDetailPage() {
   const navigate = useNavigate();
   const [challenge, { refetch }] = createResource(() => params.id, fetchChallenge);
   const [completing, setCompleting] = createSignal<string | null>(null);
+
+  createEffect(() => {
+    const c = challenge();
+    if (c?.bossType && c?.status === "active") {
+      navigate(`/boss/${c.id}`, { replace: true });
+    }
+  });
 
   const pct = () => {
     const c = challenge();

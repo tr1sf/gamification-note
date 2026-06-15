@@ -48,38 +48,61 @@ export async function initAuth() {
   }
 }
 
-export async function login(email: string, password: string): Promise<{ user?: AuthUser; error?: AuthError }> {
+// Reads an auth response, distinguishing real network failures (fetch rejects)
+// from server errors that return a non-JSON body (e.g. a 500 HTML error page).
+async function readAuthResponse(
+  res: Response,
+): Promise<{ user?: AuthUser; error?: AuthError }> {
+  let json: { success?: boolean; data?: AuthUser; error?: AuthError } | null = null;
   try {
-    const res = await fetch("/api/auth/login", {
+    json = await res.json();
+  } catch {
+    json = null;
+  }
+
+  if (!json) {
+    return {
+      error: {
+        code: "SERVER_ERROR",
+        message: `Server returned an unexpected response (HTTP ${res.status}). Please try again.`,
+      },
+    };
+  }
+  if (!json.success) {
+    return { error: json.error ?? { code: "SERVER_ERROR", message: `Request failed (HTTP ${res.status}).` } };
+  }
+  setUser(json.data!);
+  return { user: json.data };
+}
+
+export async function login(email: string, password: string): Promise<{ user?: AuthUser; error?: AuthError }> {
+  let res: Response;
+  try {
+    res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ email, password }),
     });
-    const json = await res.json();
-    if (!json.success) return { error: json.error };
-    setUser(json.data);
-    return { user: json.data };
   } catch {
-    return { error: { code: "NETWORK", message: "Network error. Please try again." } };
+    return { error: { code: "NETWORK", message: "Can't reach the server. Check your connection and try again." } };
   }
+  return readAuthResponse(res);
 }
 
 export async function register(email: string, username: string, password: string): Promise<{ user?: AuthUser; error?: AuthError }> {
+  let res: Response;
   try {
-    const res = await fetch("/api/auth/register", {
+    res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ email, username, password }),
     });
-    const json = await res.json();
-    if (!json.success) return { error: json.error };
-    setUser(json.data);
-    return { user: json.data };
   } catch {
-    return { error: { code: "NETWORK", message: "Network error. Please try again." } };
+    return { error: { code: "NETWORK", message: "Can't reach the server. Check your connection and try again." } };
   }
+  return readAuthResponse(res);
 }
 
 export async function logout() {

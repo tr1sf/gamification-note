@@ -7,6 +7,7 @@ import { computeWordCount, isBlockContent, parseBlocks, blockExcerpt } from "~/l
 import { track } from "~/lib/analytics/tracker";
 import { calculateStructureScore, scorePlainText } from "~/lib/analytics/quality-scorer";
 import { DUPLICATE_SIMILARITY_THRESHOLD } from "~/lib/gamification/constants";
+import { generateQuiz } from "~/lib/quiz/generator";
 
 export async function GET({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
@@ -127,5 +128,29 @@ export async function POST({ request }: { request: Request }) {
     metadata: { noteId: note.id, noteTitle: note.title, ...qualityMeta },
   });
 
+  if (note.wordCount >= 100) {
+    generateQuiz(note.content, note.wordCount)
+      .then(questions => {
+        prisma.quiz.create({ data: { noteId: note.id, userId: user.userId, questions: questions as any } }).catch(() => {});
+      })
+      .catch(() => {});
+  }
+
+  BOSS_DAMAGE(user.userId, structureScore ?? 5).catch(() => {});
+
   return success({ note, gamification });
+}
+
+export async function BOSS_DAMAGE(userId: string, structureScore: number) {
+  const activeBoss = await prisma.challenge.findFirst({
+    where: { userId, bossType: { in: ["daily", "weekly"] }, status: "active" },
+  });
+  if (activeBoss) {
+    const damage = 5 * Math.max(1, (structureScore || 5) / 5);
+    await prisma.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${activeBoss.id}`;
+    const updated = await prisma.challenge.findUnique({ where: { id: activeBoss.id }, select: { bossCurrentHp: true, bossMaxHp: true } });
+    if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
+      await prisma.challenge.update({ where: { id: activeBoss.id }, data: { status: "completed", completedAt: new Date() } });
+    }
+  }
 }

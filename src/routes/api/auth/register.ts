@@ -5,7 +5,16 @@ import { registerSchema } from "~/validators/auth";
 import { success, error } from "~/lib/api-response";
 import { rateLimit } from "~/lib/rate-limit";
 
-export async function POST({ request }: { request: Request }) {
+export async function POST(event: { request: Request }) {
+  try {
+    return await handleRegister(event);
+  } catch (err) {
+    console.error("[auth/register] unhandled error:", err);
+    return error("INTERNAL_ERROR", "Something went wrong on our end. Please try again.", 500);
+  }
+}
+
+async function handleRegister({ request }: { request: Request }) {
   const ip = request.headers.get("x-forwarded-for") || "unknown";
   if (!rateLimit(`register:${ip}`, 5, 1800000)) {
     return error("RATE_LIMITED", "Too many registration attempts. Try again in 30 minutes.", 429);

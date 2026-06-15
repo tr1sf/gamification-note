@@ -6,6 +6,7 @@ import { rateLimit } from "~/lib/rate-limit";
 import { processAction } from "~/lib/gamification/engine";
 import { startSession } from "~/lib/analytics/session";
 import { runNudgeEngine } from "~/lib/notifications/nudge-engine";
+import { spawnDailyBoss, spawnWeeklyBoss } from "~/lib/boss/spawner";
 
 async function calculateLoginStreak(userId: string): Promise<number> {
   const auditLogs = await prisma.auditLog.findMany({
@@ -44,7 +45,16 @@ async function calculateLoginStreak(userId: string): Promise<number> {
   return streak;
 }
 
-export async function POST({ request }: { request: Request }) {
+export async function POST(event: { request: Request }) {
+  try {
+    return await handleLogin(event);
+  } catch (err) {
+    console.error("[auth/login] unhandled error:", err);
+    return error("INTERNAL_ERROR", "Something went wrong on our end. Please try again.", 500);
+  }
+}
+
+async function handleLogin({ request }: { request: Request }) {
   const ip = request.headers.get("x-forwarded-for") || "unknown";
   if (!rateLimit(`login:${ip}`, 5, 60000)) {
     return error("RATE_LIMITED", "Too many login attempts", 429);
@@ -101,6 +111,8 @@ export async function POST({ request }: { request: Request }) {
 
   startSession(user.id).catch(() => {});
   runNudgeEngine(user.id).catch(() => {});
+  spawnDailyBoss(user.id, updatedUser?.level ?? 1).catch(() => {});
+  spawnWeeklyBoss(user.id, updatedUser?.level ?? 1).catch(() => {});
 
   const headers = new Headers({ "Content-Type": "application/json" });
   for (const cookie of setAuthCookies(accessToken, refreshToken)) {

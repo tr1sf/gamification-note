@@ -43,6 +43,9 @@ model User {
   challenges      Challenge[]
   userThemes      UserTheme[]
   aiQuests        AIQuest[]
+  quizzes         Quiz[]
+  quizAttempts    QuizAttempt[]
+  surveyResponses SurveyResponse[]
 
   @@index([level])
 }
@@ -70,6 +73,7 @@ model Note {
 
   user        User              @relation(fields: [userId], references: [id])
   guild       Guild?            @relation(fields: [guildId], references: [id])
+  quiz        Quiz?
   attachments NoteAttachment[]
 
   @@index([userId, createdAt(sort: Desc)])
@@ -326,7 +330,7 @@ model GuildTask {
   @@index([assigneeId, status])
 }
 
-// ── Challenge system (user-defined goals) ────────────────────────────────────
+  // ── Challenge system (user-defined goals) ────────────────────────────────────
 model Challenge {
   id              String   @id @default(uuid()) @db.Uuid
   userId          String   @db.Uuid
@@ -344,6 +348,15 @@ model Challenge {
   rewardCoins     Int      @default(10)
   completedAt     DateTime?
   pausedAt        DateTime?
+  // Boss fields (Phase P2)
+  bossName        String?  @db.Text
+  bossEmoji       String?  @db.Text
+  bossMaxHp       Int?
+  bossCurrentHp   Int?
+  bossType        String?  // "daily" | "weekly" | "raid" | "custom"
+  raidGuildId     String?  @db.Uuid
+  lootTable       Json?
+  lootClaimed     Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -352,6 +365,7 @@ model Challenge {
 
   @@index([userId, status])
   @@index([isPublic, status])
+  @@index([userId, bossType, status])
 }
 
 model ChallengeAction {
@@ -469,4 +483,63 @@ model AIQuest {
 
   @@index([userId, status])
   @@index([status, expiresAt])
+}
+
+model Quiz {
+  id             String   @id @default(uuid()) @db.Uuid
+  noteId         String   @unique @db.Uuid
+  userId         String   @db.Uuid
+  questions      Json
+  generatedAt    DateTime @default(now())
+  lastReviewedAt DateTime?
+  reviewCount    Int      @default(0)
+  avgScore       Float    @default(0)
+
+  note     Note          @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempts QuizAttempt[]
+
+  @@index([userId, lastReviewedAt])
+}
+
+model QuizAttempt {
+  id          String   @id @default(uuid()) @db.Uuid
+  quizId      String   @db.Uuid
+  userId      String   @db.Uuid
+  score       Int
+  answers     Json
+  completedAt DateTime @default(now())
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completedAt])
+  @@index([quizId, completedAt])
+}
+
+model Survey {
+  id                    String   @id @default(uuid()) @db.Uuid
+  title                 String
+  surveyType            String   @default("post_signup")
+  questions             Json
+  triggerDaysAfterSignup Int?
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  responses             SurveyResponse[]
+}
+
+model SurveyResponse {
+  id          String   @id @default(uuid()) @db.Uuid
+  surveyId    String   @db.Uuid
+  userId      String   @db.Uuid
+  answers     Json
+  overallScore Float?
+  comments    String?
+  completedAt DateTime @default(now())
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyId, userId])
+  @@index([userId, completedAt])
 }
