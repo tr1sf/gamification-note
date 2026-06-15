@@ -131,26 +131,29 @@ export async function POST({ request }: { request: Request }) {
   if (note.wordCount >= 100) {
     generateQuiz(note.content, note.wordCount)
       .then(questions => {
-        prisma.quiz.create({ data: { noteId: note.id, userId: user.userId, questions: questions as any } }).catch(e => console.error("[quiz] db create failed:", e));
+        prisma.quiz.upsert({
+          where: { noteId: note.id },
+          create: { noteId: note.id, userId: user.userId, questions: questions as any },
+          update: {},
+        }).catch(e => console.error("[quiz] upsert failed:", e?.message || e));
       })
       .catch(e => console.error("[quiz] auto-generation failed:", e?.message || e));
   }
 
-  BOSS_DAMAGE(user.userId, structureScore ?? 5).catch(() => {});
-
-  return success({ note, gamification });
-}
-
-export async function BOSS_DAMAGE(userId: string, structureScore: number) {
+  // Apply boss damage
   const activeBoss = await prisma.challenge.findFirst({
-    where: { userId, bossType: { in: ["daily", "weekly"] }, status: "active" },
+    where: { userId: user.userId, bossType: { in: ["daily", "weekly"] }, status: "active" },
   });
   if (activeBoss) {
-    const damage = 5 * Math.max(1, (structureScore || 5) / 5);
-    await prisma.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${activeBoss.id}`;
-    const updated = await prisma.challenge.findUnique({ where: { id: activeBoss.id }, select: { bossCurrentHp: true, bossMaxHp: true } });
-    if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
-      await prisma.challenge.update({ where: { id: activeBoss.id }, data: { status: "completed", completedAt: new Date() } });
-    }
+    const dmg = 5 * Math.max(1, (structureScore || 5) / 5);
+    try {
+      await prisma.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${dmg}) WHERE id = ${activeBoss.id}::uuid`;
+      const updated = await prisma.challenge.findUnique({ where: { id: activeBoss.id }, select: { bossCurrentHp: true } });
+      if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
+        await prisma.challenge.update({ where: { id: activeBoss.id }, data: { status: "completed", completedAt: new Date() } });
+      }
+    } catch {}
   }
+
+  return success({ note, gamification });
 }
