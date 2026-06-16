@@ -17,9 +17,10 @@ model User {
   coins            Int       @default(0)
   title            String    @default("Novice Scribe")
   streak           Int       @default(0)
-  role             String    @default("user")
-  gamificationStyle String   @default("balanced") // competitive | collaborative | solo | minimal | balanced
-  refreshTokenHash String?
+  role               String    @default("user")
+  gamificationStyle   String   @default("balanced") // competitive | collaborative | solo | minimal | balanced
+  onboardingCompleted Boolean  @default(false)
+  refreshTokenHash   String?
   lastLoginAt      DateTime?
   emailVerifiedAt  DateTime?
   isBanned         Boolean   @default(false)

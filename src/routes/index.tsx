@@ -29,7 +29,7 @@ export default function Home() {
           </A>
         </div>
         <p class="text-sm text-ink-secondary">
-          Join <span class="font-semibold text-ink-primary">12,847</span> adventurers already writing their story
+          Start your knowledge journey today
         </p>
       </div>
     </main>

@@ -19,7 +19,9 @@ import NotificationBell from "~/components/shared/NotificationBell";
 
 export default function AppLayout(props: { children?: JSX.Element }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { on, off, connected } = useSocket();
+  const isOnboarding = () => location.pathname === "/onboarding";
 
   onMount(() => {
     initAuth();
@@ -46,8 +48,15 @@ export default function AppLayout(props: { children?: JSX.Element }) {
 
   createEffect(() => {
     const u = user();
+    if (u && !u.onboardingCompleted && location.pathname !== "/onboarding") {
+      navigate("/onboarding");
+    }
+  });
+
+  createEffect(() => {
+    const u = user();
     if (u) {
-      syncFromUser({ xp: u.xp, coins: u.coins, level: u.level, title: u.title, streak: u.streak, gamificationStyle: (u as any).gamificationStyle });
+      syncFromUser({ xp: u.xp, coins: u.coins, level: u.level, title: u.title, streak: u.streak, gamificationStyle: u.gamificationStyle });
       fetchActiveQuests();
       // Auto nudge after login
       authFetch("/api/auth/nudge").catch(() => {});
@@ -92,10 +101,12 @@ export default function AppLayout(props: { children?: JSX.Element }) {
       </div>
       </div>
     }>
-      <ToastContainer />
-      <RewardPopup />
-      <LevelUpModal />
-      <SurveyWidget />
+      <Show when={isOnboarding()} fallback={
+        <>
+          <ToastContainer />
+          <RewardPopup />
+          <LevelUpModal />
+          <SurveyWidget />
       <div class="flex h-screen overflow-hidden bg-surface">
         {/* Sidebar */}
         <aside class={`${uiStore.sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-surface-elevated border-r border-surface-border flex flex-col transition-transform duration-200`} style="box-shadow: inset -1px 0 0 color-mix(in oklab, var(--color-accent) 6%, transparent);">
@@ -210,6 +221,10 @@ export default function AppLayout(props: { children?: JSX.Element }) {
           </main>
         </div>
       </div>
+        </>
+      }>
+        {props.children}
+      </Show>
     </Show>
   );
 }

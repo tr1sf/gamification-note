@@ -149,6 +149,14 @@ async function main() {
     }),
   ]);
 
+  // Beginner Badge — idempotent
+  const beginnerExists = await prisma.cosmeticItem.findFirst({ where: { name: "Beginner Badge" }, select: { id: true } });
+  if (!beginnerExists) {
+    await prisma.cosmeticItem.create({
+      data: { name: "Beginner Badge", description: "Your first step into the tavern. Welcome, adventurer!", type: "badge", coinCost: 0, rarity: "common", imageUrl: "/assets/images/default-avatar.png" },
+    });
+  }
+
   // Themes
   const themeDefs = [
     {

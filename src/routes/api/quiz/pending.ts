@@ -2,7 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 
-const REVIEW_INTERVALS = [1, 3, 7, 30];
+const REVIEW_INTERVALS = [0, 3, 7, 30];
 
 export async function GET({ request }: { request: Request }) {
   const user = getUserFromRequest(request);

@@ -11,6 +11,8 @@ export interface AuthUser {
   streak: number;
   title: string;
   role: string;
+  gamificationStyle?: string;
+  onboardingCompleted?: boolean;
   createdAt: string;
 }
 
