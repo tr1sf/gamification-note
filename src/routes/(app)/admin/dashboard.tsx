@@ -1,5 +1,6 @@
-import { createResource, For, Show } from "solid-js";
-import { authFetch } from "~/stores/auth";
+import { createResource, For, Show, onMount } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import { authFetch, user } from "~/stores/auth";
 
 interface CohortRow {
   date: string;
@@ -21,6 +22,13 @@ function downloadCSV(filename: string, headers: string[], rows: string[][]) {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+  onMount(() => {
+    if (user()?.role !== "admin") {
+      navigate("/tavern", { replace: true });
+    }
+  });
+
   const [cohorts] = createResource(async () => {
     const res = await authFetch("/api/admin/export/cohorts");
     const json = await res.json();

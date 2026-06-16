@@ -72,6 +72,12 @@ export async function PATCH({ request, params }: { request: Request; params: { i
       targetProgress: challenge.targetProgress,
       rewardXp: challenge.rewardXp,
       rewardCoins: challenge.rewardCoins,
+      bossName: challenge.bossName,
+      bossEmoji: challenge.bossEmoji,
+      bossMaxHp: challenge.bossMaxHp,
+      bossCurrentHp: challenge.bossMaxHp, // Reset HP to full
+      bossType: challenge.bossType,
+      lootTable: challenge.lootTable as any,
       actions: {
         create: challenge.actions.map((a, i) => ({
           title: a.title,
