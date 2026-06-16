@@ -1,11 +1,11 @@
 import { createSignal, For, Show } from "solid-js";
 import { authFetch, fetchMe } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
+import { PATH_DESCRIPTIONS, type UserPath } from "~/lib/path-unlocks";
 
-type Path = "student" | "professional" | "journaler";
 type Motivation = "adventurer" | "scholar" | "collaborator";
 
-const PATH_OPTIONS: Array<{ id: Path; icon: string; title: string; subtitle: string; style: string }> = [
+const PATH_OPTIONS: Array<{ id: UserPath; icon: string; title: string; subtitle: string; style: string }> = [
   {
     id: "student",
     icon: "\uD83C\uDF93",
@@ -64,7 +64,7 @@ const FIRST_QUEST_TASKS = [
 
 export default function OnboardingWizard(props: { onComplete: () => void }) {
   const [step, setStep] = createSignal(0);
-  const [path, setPath] = createSignal<Path>("student");
+  const [path, setPath] = createSignal<UserPath>("student");
   const [motivation, setMotivation] = createSignal<Motivation>("adventurer");
   const [submitting, setSubmitting] = createSignal(false);
   const [giftClaimed, setGiftClaimed] = createSignal(false);
@@ -213,26 +213,29 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
   );
 }
 
-function StepChoosePath(props: { path: () => Path; setPath: (p: Path) => void }) {
+function StepChoosePath(props: { path: () => UserPath; setPath: (p: UserPath) => void }) {
   return (
     <div>
       <h2 class="text-xl font-display font-bold text-ink-primary mb-1">Choose Your Path</h2>
-      <p class="text-sm text-ink-secondary mb-5">What brings you to the tavern?</p>
+      <p class="text-sm text-ink-secondary mb-5">Each path unlocks features at different paces — all features available to everyone eventually.</p>
       <div class="grid gap-3">
         <For each={PATH_OPTIONS}>
           {(option) => (
             <button
               onClick={() => props.setPath(option.id)}
-              class={`flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+              class={`flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all duration-200 group ${
                 props.path() === option.id
                   ? "border-accent bg-accent/5 shadow-sm"
                   : "border-surface-border hover:border-surface-border/80 hover:bg-surface-hover"
               }`}
             >
               <span class="text-3xl shrink-0">{option.icon}</span>
-              <div>
+              <div class="min-w-0 flex-1">
                 <p class="font-semibold text-ink-primary">{option.title}</p>
                 <p class="text-sm text-ink-secondary">{option.subtitle}</p>
+                <p class="text-[0.65rem] text-accent/50 mt-1 leading-relaxed line-clamp-2" title={PATH_DESCRIPTIONS[option.id]}>
+                  {PATH_DESCRIPTIONS[option.id]}
+                </p>
               </div>
               <span
                 class={`ml-auto shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${

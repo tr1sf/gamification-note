@@ -166,6 +166,11 @@ export default function AppLayout(props: { children?: JSX.Element }) {
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-ink-primary truncate">{u().username}</p>
                     <p class="text-xs text-ink-secondary">Lv.{g().level} {g().title}</p>
+                    <Show when={nextUnlock()}>
+                      {(nu) => (
+                        <p class="text-[0.6rem] text-accent/60 mt-0.5" title={`Unlocks at Level ${nu().level}`}>Next: {nu().feature} at Lv.{nu().level}</p>
+                      )}
+                    </Show>
                   </div>
                   <button onClick={async () => { await logout(); navigate("/login"); }} class="text-xs text-ink-secondary/70 hover:text-error transition-colors px-1.5 py-0.5 rounded hover:bg-error/5" title="Exit tavern">Exit</button>
                 </div>
