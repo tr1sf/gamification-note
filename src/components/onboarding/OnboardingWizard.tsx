@@ -1,5 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
-import { authFetch } from "~/stores/auth";
+import { authFetch, fetchMe } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 
 type Path = "student" | "professional" | "journaler";
@@ -105,7 +105,9 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
         setGiftClaimed(true);
         markTask("gift");
         addToast(`Welcome gift claimed! +${json.data.coinsGained} coins`, "success");
-        setTimeout(() => props.onComplete(), 2000);
+        // Refresh user state so onboardingCompleted is true on the auth signal
+        await fetchMe();
+        setTimeout(() => props.onComplete(), 1500);
       } else {
         addToast("Failed to claim gift. Try again.", "error");
       }
