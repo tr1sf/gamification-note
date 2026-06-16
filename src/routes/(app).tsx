@@ -14,8 +14,9 @@ import StreakTracker from "~/components/gamification/StreakTracker";
 import QuestProgress from "~/components/gamification/QuestProgress";
 import RewardPopup from "~/components/gamification/RewardPopup";
 import LevelUpModal from "~/components/gamification/LevelUpModal";
-import SurveyWidget from "~/components/survey/SurveyWidget";
 import NotificationBell from "~/components/shared/NotificationBell";
+import SurveyWidget from "~/components/survey/SurveyWidget";
+import { getUnlockedFeatures, getNextUnlock, type UserPath } from "~/lib/path-unlocks";
 
 export default function AppLayout(props: { children?: JSX.Element }) {
   const navigate = useNavigate();
@@ -67,6 +68,11 @@ export default function AppLayout(props: { children?: JSX.Element }) {
   const style = () => g().gamificationStyle ?? "balanced";
   const isMinimal = () => style() === "minimal";
   const isSolo = () => style() === "solo";
+
+  const userPath = () => (user()?.path as UserPath | undefined) || null;
+  const unlockedFeatures = () => getUnlockedFeatures(userPath(), g().level);
+  const nextUnlock = () => getNextUnlock(userPath(), g().level);
+  const isUnlocked = (feature: string) => unlockedFeatures().includes(feature);
 
   return (
     <Show when={!loading() && user()} fallback={
@@ -128,14 +134,11 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             <div class="px-3 py-1.5 mb-1 mt-2">
               <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Adventures</p>
             </div>
-            <NavItem href="/boss/active" icon="⚔️" label="Boss Fight" />
-            <NavItem href="/challenges" icon="🏆" label="Challenges" />
-            <NavItem href="/quiz" icon="🧠" label="Quiz Review" />
-            <NavItem href="/habits" icon="🔥" label="Daily Rituals" />
+            <NavItem href="/boss/active" icon={isUnlocked("Boss Fight") ? "⚔️" : "🔒"} label={isUnlocked("Boss Fight") ? "Boss Fight" : "Boss (Lv.7+)"} locked={!isUnlocked("Boss Fight")} />
+            <NavItem href="/quiz" icon={isUnlocked("AI Quiz") || isUnlocked("Spaced Repetition") ? "🧠" : "🔒"} label={isUnlocked("AI Quiz") ? "Quiz Review" : "Quiz (Lv.4+)"} locked={!isUnlocked("AI Quiz") && !isUnlocked("Spaced Repetition")} />
             <NavItem href="/quests" icon="📋" label="Quests" />
-            <NavItem href="/ai-quests" icon="🎯" label="AI Quests" />
             <Show when={!isSolo()}>
-              <NavItem href="/guilds" icon="🏛️" label="Guilds" />
+              <NavItem href="/guilds" icon={isUnlocked("Guild Creation") || isUnlocked("Team Workspace") ? "🏛️" : "🔒"} label={isUnlocked("Guild Creation") || isUnlocked("Team Workspace") ? "Guilds" : "Guilds (Lv.10+)"} locked={!isUnlocked("Guild Creation") && !isUnlocked("Team Workspace")} />
             </Show>
             <NavItem href="/progress" icon="📊" label="Progress" />
             <NavItem href="/insights" icon="💡" label="Insights" />
@@ -229,9 +232,25 @@ export default function AppLayout(props: { children?: JSX.Element }) {
   );
 }
 
-function NavItem(props: { href: string; icon: string; label: string }) {
+function NavItem(props: { href: string; icon: string; label: string; locked?: boolean }) {
   const location = useLocation();
-  const isActive = () => location.pathname.startsWith(props.href);
+  const isActive = () => !props.locked && location.pathname.startsWith(props.href);
+  const content = (
+    <>
+      <span class={`${props.locked ? "text-ink-secondary/30" : isActive() ? "text-accent" : "text-ink-secondary/60"} transition-transform duration-200 ${!props.locked && "group-hover:scale-110"}`} aria-hidden="true"
+        style={isActive() && !props.locked ? "filter: drop-shadow(0 0 4px color-mix(in oklab, var(--color-accent) 30%, transparent));" : ""}>
+        {props.icon}
+      </span>
+      <span class="flex-1">{props.label}</span>
+    </>
+  );
+  if (props.locked) {
+    return (
+      <div class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-ink-secondary/30 cursor-not-allowed bg-surface-hover/10" title={`Unlocks at a higher level`}>
+        {content}
+      </div>
+    );
+  }
   return (
     <a
       href={props.href}
@@ -242,14 +261,7 @@ function NavItem(props: { href: string; icon: string; label: string }) {
       }`}
       aria-current={isActive() ? "page" : undefined}
     >
-      <span
-        class={`transition-transform duration-200 group-hover:scale-110 ${isActive() ? "text-accent" : "text-ink-secondary/60 group-hover:text-ink-secondary"}`}
-        aria-hidden="true"
-        style={isActive() ? "filter: drop-shadow(0 0 4px color-mix(in oklab, var(--color-accent) 30%, transparent));" : ""}
-      >
-        {props.icon}
-      </span>
-      {props.label}
+      {content}
       <span
         class={`absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full bg-accent transition-all duration-200 ${
           isActive() ? "opacity-100" : "opacity-0 group-hover:opacity-30"

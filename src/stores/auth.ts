@@ -12,6 +12,7 @@ export interface AuthUser {
   title: string;
   role: string;
   gamificationStyle?: string;
+  path?: string | null;
   onboardingCompleted?: boolean;
   createdAt: string;
 }

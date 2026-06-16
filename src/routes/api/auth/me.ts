@@ -25,7 +25,7 @@ export async function GET({ request }: { request: Request }) {
     select: {
       id: true, email: true, username: true, avatarUrl: true,
       level: true, xp: true, coins: true, streak: true, title: true, role: true,
-      gamificationStyle: true, onboardingCompleted: true, createdAt: true, isBanned: true,
+      gamificationStyle: true, path: true, onboardingCompleted: true, createdAt: true, isBanned: true,
     },
   });
 

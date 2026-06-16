@@ -9,12 +9,14 @@ export async function POST({ request }: { request: Request }) {
 
   const body = await request.json().catch(() => ({}));
   const gamificationStyle = body.gamificationStyle as string | undefined;
+  const path = body.path as string | undefined;
 
   await prisma.user.update({
     where: { id: user.userId },
     data: {
       onboardingCompleted: true,
       ...(gamificationStyle ? { gamificationStyle } : {}),
+      ...(path ? { path } : {}),
     },
   });
 

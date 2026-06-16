@@ -105,7 +105,7 @@ async function handleLogin({ request }: { request: Request }) {
     select: {
       id: true, email: true, username: true, avatarUrl: true,
       level: true, xp: true, coins: true, streak: true, title: true, role: true,
-      gamificationStyle: true, createdAt: true,
+      gamificationStyle: true, path: true, createdAt: true,
     },
   });
 

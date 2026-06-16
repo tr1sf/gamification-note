@@ -19,6 +19,7 @@ model User {
   streak           Int       @default(0)
   role               String    @default("user")
   gamificationStyle   String   @default("balanced") // competitive | collaborative | solo | minimal | balanced
+  path                String?  // student | professional | journaler
   onboardingCompleted Boolean  @default(false)
   refreshTokenHash   String?
   lastLoginAt      DateTime?

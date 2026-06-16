@@ -98,7 +98,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
       const res = await authFetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gamificationStyle: style }),
+        body: JSON.stringify({ gamificationStyle: style, path: path() }),
       });
       const json = await res.json();
       if (json.success) {
