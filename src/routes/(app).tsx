@@ -17,6 +17,7 @@ import LevelUpModal from "~/components/gamification/LevelUpModal";
 import NotificationBell from "~/components/shared/NotificationBell";
 import SurveyWidget from "~/components/survey/SurveyWidget";
 import { getUnlockedFeatures, getNextUnlock, type UserPath } from "~/lib/path-unlocks";
+import { applyThemeVariables } from "~/lib/themes/defaults";
 
 export default function AppLayout(props: { children?: JSX.Element }) {
   const navigate = useNavigate();
@@ -61,6 +62,8 @@ export default function AppLayout(props: { children?: JSX.Element }) {
       fetchActiveQuests();
       // Auto nudge after login
       authFetch("/api/auth/nudge").catch(() => {});
+      // Restore equipped theme
+      restoreEquippedTheme().catch(() => {});
     }
   });
 
@@ -73,6 +76,22 @@ export default function AppLayout(props: { children?: JSX.Element }) {
   const unlockedFeatures = () => getUnlockedFeatures(userPath(), g().level);
   const nextUnlock = () => getNextUnlock(userPath(), g().level);
   const isUnlocked = (feature: string) => unlockedFeatures().includes(feature);
+
+  async function restoreEquippedTheme() {
+    // Check if theme was saved locally
+    const savedId = typeof localStorage !== "undefined" ? localStorage.getItem("equippedThemeId") : null;
+    if (!savedId) return;
+    try {
+      const res = await authFetch("/api/themes");
+      const json = await res.json();
+      if (json.success) {
+        const theme = (json.data as any[]).find((t: any) => t.id === savedId);
+        if (theme?.cssVariables) {
+          applyThemeVariables(theme.cssVariables);
+        }
+      }
+    } catch {}
+  }
 
   return (
     <Show when={!loading() && user()} fallback={
