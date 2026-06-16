@@ -64,6 +64,8 @@ export default function ChallengeDetailPage() {
   const navigate = useNavigate();
   const [challenge, { refetch }] = createResource(() => params.id, fetchChallenge);
   const [completing, setCompleting] = createSignal<string | null>(null);
+  const [restarting, setRestarting] = createSignal(false);
+  const [showCelebration, setShowCelebration] = createSignal(false);
 
   createEffect(() => {
     const c = challenge();
@@ -97,6 +99,7 @@ export default function ChallengeDetailPage() {
       }
       if (result.challengeCompleted) {
         addToast("Challenge completed! 🎉", "success");
+        setShowCelebration(true);
       }
       refetch();
     } catch (e: any) {
@@ -105,6 +108,30 @@ export default function ChallengeDetailPage() {
       setCompleting(null);
     }
   };
+
+  const handleRestart = async () => {
+    setRestarting(true);
+    try {
+      const res = await authFetch(`/api/challenges/${params.id}`, { method: "PATCH" });
+      const json = await res.json();
+      if (json.success) {
+        addToast("Challenge restarted!", "success");
+        navigate(`/challenges/${json.data.id}`);
+      } else {
+        addToast(json.error?.message || "Failed to restart", "error");
+      }
+    } catch {
+      addToast("Failed to restart challenge", "error");
+    } finally {
+      setRestarting(false);
+    }
+  };
+
+  createEffect(() => {
+    if (challenge()?.status === "completed") {
+      setShowCelebration(true);
+    }
+  });
 
   return (
     <div class="max-w-3xl mx-auto p-6 space-y-6">
@@ -226,6 +253,55 @@ export default function ChallengeDetailPage() {
                 </For>
               </div>
             </div>
+
+            {/* Celebration Section */}
+            <Show when={showCelebration() && isCompleted()}>
+              <div class="bg-surface-elevated rounded-xl p-6 border border-success/20 bg-success/5 relative overflow-hidden">
+                <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  <span class="absolute top-2 left-4 text-xl animate-celebration-bounce" style="animation-delay: 0s">🎉</span>
+                  <span class="absolute top-4 right-6 text-xl animate-celebration-bounce" style="animation-delay: 0.2s">✨</span>
+                  <span class="absolute bottom-4 left-8 text-xl animate-celebration-bounce" style="animation-delay: 0.4s">🌟</span>
+                  <span class="absolute top-6 right-12 text-xl animate-celebration-bounce" style="animation-delay: 0.6s">💫</span>
+                  <span class="absolute bottom-2 right-4 text-xl animate-celebration-bounce" style="animation-delay: 0.8s">⭐</span>
+                </div>
+                <div class="text-center space-y-3 relative z-10">
+                  <div class="text-5xl animate-celebration-bounce">
+                    {c().theme === "growth" ? "🌱" : c().theme === "journey" ? "🧭" : c().theme === "puzzle" ? "🧩" : c().theme === "star" ? "⭐" : c().theme === "museum" ? "🏛️" : c().theme === "scholar" ? "📚" : "🏆"}
+                  </div>
+                  <h2 class="text-xl font-display font-bold text-ink-primary">Challenge Complete!</h2>
+                  <p class="text-sm text-ink-secondary">Congratulations on finishing "{c().title}"</p>
+                  <div class="flex items-center justify-center gap-6 mt-3">
+                    <div class="text-center">
+                      <p class="text-2xl font-bold text-xp">+{c().rewardXp}</p>
+                      <p class="text-xs text-ink-secondary/60">XP Earned</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-2xl font-bold text-coin">+{c().rewardCoins}</p>
+                      <p class="text-xs text-ink-secondary/60">Coins Earned</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-center gap-3 pt-2">
+                    <A
+                      href="/challenges/new"
+                      class="px-4 py-2 rounded-lg text-sm font-medium bg-accent text-white hover:bg-accent/90 transition-colors"
+                    >
+                      Create Next Challenge
+                    </A>
+                    <button
+                      onClick={handleRestart}
+                      disabled={restarting()}
+                      class={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        restarting()
+                          ? "border-surface-border text-ink-secondary/50 cursor-not-allowed"
+                          : "border-accent text-accent hover:bg-accent/10"
+                      }`}
+                    >
+                      {restarting() ? "Restarting..." : "Restart"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Show>
           </>
         )}
       </Show>

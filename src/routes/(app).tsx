@@ -1,4 +1,4 @@
-import { Show, onMount, createEffect, type JSX } from "solid-js";
+import { Show, onMount, onCleanup, createEffect, type JSX } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
 import { user, loading, initAuth, logout, authFetch } from "~/stores/auth";
 import { uiStore, toggleSidebar, setTheme } from "~/stores/ui";
@@ -65,6 +65,16 @@ export default function AppLayout(props: { children?: JSX.Element }) {
       // Restore equipped theme
       restoreEquippedTheme().catch(() => {});
     }
+  });
+
+  // Nudge heartbeat — periodic health check every 30 min
+  onMount(() => {
+    const interval = setInterval(() => {
+      if (user()) {
+        authFetch("/api/auth/nudge").catch(() => {});
+      }
+    }, 30 * 60 * 1000);
+    onCleanup(() => clearInterval(interval));
   });
 
   const g = () => gamification();

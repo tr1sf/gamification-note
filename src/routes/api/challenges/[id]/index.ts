@@ -49,6 +49,48 @@ export async function PUT({ request, params }: { request: Request; params: { id:
   return success(updated);
 }
 
+// PATCH — restart a completed challenge (duplicate as new active)
+export async function PATCH({ request, params }: { request: Request; params: { id: string } }) {
+  const user = getUserFromRequest(request);
+  if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
+
+  const challenge = await prisma.challenge.findUnique({
+    where: { id: params.id },
+    include: { actions: true },
+  });
+  if (!challenge) return error("NOT_FOUND", "Challenge not found", 404);
+  if (challenge.userId !== user.userId) return error("FORBIDDEN", "Not your challenge", 403);
+
+  const newChallenge = await prisma.challenge.create({
+    data: {
+      userId: user.userId,
+      title: `${challenge.title} (Restarted)`,
+      description: challenge.description,
+      theme: challenge.theme,
+      difficulty: challenge.difficulty,
+      iconEmoji: challenge.iconEmoji,
+      targetProgress: challenge.targetProgress,
+      rewardXp: challenge.rewardXp,
+      rewardCoins: challenge.rewardCoins,
+      actions: {
+        create: challenge.actions.map((a, i) => ({
+          title: a.title,
+          description: a.description,
+          iconEmoji: a.iconEmoji,
+          progressValue: a.progressValue,
+          order: i,
+          linkedActionType: a.linkedActionType,
+          isRepeatable: a.isRepeatable,
+          maxRepeats: a.maxRepeats,
+        })),
+      },
+    },
+    include: { actions: { orderBy: { order: "asc" } } },
+  });
+
+  return success(newChallenge);
+}
+
 // DELETE — archive challenge
 export async function DELETE({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
