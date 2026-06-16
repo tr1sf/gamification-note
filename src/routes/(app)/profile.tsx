@@ -55,6 +55,7 @@ export default function ProfilePage() {
         <CharacterSheet
           username={userData()!.username}
           avatarUrl={userData()!.avatarUrl}
+          inventory={dashboard()?.inventory}
         />
 
         <div class="flex gap-1 border-b border-surface-border">
@@ -97,7 +98,7 @@ export default function ProfilePage() {
               <AchievementList achievements={dashboard()!.achievements} />
             </Show>
             <Show when={activeTab() === "inventory"}>
-              <InventoryPanel items={dashboard()!.inventory} />
+              <InventoryPanel items={dashboard()!.inventory} onRefresh={() => refetch()} />
             </Show>
           </Show>
         </Show>

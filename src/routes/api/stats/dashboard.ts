@@ -105,7 +105,9 @@ export async function GET({ request }: { request: Request }) {
       where: { userId: user.userId },
       orderBy: { purchasedAt: "desc" },
       select: {
+        id: true,
         isEquipped: true,
+        expiresAt: true,
         item: {
           select: { id: true, name: true, description: true, type: true, imageUrl: true, rarity: true },
         },
@@ -150,6 +152,7 @@ export async function GET({ request }: { request: Request }) {
 
   const inventoryItems = inventory.map((inv) => ({
     id: inv.item.id,
+    inventoryId: inv.id,
     name: inv.item.name,
     description: inv.item.description ?? "",
     icon: inv.item.imageUrl || ITEM_ICONS[inv.item.type] || "🎁",
@@ -157,6 +160,7 @@ export async function GET({ request }: { request: Request }) {
     rarity: inv.item.rarity,
     equipped: inv.isEquipped,
     owned: true,
+    expiresAt: inv.expiresAt ? inv.expiresAt.toISOString() : null,
   }));
 
   return success({

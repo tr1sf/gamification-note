@@ -30,22 +30,22 @@ export default function ThemePicker() {
 
   const load = async () => {
     try {
-      const [themesRes, userRes] = await Promise.all([
+      const [themesRes, userThemesRes] = await Promise.all([
         authFetch("/api/themes"),
-        authFetch("/api/auth/me"),
+        authFetch("/api/users/theme"),
       ]);
       const themesJson = await themesRes.json();
-      const userJson = await userRes.json();
+      const userThemesJson = await userThemesRes.json();
       if (themesJson.success) setThemes(themesJson.data);
 
-      // Fetch owned themes (from stats/inventory)
-      const statsRes = await authFetch("/api/stats/dashboard");
-      const statsJson = await statsRes.json();
-      if (statsJson.success && statsJson.data?.inventory) {
-        const themeIds = (statsJson.data.inventory as any[])
-          .filter((i: any) => i.itemType === "theme")
-          .map((i: any) => i.id as string);
-        setOwnedThemes(new Set<string>(themeIds));
+      if (userThemesJson.success) {
+        const userThemes = userThemesJson.data as Array<{ themeId: string; isEquipped: boolean }>;
+        setOwnedThemes(new Set<string>(userThemes.map((ut) => ut.themeId)));
+        const equipped = userThemes.find((ut) => ut.isEquipped);
+        if (equipped) {
+          setEquippedId(equipped.themeId);
+          localStorage.setItem("equippedThemeId", equipped.themeId);
+        }
       }
     } catch {}
   };

@@ -1,7 +1,10 @@
-import { Show, For } from "solid-js";
+import { Show, For, createSignal, createMemo, onCleanup } from "solid-js";
+import { authFetch } from "~/stores/auth";
+import { addToast } from "~/stores/ui";
 
 export interface InventoryItem {
   id: string;
+  inventoryId: string;
   name: string;
   description: string;
   icon: string;
@@ -9,10 +12,12 @@ export interface InventoryItem {
   rarity: string;
   equipped: boolean;
   owned: boolean;
+  expiresAt: string | null;
 }
 
 interface InventoryPanelProps {
   items: InventoryItem[];
+  onRefresh?: () => void;
 }
 
 const rarityColors: Record<string, string> = {
@@ -23,7 +28,67 @@ const rarityColors: Record<string, string> = {
   legendary: "bg-coin/10 text-coin border-coin/20",
 };
 
+const CONSUMABLE_TYPE = "consumable";
+
+function TimeRemaining(props: { expiresAt: string }) {
+  const [now, setNow] = createSignal(Date.now());
+  const timer = setInterval(() => setNow(Date.now()), 1000);
+  onCleanup(() => clearInterval(timer));
+
+  const remaining = createMemo(() => {
+    const diff = new Date(props.expiresAt).getTime() - now();
+    if (diff <= 0) return "Expired";
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
+  });
+
+  return (
+    <span class="text-[10px] text-ink-secondary mt-0.5 block">{remaining()}</span>
+  );
+}
+
 export default function InventoryPanel(props: InventoryPanelProps) {
+  const [actionId, setActionId] = createSignal<string | null>(null);
+
+  const handleEquip = async (inventoryId: string) => {
+    setActionId(inventoryId);
+    try {
+      const res = await authFetch(`/api/inventory/${inventoryId}/equip`, { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        addToast("Item equipped!", "success");
+        props.onRefresh?.();
+      } else {
+        addToast(json.error?.message || "Failed to equip", "error");
+      }
+    } catch {
+      addToast("Failed to equip item", "error");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleOpen = async (inventoryId: string) => {
+    setActionId(inventoryId);
+    try {
+      const res = await authFetch(`/api/inventory/${inventoryId}/open`, { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        addToast(`Opened! You got ${json.data.name}`, "success");
+        props.onRefresh?.();
+      } else {
+        addToast(json.error?.message || "Failed to open", "error");
+      }
+    } catch {
+      addToast("Failed to open loot box", "error");
+    } finally {
+      setActionId(null);
+    }
+  };
+
   return (
     <div class="p-6 rounded-xl border border-surface-border bg-surface-elevated">
       <h2 class="text-lg font-display font-bold text-ink-primary mb-4">Inventory</h2>
@@ -52,9 +117,36 @@ export default function InventoryPanel(props: InventoryPanelProps) {
                 >
                   {item.rarity}
                 </span>
-                <Show when={item.equipped}>
-                  <p class="text-[10px] text-accent font-semibold mt-1">Equipped</p>
+
+                <Show when={item.expiresAt}>
+                  <TimeRemaining expiresAt={item.expiresAt!} />
                 </Show>
+
+                <div class="mt-2">
+                  <Show when={item.itemType === CONSUMABLE_TYPE}>
+                    <button
+                      onClick={() => handleOpen(item.inventoryId)}
+                      disabled={actionId() === item.inventoryId}
+                      class="px-2 py-1 rounded text-[10px] font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors disabled:opacity-50"
+                    >
+                      {actionId() === item.inventoryId ? "..." : "Open"}
+                    </button>
+                  </Show>
+
+                  <Show when={item.itemType !== CONSUMABLE_TYPE && !item.equipped}>
+                    <button
+                      onClick={() => handleEquip(item.inventoryId)}
+                      disabled={actionId() === item.inventoryId}
+                      class="px-2 py-1 rounded text-[10px] font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors disabled:opacity-50"
+                    >
+                      {actionId() === item.inventoryId ? "..." : "Equip"}
+                    </button>
+                  </Show>
+
+                  <Show when={item.itemType !== CONSUMABLE_TYPE && item.equipped}>
+                    <p class="text-[10px] text-accent font-semibold mt-1">Equipped</p>
+                  </Show>
+                </div>
               </div>
             )}
           </For>

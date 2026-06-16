@@ -87,7 +87,20 @@ async function handleLogin({ request }: { request: Request }) {
     data: { refreshTokenHash: refreshHash, lastLoginAt: new Date() },
   });
 
-  const streak = await calculateLoginStreak(user.id);
+  let streak = await calculateLoginStreak(user.id);
+
+  if (streak === 0) {
+    const freeze = await prisma.userInventory.findFirst({
+      where: { userId: user.id },
+      include: { item: true },
+    });
+    const hasFreeze = freeze && (freeze.item.category as Record<string, unknown> | null)?.usageType === "streak_freeze";
+
+    if (hasFreeze) {
+      await prisma.userInventory.delete({ where: { id: freeze!.id } });
+      streak = user.streak;
+    }
+  }
 
   await prisma.user.update({
     where: { id: user.id },

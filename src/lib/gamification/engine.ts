@@ -9,10 +9,28 @@ import { checkAchievements } from "./achievements/achievement-checker";
 import { createNotification } from "~/lib/socket/notifications";
 import type { AuditMetadata } from "~/lib/analytics/types";
 import { getActionMessage } from "./messages";
+import { XP_WRITE_WORDS_PER_100, XP_WRITE_WORDS_MAX } from "./constants";
+
+async function checkActiveBooster(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  usageType: string,
+): Promise<boolean> {
+  const boosters = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT ui.id FROM "UserInventory" ui
+    JOIN "CosmeticItem" ci ON ui."cosmeticItemId" = ci.id
+    WHERE ui."userId" = ${userId}::uuid
+      AND (ci.category->>'usageType' = ${usageType})
+      AND ci.type = 'consumable'
+      AND (ui."expiresAt" IS NULL OR ui."expiresAt" > NOW())
+    LIMIT 1
+  `;
+  return boosters.length > 0;
+}
 
 export interface ActionContext {
   userId: string;
-  actionType: "create_note" | "update_note" | "make_public" | "daily_login" | "complete_quest" | "join_guild" | "create_guild" | "ai_summarize" | "review_note" | "structured_note" | "export_note" | "share_note" | "add_link";
+  actionType: "create_note" | "update_note" | "write_words" | "make_public" | "daily_login" | "complete_quest" | "join_guild" | "create_guild" | "ai_summarize" | "review_note" | "structured_note" | "export_note" | "share_note" | "add_link";
   metadata?: Record<string, unknown>;
   analyticsMeta?: AuditMetadata;
 }
@@ -35,7 +53,22 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
     `;
     const user = rows[0];
 
-    const xpGained = calculateXP(ctx.actionType, ctx.metadata, ctx.metadata?.dailyNoteCount as number | undefined);
+    let xpGained = calculateXP(ctx.actionType, ctx.metadata, ctx.metadata?.dailyNoteCount as number | undefined);
+
+    // Focus Potion: double word-count bonus portion of XP
+    const hasFocusPotion = await checkActiveBooster(tx, ctx.userId, "focus_potion");
+    if (hasFocusPotion && (ctx.actionType === "create_note" || ctx.actionType === "write_words")) {
+      const wordCount = typeof ctx.metadata?.wordCount === "number" ? ctx.metadata.wordCount : 0;
+      const wordBonus = Math.min(Math.floor(wordCount / 100) * XP_WRITE_WORDS_PER_100, XP_WRITE_WORDS_MAX);
+      xpGained += wordBonus;
+    }
+
+    // XP Booster: double all XP gained
+    const hasXpBoost = await checkActiveBooster(tx, ctx.userId, "xp_boost");
+    if (hasXpBoost) {
+      xpGained *= 2;
+    }
+
     const coinsGained = calculateCoins(ctx.actionType, ctx.metadata);
 
     const newXp = user.xp + xpGained;

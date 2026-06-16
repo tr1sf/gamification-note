@@ -2,6 +2,18 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 
+// GET — list user's owned themes
+export async function GET({ request }: { request: Request }) {
+  const user = getUserFromRequest(request);
+  if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
+
+  const userThemes = await prisma.userTheme.findMany({
+    where: { userId: user.userId },
+    include: { theme: true },
+  });
+  return success(userThemes);
+}
+
 // POST — equip a theme (must own it)
 export async function POST({ request }: { request: Request }) {
   const user = getUserFromRequest(request);

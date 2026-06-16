@@ -48,6 +48,15 @@ export async function POST({ request, params }: { request: Request; params: { it
         },
       });
 
+      const category = item.category as Record<string, unknown> | null;
+      if (category?.durationMin && typeof category.durationMin === "number") {
+        const expiresAt = new Date(Date.now() + category.durationMin * 60 * 1000);
+        await tx.userInventory.update({
+          where: { id: inventoryItem.id },
+          data: { expiresAt },
+        });
+      }
+
       const updatedUser = await tx.user.findUniqueOrThrow({
         where: { id: user.userId },
         select: { coins: true },
