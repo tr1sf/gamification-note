@@ -3,12 +3,24 @@ import { Server } from 'socket.io';
 import { verifyAccessToken } from '~/lib/auth/jwt';
 import { registerHandlers } from './handlers';
 
+const ALLOWED_ORIGINS = [
+  process.env.CLIENT_URL || 'http://localhost:3000',
+  'tauri://localhost',
+  'https://tauri.localhost',
+];
+
 let io: Server | null = null;
 
 export function initSocket(server: HttpServer): Server {
   io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || 'http://localhost:3000',
+      origin: (origin, callback) => {
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true,
     },
     pingTimeout: 60000,

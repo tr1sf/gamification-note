@@ -16,6 +16,7 @@ import RewardPopup from "~/components/gamification/RewardPopup";
 import LevelUpModal from "~/components/gamification/LevelUpModal";
 import NotificationBell from "~/components/shared/NotificationBell";
 import SurveyWidget from "~/components/survey/SurveyWidget";
+import InstallPrompt from "~/components/pwa/InstallPrompt";
 import { getUnlockedFeatures, getNextUnlock, type UserPath } from "~/lib/path-unlocks";
 import { applyThemeVariables } from "~/lib/themes/defaults";
 
@@ -142,6 +143,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
           <RewardPopup />
           <LevelUpModal />
           <SurveyWidget />
+          <InstallPrompt />
       <div class="flex h-screen overflow-hidden bg-surface">
         {/* Sidebar */}
         <aside class={`${uiStore.sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-surface-elevated border-r border-surface-border flex flex-col transition-transform duration-200`} style="box-shadow: inset -1px 0 0 color-mix(in oklab, var(--color-accent) 6%, transparent);">
