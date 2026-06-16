@@ -106,6 +106,22 @@ export async function POST({ request }: { request: Request }) {
     metadata: { noteId: note.id, wordCount: note.wordCount, structureScore, dailyNoteCount, isSpam },
   });
 
+  // Reflection depth bonus (journaler path)
+  if (note.wordCount >= 200) {
+    const u = await prisma.user.findUnique({ where: { id: user.userId }, select: { path: true } });
+    if (u?.path === "journaler") {
+      const { grantReward } = await import("~/lib/gamification/engine");
+      const { REFLECTION_XP_BONUS, REFLECTION_COIN_BONUS } = await import("~/lib/gamification/constants");
+      grantReward({
+        userId: user.userId,
+        xp: REFLECTION_XP_BONUS,
+        coins: REFLECTION_COIN_BONUS,
+        actionType: "deep_reflection",
+        metadata: { noteId: note.id, wordCount: note.wordCount },
+      }).catch(() => {});
+    }
+  }
+
   let qualityMeta: Record<string, unknown> = {};
   if (isBlock) {
     const blocks = parseBlocks(note.content);

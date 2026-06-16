@@ -38,6 +38,10 @@ export const XP_QUALITY_BONUS = 5;
 export const QUALITY_SCORE_THRESHOLD = 3;
 export const QUALITY_BONUS_THRESHOLD = 7;
 export const DUPLICATE_SIMILARITY_THRESHOLD = 0.8;
+// Reflection depth bonus (journaler path)
+export const REFLECTION_XP_BONUS = 5;
+export const REFLECTION_COIN_BONUS = 3;
+
 export const DELETE_PENALTY_XP = 5;
 export const DELETE_PENALTY_MAX_WORDS = 50;
 export const DELETE_PENALTY_MAX_AGE_MS = 5 * 60 * 1000;

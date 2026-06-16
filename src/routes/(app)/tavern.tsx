@@ -3,6 +3,10 @@ import { authFetch, user as authUser } from "~/stores/auth";
 import { gamification, xpProgressInLevel } from "~/stores/user";
 import { quests, fetchActiveQuests, type Quest } from "~/stores/quests";
 import RadarChart, { type RadarStat } from "~/components/gamification/RadarChart";
+import MoodPicker from "~/components/mood/MoodPicker";
+import GratitudeGarden from "~/components/gratitude/GratitudeGarden";
+import FocusTimer from "~/components/focus/FocusTimer";
+import ProjectList from "~/components/projects/ProjectCard";
 
 // ── Dashboard stats API ──────────────────────────────────────────────────────
 interface DashboardData {
@@ -53,6 +57,18 @@ const STAT_COLORS = {
 export default function TavernPage() {
   const [dashboard] = createResource(fetchDashboard);
   const [questTab, setQuestTab] = createSignal<"plan" | "today" | "done">("today");
+  const [digestData, setDigestData] = createSignal<string | null>(null);
+  const [digestLoading, setDigestLoading] = createSignal(false);
+
+  const loadDigest = async () => {
+    setDigestLoading(true);
+    try {
+      const res = await authFetch("/api/digest");
+      const json = await res.json();
+      if (json.success) setDigestData(json.data.digest);
+    } catch { /* ignore */ }
+    setDigestLoading(false);
+  };
 
   onMount(() => {
     fetchActiveQuests();
@@ -404,6 +420,48 @@ export default function TavernPage() {
               </div>
             </div>
           </section>
+
+          {/* ─────────── PATH-SPECIFIC WIDGETS ─────────── */}
+          <Show when={authUser()?.path === "professional"}>
+            <section class="lg:col-span-12">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Smart Inbox Digest */}
+                <div class="bg-surface-elevated rounded-xl p-5 border border-surface-border">
+                  <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-ink-primary">Smart Inbox Digest</h3>
+                    <button
+                      onClick={loadDigest}
+                      disabled={digestLoading()}
+                      class="text-xs px-2 py-1 rounded-md bg-surface hover:bg-surface-hover text-ink-secondary transition-colors disabled:opacity-50"
+                    >
+                      {digestLoading() ? "Loading..." : "Refresh"}
+                    </button>
+                  </div>
+                  <Show
+                    when={digestData()}
+                    fallback={<p class="text-sm text-ink-secondary/60 italic">Click Refresh to generate your daily digest</p>}
+                  >
+                    <p class="text-sm text-ink-primary leading-relaxed whitespace-pre-line">{digestData()}</p>
+                  </Show>
+                </div>
+                {/* Focus Timer */}
+                <FocusTimer />
+              </div>
+              {/* Projects */}
+              <div class="mt-4">
+                <ProjectList />
+              </div>
+            </section>
+          </Show>
+
+          <Show when={authUser()?.path === "journaler"}>
+            <section class="lg:col-span-12">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <MoodPicker />
+                <GratitudeGarden />
+              </div>
+            </section>
+          </Show>
         </div>
       </div>
     </div>
