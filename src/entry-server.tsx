@@ -13,6 +13,27 @@ export default createHandler(() => (
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>TavernoteX — Gamified AI Note-Taking App</title>
+          <meta name="description" content="AI-powered gamified note-taking with medieval tavern theme. Write notes, complete quests, battle bosses, and join guilds. Built-in AI quiz generation and spaced repetition." />
+          <meta name="keywords" content="note-taking, gamification, AI quiz, spaced repetition, productivity, study app, journal, medieval theme" />
+          <meta name="author" content="TavernoteX" />
+          <meta name="robots" content="index, follow" />
+          <link rel="canonical" href="https://gamification-note-production.up.railway.app" />
+          {/* Open Graph */}
+          <meta property="og:title" content="TavernoteX — Gamified AI Note-Taking App" />
+          <meta property="og:description" content="Write notes, battle bosses, join guilds. AI quizzes + spaced repetition built in. Your knowledge adventure starts here." />
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content="https://gamification-note-production.up.railway.app" />
+          <meta property="og:image" content="https://gamification-note-production.up.railway.app/assets/images/favicon.png" />
+          <meta property="og:image:width" content="512" />
+          <meta property="og:image:height" content="512" />
+          <meta property="og:site_name" content="TavernoteX" />
+          <meta property="og:locale" content="en_US" />
+          {/* Twitter Card */}
+          <meta name="twitter:card" content="summary" />
+          <meta name="twitter:title" content="TavernoteX — Gamified AI Note-Taking" />
+          <meta name="twitter:description" content="AI-powered notes with quests, boss fights, and guilds. Built-in quiz generation." />
+          <meta name="twitter:image" content="https://gamification-note-production.up.railway.app/assets/images/favicon.png" />
           <link rel="icon" href="/assets/images/favicon.png" />
           <link rel="apple-touch-icon" href="/assets/images/favicon.png" />
           <meta name="theme-color" content="#1a1a2e" />
