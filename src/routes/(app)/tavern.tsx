@@ -3,6 +3,7 @@ import { A } from "@solidjs/router";
 import { authFetch, user as authUser } from "~/stores/auth";
 import { gamification, xpProgressInLevel } from "~/stores/user";
 import { quests, fetchActiveQuests, type Quest } from "~/stores/quests";
+import { getUnlockedFeatures, type UserPath } from "~/lib/path-unlocks";
 import RadarChart, { type RadarStat } from "~/components/gamification/RadarChart";
 import MoodPicker from "~/components/mood/MoodPicker";
 import GratitudeGarden from "~/components/gratitude/GratitudeGarden";
@@ -504,8 +505,10 @@ export default function TavernPage() {
           </Show>
 
           <Show when={authUser()?.path === "student"}>
+            <Show when={getUnlockedFeatures(authUser()?.path as UserPath, gamification().level).length > 2}>
             <section class="lg:col-span-12">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Show when={getUnlockedFeatures(authUser()?.path as UserPath, gamification().level).includes("Boss Fight")}>
                 <div class="bg-surface-elevated rounded-xl p-5 border border-surface-border">
                   <h3 class="text-sm font-semibold text-ink-primary mb-3">⚔️ Active Bosses</h3>
                   <Show when={(bosses() || []).length > 0} fallback={
@@ -525,6 +528,8 @@ export default function TavernPage() {
                     )}</For>
                   </Show>
                 </div>
+                </Show>
+                <Show when={getUnlockedFeatures(authUser()?.path as UserPath, gamification().level).includes("AI Quiz")}>
                 <div class="bg-surface-elevated rounded-xl p-5 border border-surface-border">
                   <h3 class="text-sm font-semibold text-ink-primary mb-3">🧠 Pending Quizzes</h3>
                   <Show when={(pendingQuizzes() || []).length > 0} fallback={
@@ -544,8 +549,10 @@ export default function TavernPage() {
                     )}</For>
                   </Show>
                 </div>
+                </Show>
               </div>
             </section>
+            </Show>
           </Show>
         </div>
       </div>
