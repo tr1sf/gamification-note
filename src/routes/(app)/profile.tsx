@@ -55,6 +55,7 @@ export default function ProfilePage() {
         <CharacterSheet
           username={userData()!.username}
           avatarUrl={userData()!.avatarUrl}
+          userPath={userData()!.path}
           inventory={dashboard()?.inventory}
         />
 

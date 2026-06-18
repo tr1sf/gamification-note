@@ -1,5 +1,7 @@
-import { Show, createMemo } from "solid-js";
+import { Show, createMemo, createSignal } from "solid-js";
 import { gamification, xpProgressInLevel } from "~/stores/user";
+import { authFetch } from "~/stores/auth";
+import { addToast } from "~/stores/ui";
 import XPBar from "~/components/gamification/XPBar";
 import CoinDisplay from "~/components/gamification/CoinDisplay";
 import StreakTracker from "~/components/gamification/StreakTracker";
@@ -8,6 +10,7 @@ import type { InventoryItem } from "./InventoryPanel";
 interface CharacterSheetProps {
   username: string;
   avatarUrl: string | null;
+  userPath?: string | null;
   inventory?: InventoryItem[];
 }
 
@@ -45,10 +48,34 @@ export default function CharacterSheet(props: CharacterSheetProps) {
     return { color: nc.rarity === "legendary" ? "var(--color-coin)" : undefined };
   });
 
+  const [uploading, setUploading] = createSignal(false);
+  let fileInput: HTMLInputElement | undefined;
+
+  const handleUpload = async (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("avatar", file);
+    try {
+      const res = await authFetch("/api/users/avatar", { method: "POST", body: formData });
+      const json = await res.json();
+      if (json.success) { addToast("Avatar updated!", "success"); location.reload(); }
+      else addToast(json.error?.message || "Upload failed", "error");
+    } catch { addToast("Upload failed", "error"); }
+    setUploading(false);
+  };
+
+  const pathDefaultAvatar = () => {
+    if (props.avatarUrl) return null;
+    // Fallback to text initial — could be path-specific images later
+    return null;
+  };
+
   return (
     <div class="p-6 rounded-xl border border-surface-border bg-surface-elevated">
       <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-        <div class="relative shrink-0">
+        <div class="relative shrink-0 group cursor-pointer" onClick={() => fileInput?.click()} title="Click to change avatar">
           <div
             class={`w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center text-3xl font-bold text-accent overflow-hidden border-[3px] ${avatarBorderClass()}`}
           >
@@ -63,6 +90,15 @@ export default function CharacterSheet(props: CharacterSheetProps) {
               <img src={props.avatarUrl!} alt={props.username} class="w-full h-full object-cover" />
             </Show>
           </div>
+          {uploading() && (
+            <div class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+              <span class="text-white text-xs">Uploading...</span>
+            </div>
+          )}
+          <div class="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+            <span class="text-white text-xl">📷</span>
+          </div>
+          <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" class="hidden" onChange={handleUpload} />
           <div
             class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-accent text-surface-overlay text-xs font-bold flex items-center justify-center border-2 border-surface-elevated"
             aria-label={`Level ${g().level}`}
