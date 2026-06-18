@@ -2,6 +2,7 @@ import { createSignal, For, Show } from "solid-js";
 import { authFetch, fetchMe } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 import { PATH_DESCRIPTIONS, type UserPath } from "~/lib/path-unlocks";
+import { applyLanguage, getCurrentLang } from "~/lib/i18n";
 
 type Motivation = "adventurer" | "scholar" | "collaborator";
 
@@ -70,7 +71,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
   const [giftClaimed, setGiftClaimed] = createSignal(false);
   const [completedTasks, setCompletedTasks] = createSignal<string[]>([]);
 
-  const totalSteps = 3;
+  const totalSteps = 4; // 0=Language, 1=Path, 2=Motivation, 3=Gift
 
   function nextStep() {
     if (step() < totalSteps) setStep((s) => s + 1);
@@ -119,7 +120,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
   }
 
   const canProceed = () => {
-    if (step() === 2) return giftClaimed();
+    if (step() === 3) return giftClaimed();
     return true;
   };
 
@@ -128,7 +129,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
       <div class="w-full max-w-xl">
         {/* Step indicators */}
         <div class="flex items-center justify-center gap-2 mb-8">
-          <For each={[0, 1, 2]}>
+          <For each={[0, 1, 2, 3]}>
             {(i) => (
               <div class="flex items-center gap-2">
                 <div
@@ -140,7 +141,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
                 >
                   {i < step() ? "\u2713" : i + 1}
                 </div>
-                {i < 2 && (
+                {i < 3 && (
                   <div
                     class={`w-10 h-0.5 transition-colors duration-300 ${
                       i < step() ? "bg-accent" : "bg-surface-border"
@@ -158,12 +159,15 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
           style={`animation: fade-up 0.35s ease-out`}
         >
           <Show when={step() === 0}>
-            <StepChoosePath path={path} setPath={setPath} />
+            <StepLanguage />
           </Show>
           <Show when={step() === 1}>
-            <StepMotivation motivation={motivation} setMotivation={setMotivation} />
+            <StepChoosePath path={path} setPath={setPath} />
           </Show>
           <Show when={step() === 2}>
+            <StepMotivation motivation={motivation} setMotivation={setMotivation} />
+          </Show>
+          <Show when={step() === 3}>
             <StepFirstQuest
               completedTasks={completedTasks}
               markTask={markTask}
@@ -184,7 +188,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
               </button>
             </Show>
 
-            <Show when={step() < 2}>
+            <Show when={step() < 3}>
               <button
                 onClick={nextStep}
                 class="ml-auto px-6 py-2.5 bg-accent text-surface-overlay rounded-lg font-semibold text-sm hover:bg-accent-hover transition-all duration-200 active:scale-[0.98]"
@@ -193,7 +197,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
               </button>
             </Show>
 
-            <Show when={step() === 2}>
+            <Show when={step() === 3}>
               <button
                 onClick={() => props.onComplete()}
                 disabled={!giftClaimed()}
@@ -208,6 +212,29 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
             </Show>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StepLanguage() {
+  const lang = () => getCurrentLang();
+  const select = (l: "en" | "vi") => applyLanguage(l);
+  return (
+    <div>
+      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">Language / Ngôn Ngữ</h2>
+      <p class="text-sm text-ink-secondary mb-5">Choose your preferred language</p>
+      <div class="grid grid-cols-2 gap-3">
+        <button onClick={() => select("en")} class={`p-4 rounded-xl border-2 text-left transition-all ${lang() === "en" ? "border-accent bg-accent/5 shadow-sm" : "border-surface-border hover:border-accent/30"}`}>
+          <p class="text-2xl mb-1">🇬🇧</p>
+          <p class="font-semibold text-ink-primary">English</p>
+          <p class="text-xs text-ink-secondary">Default</p>
+        </button>
+        <button onClick={() => select("vi")} class={`p-4 rounded-xl border-2 text-left transition-all ${lang() === "vi" ? "border-accent bg-accent/5 shadow-sm" : "border-surface-border hover:border-accent/30"}`}>
+          <p class="text-2xl mb-1">🇻🇳</p>
+          <p class="font-semibold text-ink-primary">Tiếng Việt</p>
+          <p class="text-xs text-ink-secondary">Beta</p>
+        </button>
       </div>
     </div>
   );
