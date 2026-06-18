@@ -70,8 +70,9 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
   const [submitting, setSubmitting] = createSignal(false);
   const [giftClaimed, setGiftClaimed] = createSignal(false);
   const [completedTasks, setCompletedTasks] = createSignal<string[]>([]);
+  const [consentAccepted, setConsentAccepted] = createSignal(false);
 
-  const totalSteps = 4; // 0=Language, 1=Path, 2=Motivation, 3=Gift
+  const totalSteps = 5; // 0=Lang, 1=Consent, 2=Path, 3=Motivation, 4=Gift
 
   function nextStep() {
     if (step() < totalSteps) setStep((s) => s + 1);
@@ -120,7 +121,8 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
   }
 
   const canProceed = () => {
-    if (step() === 3) return giftClaimed();
+    if (step() === 1) return consentAccepted();
+    if (step() === 4) return giftClaimed();
     return true;
   };
 
@@ -129,7 +131,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
       <div class="w-full max-w-xl">
         {/* Step indicators */}
         <div class="flex items-center justify-center gap-2 mb-8">
-          <For each={[0, 1, 2, 3]}>
+          <For each={[0, 1, 2, 3, 4]}>
             {(i) => (
               <div class="flex items-center gap-2">
                 <div
@@ -141,7 +143,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
                 >
                   {i < step() ? "\u2713" : i + 1}
                 </div>
-                {i < 3 && (
+                {i < 4 && (
                   <div
                     class={`w-10 h-0.5 transition-colors duration-300 ${
                       i < step() ? "bg-accent" : "bg-surface-border"
@@ -162,12 +164,15 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
             <StepLanguage />
           </Show>
           <Show when={step() === 1}>
-            <StepChoosePath path={path} setPath={setPath} />
+            <StepConsent accepted={consentAccepted} setAccepted={setConsentAccepted} />
           </Show>
           <Show when={step() === 2}>
-            <StepMotivation motivation={motivation} setMotivation={setMotivation} />
+            <StepChoosePath path={path} setPath={setPath} />
           </Show>
           <Show when={step() === 3}>
+            <StepMotivation motivation={motivation} setMotivation={setMotivation} />
+          </Show>
+          <Show when={step() === 4}>
             <StepFirstQuest
               completedTasks={completedTasks}
               markTask={markTask}
@@ -188,16 +193,21 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
               </button>
             </Show>
 
-            <Show when={step() < 3}>
+            <Show when={step() < 4}>
               <button
                 onClick={nextStep}
-                class="ml-auto px-6 py-2.5 bg-accent text-surface-overlay rounded-lg font-semibold text-sm hover:bg-accent-hover transition-all duration-200 active:scale-[0.98]"
+                disabled={!canProceed()}
+                class={`ml-auto px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 active:scale-[0.98] ${
+                  canProceed()
+                    ? "bg-accent text-surface-overlay hover:bg-accent-hover"
+                    : "bg-surface-border text-ink-secondary cursor-not-allowed"
+                }`}
               >
                 Continue &rarr;
               </button>
             </Show>
 
-            <Show when={step() === 3}>
+            <Show when={step() === 4}>
               <button
                 onClick={() => props.onComplete()}
                 disabled={!giftClaimed()}
@@ -236,6 +246,27 @@ function StepLanguage() {
           <p class="text-xs text-ink-secondary">Beta</p>
         </button>
       </div>
+    </div>
+  );
+}
+
+function StepConsent(props: { accepted: () => boolean; setAccepted: (v: boolean) => void }) {
+  return (
+    <div>
+      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">Privacy & Data Usage</h2>
+      <p class="text-sm text-ink-secondary mb-5">We care about your data. Your notes are private by default.</p>
+      <div class="bg-surface rounded-xl p-4 border border-surface-border text-sm text-ink-secondary space-y-2 mb-4">
+        <p>\u2022 Your notes are stored securely and are <span class="font-medium text-ink-primary">private by default</span></p>
+        <p>\u2022 AI features (quiz generation, summarization) send note content to our AI provider (Neuralwatt). <span class="font-medium text-ink-primary">No personal data</span> is shared.</p>
+        <p>\u2022 Analytics data (XP, quests, quiz scores) is collected to improve the app. This data is <span class="font-medium text-ink-primary">anonymous</span> in research reports.</p>
+        <p>\u2022 You can request data deletion anytime by contacting the developer.</p>
+        <p>\u2022 <span class="text-accent underline cursor-pointer" onClick={() => window.open("/privacy", "_blank")}>Full Privacy Policy</span></p>
+      </div>
+      <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-surface-border hover:border-accent/30 transition-colors">
+        <input type="checkbox" checked={props.accepted()} onChange={(e) => props.setAccepted(e.currentTarget.checked)}
+          class="mt-0.5 w-4 h-4 rounded border-surface-border accent-accent" />
+        <span class="text-sm text-ink-primary">I understand and agree to the data usage policy. I consent to my anonymized data being used for academic research purposes.</span>
+      </label>
     </div>
   );
 }

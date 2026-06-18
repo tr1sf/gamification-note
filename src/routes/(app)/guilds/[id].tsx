@@ -127,10 +127,15 @@ export default function GuildDetailPage() {
       if (data.role === "owner") fetchGuild(guildId()).then((g) => g && setGuild(g));
     };
 
+    const handleGuildUpdated = (data: { id: string; name: string; description: string }) => {
+      setGuild((g) => g ? { ...g, name: data.name, description: data.description } : g);
+    };
+
     on("guild:message", handleNewMessage);
     on("guild:user-joined", handleMemberJoined);
     on("guild:user-left", handleMemberLeft);
     on("guild:role-changed", handleRoleChanged);
+    on("guild:updated", handleGuildUpdated);
 
     onCleanup(() => {
       emit("guild:leave", { guildId: guildId() });
@@ -138,6 +143,7 @@ export default function GuildDetailPage() {
       off("guild:user-joined", handleMemberJoined);
       off("guild:user-left", handleMemberLeft);
       off("guild:role-changed", handleRoleChanged);
+      off("guild:updated", handleGuildUpdated);
     });
   });
 

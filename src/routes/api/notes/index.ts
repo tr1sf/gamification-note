@@ -71,7 +71,7 @@ export async function POST({ request }: { request: Request }) {
     take: 10,
     select: { content: true },
   });
-  const isSpam = recentNotes.some((n) => jaccardSimilarity(contentTokens, tokenize(n.content)) >= DUPLICATE_SIMILARITY_THRESHOLD);
+  const isDuplicate = recentNotes.some((n) => jaccardSimilarity(contentTokens, tokenize(n.content)) >= DUPLICATE_SIMILARITY_THRESHOLD);
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -103,7 +103,7 @@ export async function POST({ request }: { request: Request }) {
   const gamification = await processAction({
     userId: user.userId,
     actionType: "create_note",
-    metadata: { noteId: note.id, wordCount: note.wordCount, structureScore, dailyNoteCount, isSpam },
+    metadata: { noteId: note.id, wordCount: note.wordCount, structureScore, dailyNoteCount, isSpam: isDuplicate },
   });
 
   // Reflection depth bonus (journaler path)
@@ -118,7 +118,7 @@ export async function POST({ request }: { request: Request }) {
         coins: REFLECTION_COIN_BONUS,
         actionType: "deep_reflection",
         metadata: { noteId: note.id, wordCount: note.wordCount },
-      }).catch(() => {});
+      }).catch(e => console.error("[reflection bonus]", e));
     }
   }
 
@@ -146,12 +146,14 @@ export async function POST({ request }: { request: Request }) {
 
   if (note.wordCount >= 100) {
     generateQuiz(note.content, note.wordCount)
-      .then(questions => {
-        prisma.quiz.upsert({
+      .then(async (questions) => {
+        await prisma.quiz.upsert({
           where: { noteId: note.id },
           create: { noteId: note.id, userId: user.userId, questions: questions as any },
           update: {},
-        }).catch(e => console.error("[quiz] upsert failed:", e?.message || e));
+        });
+        const { createNotification } = await import("~/lib/socket/notifications");
+        createNotification(user.userId, "quiz_generated", "Quiz Ready!", "Your note has been turned into a quiz. Review it to test your knowledge!", { metadata: { noteId: note.id } }).catch(() => {});
       })
       .catch(e => console.error("[quiz] auto-generation failed:", e?.message || e));
   }
@@ -163,12 +165,35 @@ export async function POST({ request }: { request: Request }) {
   if (activeBoss) {
     const dmg = 5 * Math.max(1, (structureScore || 5) / 5);
     try {
-      await prisma.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${dmg}) WHERE id = ${activeBoss.id}::uuid`;
-      const updated = await prisma.challenge.findUnique({ where: { id: activeBoss.id }, select: { bossCurrentHp: true } });
-      if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
-        await prisma.challenge.update({ where: { id: activeBoss.id }, data: { status: "completed", completedAt: new Date() } });
-      }
-    } catch {}
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${dmg}) WHERE id = ${activeBoss.id}::uuid`;
+        const updated = await tx.challenge.findUnique({ where: { id: activeBoss.id }, select: { bossCurrentHp: true } });
+        if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
+          await tx.challenge.update({ where: { id: activeBoss.id }, data: { status: "completed", completedAt: new Date() } });
+        }
+        await tx.auditLog.create({
+          data: {
+            userId: user.userId,
+            actionType: "boss_damage",
+            xpChange: 0,
+            coinChange: 0,
+            metadata: { bossId: activeBoss.id, damage: dmg, source: "note", bossName: activeBoss.bossName },
+          },
+        });
+      });
+    } catch (e) { console.error("[boss] auto-damage failed:", e); }
+  }
+
+  // Auto-increment guild goal progress for all guilds the user belongs to
+  const memberships = await prisma.guildMember.findMany({
+    where: { userId: user.userId },
+    select: { guildId: true },
+  });
+  for (const m of memberships) {
+    await prisma.guildGoal.updateMany({
+      where: { guildId: m.guildId, isCompleted: false },
+      data: { currentCount: { increment: 1 } },
+    });
   }
 
   return success({ note, gamification });

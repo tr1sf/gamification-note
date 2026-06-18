@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { updateGuildSchema } from "~/validators/guild";
 import { success, error } from "~/lib/api-response";
+import { getIO } from "~/lib/socket";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -66,6 +67,10 @@ export async function PUT({ request, params }: { request: Request; params: { id:
       ...(parsed.data.description !== undefined ? { description: parsed.data.description } : {}),
     },
   });
+
+  try {
+    getIO().to(`guild:${params.id}`).emit("guild:updated", { id: params.id, name: parsed.data.name, description: parsed.data.description });
+  } catch {}
 
   return success(guild);
 }

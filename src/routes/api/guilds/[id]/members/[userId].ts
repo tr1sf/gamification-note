@@ -100,7 +100,7 @@ export async function DELETE({ request, params }: RouteCtx) {
 
   const target = await prisma.guildMember.findUnique({
     where: { guildId_userId: { guildId: params.id, userId: params.userId } },
-    select: { role: true },
+    include: { user: { select: { username: true } } },
   });
   if (!target) return error("NOT_FOUND", "Member not found", 404);
 
@@ -125,7 +125,7 @@ export async function DELETE({ request, params }: RouteCtx) {
   try {
     getIO().to(`guild:${params.id}`).emit("guild:user-left", {
       userId: params.userId,
-      username: "",
+      username: target.user.username,
     });
   } catch {}
 

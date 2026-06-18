@@ -35,6 +35,7 @@ export default function BossPage() {
     if (json.success) {
       setLoot(json.data);
       addToast(json.data.message, "success");
+      refetch();
     }
     setClaiming(false);
   };

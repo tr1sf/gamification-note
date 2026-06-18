@@ -10,11 +10,11 @@ export async function POST({ request, params }: { request: Request; params: { id
 
   const task = await prisma.guildTask.findUnique({ where: { id: params.taskId } });
   if (!task || task.guildId !== params.id) return error("NOT_FOUND", "Task not found", 404);
+  if (task.status !== "assigned") {
+    return error("CONFLICT", "Task is not in assignable state", 409);
+  }
   if (task.assigneeId !== user.userId) {
     return error("FORBIDDEN", "Only the assignee can submit this task", 403);
-  }
-  if (task.status === "approved") {
-    return error("CONFLICT", "Task already approved", 409);
   }
 
   await prisma.guildTask.update({

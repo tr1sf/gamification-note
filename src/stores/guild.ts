@@ -54,6 +54,7 @@ export interface ChatMessage {
     avatarUrl: string | null;
   };
   type?: "message" | "system";
+  reactions?: { emoji: string; userId: string; createdAt: string }[];
 }
 
 const [guilds, setGuilds] = createSignal<Guild[]>([]);

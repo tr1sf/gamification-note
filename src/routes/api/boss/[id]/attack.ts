@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { calculateBossDamage } from "~/lib/boss/damage";
+import { rateLimit } from "~/lib/rate-limit";
 
 export async function POST({
   request,
@@ -13,6 +14,11 @@ export async function POST({
   const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
+  // Rate limit: one attack per 30 seconds per boss
+  if (!rateLimit(`boss_attack:${user.userId}:${params.id}`, 1, 30000)) {
+    return error("RATE_LIMITED", "Wait before attacking again", 429);
+  }
+
   const boss = await prisma.challenge.findUnique({ where: { id: params.id } });
   if (!boss || !boss.bossType)
     return error("NOT_FOUND", "Boss not found", 404);
@@ -22,16 +28,30 @@ export async function POST({
     return error("INVALID_STATE", "Boss already dead", 400);
 
   const body = await request.json();
-  // Always calculate damage server-side — never trust client-provided damage
-  const damage = calculateBossDamage(body);
   const source = body.source || "note";
 
-  const maxHp = boss.bossMaxHp ?? 100;
-  const isDead = (boss.bossCurrentHp ?? maxHp) - damage <= 0;
+  // Compute combo server-side from recent attacks
+  const recentAttacks = await prisma.auditLog.count({
+    where: {
+      userId: user.userId,
+      actionType: "boss_damage",
+      createdAt: { gte: new Date(Date.now() - 86400000) },
+    },
+  });
+  const comboMultiplier = recentAttacks >= 3 ? 1.5 : 1.0;
 
-  await prisma.$transaction(async (tx) => {
-    // Atomic HP decrement using raw SQL to prevent race conditions
+  const damage = Math.round(calculateBossDamage({ ...body, actionType: body.actionType || source }) * comboMultiplier);
+
+  const maxHp = boss.bossMaxHp ?? 100;
+
+  const actuallyDead = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${params.id}::uuid`;
+
+    const updated = await tx.challenge.findUnique({
+      where: { id: params.id },
+      select: { bossCurrentHp: true },
+    });
+    const isDead = (updated?.bossCurrentHp ?? 0) <= 0;
 
     if (isDead) {
       await tx.challenge.update({
@@ -55,19 +75,10 @@ export async function POST({
         },
       },
     });
+
+    return isDead;
   });
 
-  // Fire-and-forget XP for attacking
-  if (!isDead) {
-    const { processAction } = await import("~/lib/gamification/engine");
-    processAction({
-      userId: user.userId,
-      actionType: "create_note",
-      metadata: { bossId: params.id, damage },
-    }).catch(() => {});
-  }
-
-  // Read final HP
   const updated = await prisma.challenge.findUnique({
     where: { id: params.id },
     select: { bossCurrentHp: true },
@@ -76,7 +87,7 @@ export async function POST({
   return success({
     damage,
     newHp: updated?.bossCurrentHp ?? Math.max(0, (boss.bossCurrentHp ?? maxHp) - damage),
-    isDead,
+    isDead: actuallyDead,
     bossMaxHp: maxHp,
   });
 }

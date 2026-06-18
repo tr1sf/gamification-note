@@ -24,9 +24,5 @@ export function calculateBossDamage(params: {
       damage = 5;
       break;
   }
-  if (params.comboCount && params.comboCount >= 2)
-    damage = Math.round(damage * 1.5);
-  if (params.consecutiveDays && params.consecutiveDays >= 3)
-    damage = Math.round(damage * 2.0);
   return damage;
 }

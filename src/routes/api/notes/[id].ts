@@ -70,7 +70,7 @@ export async function PUT({ request, params }: { request: Request; params: { id:
 
   const existing = await prisma.note.findUnique({
     where: { id: params.id },
-    select: { id: true, isDeleted: true, userId: true, version: true, isPublic: true },
+    select: { id: true, isDeleted: true, userId: true, version: true, isPublic: true, wordCount: true },
   });
   if (!existing || existing.isDeleted) return error("NOT_FOUND", "Note not found", 404);
   if (existing.userId !== user.userId) return error("FORBIDDEN", "Not your note", 403);
@@ -102,6 +102,17 @@ export async function PUT({ request, params }: { request: Request; params: { id:
     metadata: { noteId: note.id, noteTitle: note.title, wordCount: note.wordCount },
   });
 
+  // Recycle bonus: if note was improved by 20+ words, award XP
+  const wordDelta = note.wordCount - (existing.wordCount || 0);
+  let recycleReward = null;
+  if (wordDelta >= 20) {
+    recycleReward = await processAction({
+      userId: user.userId,
+      actionType: "add_link", // Reuse existing action type for recycle XP
+      metadata: { noteId: note.id, wordDelta, source: "recycle" },
+    });
+  }
+
   let gamification = null;
   if (isBecomingPublic) {
     gamification = await processAction({
@@ -111,7 +122,7 @@ export async function PUT({ request, params }: { request: Request; params: { id:
     });
   }
 
-  return success({ note, gamification });
+  return success({ note, gamification, recycleReward });
 }
 
 export async function DELETE({ request, params }: { request: Request; params: { id: string } }) {

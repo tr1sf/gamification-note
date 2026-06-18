@@ -82,9 +82,7 @@ export default function CharacterSheet(props: CharacterSheetProps) {
             <Show
               when={props.avatarUrl}
               fallback={
-                <span aria-label={props.username}>
-                  {props.username.charAt(0).toUpperCase()}
-                </span>
+                <img src="/assets/images/default-avatar.png" alt={props.username} class="w-full h-full object-cover" />
               }
             >
               <img src={props.avatarUrl!} alt={props.username} class="w-full h-full object-cover" />

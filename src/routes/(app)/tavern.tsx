@@ -1,4 +1,5 @@
 import { createResource, createSignal, For, Show, onMount } from "solid-js";
+import { A } from "@solidjs/router";
 import { authFetch, user as authUser } from "~/stores/auth";
 import { gamification, xpProgressInLevel } from "~/stores/user";
 import { quests, fetchActiveQuests, type Quest } from "~/stores/quests";
@@ -56,6 +57,26 @@ const STAT_COLORS = {
 
 export default function TavernPage() {
   const [dashboard] = createResource(fetchDashboard);
+  const [bosses] = createResource(async () => {
+    if (typeof document === "undefined") return [];
+    try {
+      const res = await authFetch("/api/boss/active");
+      const json = await res.json();
+      return json.success ? json.data : [];
+    } catch {
+      return [];
+    }
+  });
+  const [pendingQuizzes] = createResource(async () => {
+    if (typeof document === "undefined") return [];
+    try {
+      const res = await authFetch("/api/quiz/pending");
+      const json = await res.json();
+      return json.success ? json.data : [];
+    } catch {
+      return [];
+    }
+  });
   const [questTab, setQuestTab] = createSignal<"plan" | "today" | "done">("today");
   const [digestData, setDigestData] = createSignal<string | null>(null);
   const [digestLoading, setDigestLoading] = createSignal(false);
@@ -238,7 +259,14 @@ export default function TavernPage() {
             <p class="text-xs italic text-ink-secondary mb-1">Stats Radar</p>
             <div class="rounded-2xl border border-surface-border bg-surface-elevated p-4 sm:p-6 flex items-center justify-center shadow-sm">
               <div class="w-full max-w-sm">
-                <RadarChart stats={radarStats()} />
+                <Show when={d()?.totalNotes === 0} fallback={<RadarChart stats={radarStats()} />}>
+                  <div class="bg-surface-elevated rounded-xl p-6 border border-surface-border text-center space-y-4">
+                    <p class="text-5xl">📜</p>
+                    <h3 class="text-lg font-bold text-ink-primary">Your adventure begins!</h3>
+                    <p class="text-sm text-ink-secondary max-w-xs mx-auto">Write your first scroll to unlock your character stats, quests, and boss fights.</p>
+                    <A href="/notes/new" class="inline-block px-6 py-2 bg-accent text-white rounded-lg font-medium text-sm">Write Your First Scroll</A>
+                  </div>
+                </Show>
               </div>
             </div>
           </section>
@@ -331,6 +359,10 @@ export default function TavernPage() {
                 </ul>
 
                 <p class="text-sm font-mono text-coin">Total: {totalXP()} XP</p>
+
+                <p class="text-sm text-ink-secondary">
+                  {d()?.totalNotes === 0 ? "Complete quests to earn XP" : `Earned ${gamification().xp} XP`}
+                </p>
 
                 <p class="text-sm text-ink-secondary flex items-center gap-1.5">
                   <span aria-hidden="true">📊</span> Log Status
@@ -467,6 +499,51 @@ export default function TavernPage() {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <MoodPicker />
                 <GratitudeGarden />
+              </div>
+            </section>
+          </Show>
+
+          <Show when={authUser()?.path === "student"}>
+            <section class="lg:col-span-12">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-surface-elevated rounded-xl p-5 border border-surface-border">
+                  <h3 class="text-sm font-semibold text-ink-primary mb-3">⚔️ Active Bosses</h3>
+                  <Show when={(bosses() || []).length > 0} fallback={
+                    <div class="text-center py-6 text-ink-secondary">
+                      <p class="text-3xl mb-2">👻</p>
+                      <p class="text-sm">No active bosses. Keep writing to summon them!</p>
+                    </div>
+                  }>
+                    <For each={(bosses() || []).slice(0, 2)}>{(boss: any) => (
+                      <A href={`/boss/${boss.id}`} class="flex items-center gap-3 py-2 hover:bg-surface-hover rounded-lg px-2 transition-colors">
+                        <span class="text-xl">{boss.bossEmoji || "👻"}</span>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-medium text-ink-primary truncate">{boss.bossName || boss.title}</p>
+                          <div class="h-1.5 bg-surface-border rounded-full mt-1"><div class="h-full bg-error rounded-full" style={`width:${Math.round((boss.bossCurrentHp / boss.bossMaxHp) * 100)}%`} /></div>
+                        </div>
+                      </A>
+                    )}</For>
+                  </Show>
+                </div>
+                <div class="bg-surface-elevated rounded-xl p-5 border border-surface-border">
+                  <h3 class="text-sm font-semibold text-ink-primary mb-3">🧠 Pending Quizzes</h3>
+                  <Show when={(pendingQuizzes() || []).length > 0} fallback={
+                    <div class="text-center py-6 text-ink-secondary">
+                      <p class="text-3xl mb-2">📝</p>
+                      <p class="text-sm">Write 100+ word notes to generate quizzes!</p>
+                    </div>
+                  }>
+                    <For each={(pendingQuizzes() || []).slice(0, 3)}>{(q: any) => (
+                      <A href="/quiz" class="flex items-center gap-3 py-2 hover:bg-surface-hover rounded-lg px-2 transition-colors">
+                        <span class="text-lg">🧠</span>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm text-ink-primary truncate">Review #{q.reviewCount + 1}</p>
+                          <p class="text-xs text-ink-secondary">{new Date(q.generatedAt).toLocaleDateString()}</p>
+                        </div>
+                      </A>
+                    )}</For>
+                  </Show>
+                </div>
               </div>
             </section>
           </Show>

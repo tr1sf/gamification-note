@@ -38,8 +38,16 @@ export async function GET({ request, params }: RouteCtx) {
   });
   if (!membership) return error("FORBIDDEN", "Not a member of this guild", 403);
 
+  const url = new URL(request.url);
+  const status = url.searchParams.get("status");
+  const assigneeId = url.searchParams.get("assigneeId");
+
   const tasks = await prisma.guildTask.findMany({
-    where: { guildId: params.id },
+    where: {
+      guildId: params.id,
+      ...(status ? { status } : {}),
+      ...(assigneeId ? { assigneeId } : {}),
+    },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     include: { creator: userSelect, assignee: userSelect },
   });

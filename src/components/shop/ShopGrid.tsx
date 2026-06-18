@@ -9,6 +9,7 @@ export interface ShopItem {
   coinCost: number;
   owned: boolean;
   itemType: string;
+  type?: string;
 }
 
 interface ShopGridProps {

@@ -3,6 +3,16 @@ import type { ChatMessage } from "~/stores/guild";
 import { user } from "~/stores/auth";
 import { timeAgo } from "~/lib/time-ago";
 
+function renderMentions(content: string) {
+  const parts = content.split(/(@\w+)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('@')) {
+      return <span class="text-accent font-medium">{part}</span>;
+    }
+    return <>{part}</>;
+  });
+}
+
 interface GuildChatProps {
   guildId: string;
   messages: ChatMessage[];
@@ -94,8 +104,15 @@ export default function GuildChat(props: GuildChatProps) {
                           : "bg-surface-elevated text-ink-primary"
                       }`}
                     >
-                      {msg.content}
+                      {renderMentions(msg.content)}
                     </div>
+                    <Show when={msg.reactions && msg.reactions.length > 0}>
+                      <div class="flex gap-1 mt-1">
+                        {msg.reactions?.map((r) => (
+                          <span class="text-xs bg-surface-border rounded px-1.5 py-0.5">{r.emoji}</span>
+                        ))}
+                      </div>
+                    </Show>
                   </div>
                 </div>
               </Show>
@@ -118,6 +135,14 @@ export default function GuildChat(props: GuildChatProps) {
           class="flex-1 rounded-md border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
           maxLength={2000}
         />
+        <button
+          type="button"
+          onClick={() => setNewMessage((prev) => prev + "@")}
+          class="px-3 py-2 border border-surface-border rounded-md text-xs text-ink-secondary hover:text-accent hover:border-accent transition-colors shrink-0"
+          title="Mention a member"
+        >
+          @
+        </button>
         <button
           type="submit"
           disabled={!newMessage().trim()}

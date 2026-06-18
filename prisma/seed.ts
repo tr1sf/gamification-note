@@ -29,6 +29,7 @@ async function main() {
     { title: 'AI Scribe',        description: 'Use AI to summarize 1 note today', questType: 'daily',  icon: 'sparkle', criteria: { action: 'ai_summarize', count: 1 },   xpReward: 20,  coinReward: 5 },
     { title: 'Knowledge Keeper', description: 'Review 1 old note (>7 days)',     questType: 'daily',  icon: 'book',    criteria: { action: 'review_note',   count: 1 },   xpReward: 15,  coinReward: 3 },
     { title: 'Architect',        description: 'Create 5 structured notes',         questType: 'weekly', icon: 'layout',  criteria: { action: 'structured_note', count: 5 },  xpReward: 50,  coinReward: 15 },
+    { title: 'Knowledge Recycler', description: 'Improve a duplicate note by 20+ words', questType: 'daily', icon: 'recycle', criteria: { action: 'add_link', count: 1 }, xpReward: 15, coinReward: 5 },
     // Monthly quests — Phase G
     { title: 'Cartographer',     description: 'Create 20 notes this month',        questType: 'monthly', icon: 'map',     criteria: { action: 'create_note',   count: 20 },  xpReward: 200, coinReward: 50 },
     { title: 'Chronicler',       description: 'Write 10000 words this month',       questType: 'monthly', icon: 'scroll',  criteria: { action: 'write_words',   count: 10000 }, xpReward: 300, coinReward: 80 },
@@ -163,7 +164,7 @@ async function main() {
   const beginnerExists = await prisma.cosmeticItem.findFirst({ where: { name: "Beginner Badge" }, select: { id: true } });
   if (!beginnerExists) {
     await prisma.cosmeticItem.create({
-      data: { name: "Beginner Badge", description: "Your first step into the tavern. Welcome, adventurer!", type: "badge", coinCost: 0, rarity: "common", imageUrl: "/assets/images/default-avatar.png" },
+      data: { name: "Beginner Badge", description: "Your first step into the tavern. Welcome, adventurer!", type: "badge", coinCost: 0, rarity: "common", imageUrl: null },
     });
   }
 

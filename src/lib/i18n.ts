@@ -70,6 +70,52 @@ const vi: Record<string, string> = {
   "Play Again": "Chơi Lại",
   "Pairs": "Cặp",
   "Flips": "Lượt Lật",
+
+  // Common UI
+  "Welcome back, adventurer": "Chào mừng trở lại, lữ khách",
+  "Your tavern of knowledge": "Quán trọ tri thức của bạn",
+  "No notes yet": "Chưa có ghi chú",
+  "Create your first note": "Tạo ghi chú đầu tiên",
+  "Submit Answers": "Nộp Đáp Án",
+  "New Note": "Ghi Chú Mới",
+  "Title": "Tiêu Đề",
+  "Content": "Nội Dung",
+  "Save": "Lưu",
+  "Cancel": "Hủy",
+  "Delete": "Xóa",
+  "Edit": "Sửa",
+  "Search": "Tìm Kiếm",
+  "No results": "Không có kết quả",
+  "Loading...": "Đang tải...",
+  "Error": "Lỗi",
+  "Success": "Thành Công",
+  "Try again": "Thử Lại",
+  "Back": "Quay Lại",
+  "Next": "Tiếp",
+  "Done": "Xong",
+  "Close": "Đóng",
+  "Settings": "Cài Đặt",
+  "Logout": "Đăng Xuất",
+  "Login": "Đăng Nhập",
+  "Register": "Đăng Ký",
+  "Email": "Email",
+  "Password": "Mật Khẩu",
+  "Username": "Tên Người Dùng",
+  "Create account": "Tạo Tài Khoản",
+  "Already have an account?": "Đã Có Tài Khoản?",
+  "Don't have an account?": "Chưa Có Tài Khoản?",
+  "Welcome to TavernoteX": "Chào Mừng Đến TavernoteX",
+  "Begin Your Adventure": "Bắt Đầu Phiêu Lưu",
+  "Export": "Xuất",
+  "Share": "Chia Sẻ",
+  "Public": "Công Khai",
+  "Private": "Riêng Tư",
+  "Delete note?": "Xóa ghi chú?",
+  "Are you sure?": "Bạn Có Chắc?",
+  "Never mind": "Không Sao",
+  "Your current level": "Cấp Độ Hiện Tại",
+  "Coins earned": "Xu Đã Kiếm",
+  "Days active": "Ngày Hoạt Động",
 };
 
 export function t(key: string): string {
@@ -87,4 +133,8 @@ export function applyLanguage(lang: "en" | "vi"): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem("lang", lang);
   document.documentElement.setAttribute("lang", lang);
+}
+
+export function getLangLabel(lang: "en" | "vi"): string {
+  return lang === "en" ? "English" : "Tiếng Việt";
 }

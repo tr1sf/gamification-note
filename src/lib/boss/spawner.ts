@@ -9,10 +9,10 @@ const DAILY_BOSS_NAMES = [
 ];
 
 const WEEKLY_BOSS_NAMES = [
-  { name: "Knowledge Wyrm", emoji: "🐉" },
-  { name: "Procrastination Hydra", emoji: "🐍" },
-  { name: "The Great Blank", emoji: "🌑" },
-  { name: "Void Colossus", emoji: "🗿" },
+  { name: "Knowledge Wyrm", emoji: "🐉", image: "/assets/images/bosses/knowledge_wyrm.png" },
+  { name: "Procrastination Hydra", emoji: "🐍", image: "/assets/images/bosses/procrastination_hydra.png" },
+  { name: "The Great Blank", emoji: "🌑", image: "/assets/images/bosses/great_blank.png" },
+  { name: "Void Colossus", emoji: "🗿", image: "/assets/images/bosses/void_colossus.png" },
 ];
 
 export async function spawnDailyBoss(
@@ -96,6 +96,7 @@ export async function spawnWeeklyBoss(
       targetProgress: 100,
       rewardXp: 100,
       rewardCoins: 30,
+      iconImageUrl: boss.image || null,
       lootTable: [
         { itemType: "coins", dropChance: 0.7, amount: 30 },
         { itemType: "consumable", dropChance: 0.2, name: "XP Booster (1h)" },

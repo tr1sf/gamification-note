@@ -179,6 +179,7 @@ model GuildMessage {
   guildId   String   @db.Uuid
   userId    String   @db.Uuid
   content   String
+  reactions Json?
   createdAt DateTime @default(now())
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)

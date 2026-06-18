@@ -35,6 +35,7 @@ export async function fetchMe(): Promise<AuthUser | null> {
     const res = await authFetch("/api/auth/me");
     if (!res.ok) return null;
     const json = await res.json();
+    if (json.data) setUser(json.data);
     return json.data;
   } catch {
     return null;

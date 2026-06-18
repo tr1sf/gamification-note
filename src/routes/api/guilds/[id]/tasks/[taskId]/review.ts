@@ -28,7 +28,9 @@ export async function POST({ request, params }: { request: Request; params: { id
 
   const task = await prisma.guildTask.findUnique({ where: { id: params.taskId } });
   if (!task || task.guildId !== params.id) return error("NOT_FOUND", "Task not found", 404);
-  if (task.status === "approved") return error("CONFLICT", "Task already approved", 409);
+  if (task.status !== "submitted") {
+    return error("CONFLICT", "Task has not been submitted yet", 409);
+  }
 
   const guild = await prisma.guild.findUnique({ where: { id: params.id }, select: { name: true } });
 
@@ -55,6 +57,12 @@ export async function POST({ request, params }: { request: Request; params: { id
       `Your task "${task.title}" was approved${task.xpReward > 0 ? ` (+${task.xpReward} XP)` : ""}.`,
       { guildId: params.id, taskId: task.id }
     ).catch(() => {});
+
+    // Auto-increment guild goal progress
+    await prisma.guildGoal.updateMany({
+      where: { guildId: params.id, isCompleted: false },
+      data: { currentCount: { increment: 1 } },
+    });
 
     return success({ status: "approved" });
   }

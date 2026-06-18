@@ -109,7 +109,7 @@ export async function GET({ request }: { request: Request }) {
         isEquipped: true,
         expiresAt: true,
         item: {
-          select: { id: true, name: true, description: true, type: true, imageUrl: true, rarity: true },
+          select: { id: true, name: true, description: true, type: true, imageUrl: true, rarity: true, category: true },
         },
       },
     }),
@@ -157,6 +157,7 @@ export async function GET({ request }: { request: Request }) {
     description: inv.item.description ?? "",
     icon: inv.item.imageUrl || ITEM_ICONS[inv.item.type] || "🎁",
     itemType: inv.item.type,
+    itemCategory: inv.item.category as { usageType?: string } | undefined,
     rarity: inv.item.rarity,
     equipped: inv.isEquipped,
     owned: true,

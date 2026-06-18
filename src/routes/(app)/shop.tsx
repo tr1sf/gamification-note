@@ -39,7 +39,7 @@ export default function ShopPage() {
     const items = shopItems() || [];
     switch (shopTab()) {
       case "consumables": return items.filter((i) => (i as any).itemType === "consumable");
-      case "themes": return [];
+      case "themes": return items.filter((i) => (i as any).type === "theme");
       default: return items.filter((i) => (i as any).itemType !== "consumable" && (i as any).itemType !== "theme");
     }
   };
@@ -47,6 +47,26 @@ export default function ShopPage() {
   const handleBuy = async (itemId: string) => {
     setBuyingId(itemId);
     try {
+      const item = (shopItems() || []).find((i) => i.id === itemId);
+      if (item && (item as any).type === "theme") {
+        const res = await authFetch("/api/users/theme", {
+          method: "PUT",
+          body: JSON.stringify({ themeId: itemId }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          addToast("Theme purchased!", "success");
+          if (typeof json.data?.coins === "number") {
+            setCoins(json.data.coins);
+          }
+          refetch();
+          refetchRec();
+        } else {
+          addToast(json.error?.message || "Failed to buy theme", "error");
+        }
+        return;
+      }
+
       const res = await authFetch(`/api/shop/${itemId}/purchase`, { method: "POST" });
       const json = await res.json();
       if (json.success) {

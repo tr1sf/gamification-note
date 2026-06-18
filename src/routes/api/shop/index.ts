@@ -21,10 +21,30 @@ export async function GET({ request }: { request: Request }) {
     orderBy: { coinCost: "asc" },
   });
 
-  const userData = await prisma.user.findUnique({
-    where: { id: user.userId },
-    select: { coins: true },
+  const ownedThemeIds = (
+    await prisma.userTheme.findMany({
+      where: { userId: user.userId },
+      select: { themeId: true },
+    })
+  ).map((t) => t.themeId);
+
+  const themes = await prisma.theme.findMany({
+    where: { isActive: true, coinCost: { gt: 0 }, id: { notIn: ownedThemeIds } },
+    orderBy: { coinCost: "asc" },
   });
 
-  return success(items, { coins: userData?.coins ?? 0 });
+  const themeItems = themes.map((t) => ({
+    id: t.id,
+    name: t.name,
+    description: t.description,
+    type: "theme",
+    coinCost: t.coinCost,
+    rarity: t.rarity,
+    isActive: t.isActive,
+    imageUrl: null,
+    category: { usageType: "theme", themeId: t.id },
+    icon: "🎨",
+  }));
+
+  return success([...items, ...themeItems]);
 }

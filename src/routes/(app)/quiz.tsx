@@ -1,4 +1,4 @@
-import { createResource, For, Show, createSignal } from "solid-js";
+import { createResource, For, Show, createSignal, createEffect } from "solid-js";
 import { authFetch, user } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 
@@ -12,6 +12,22 @@ export default function QuizPage() {
   const [currentQuiz, setCurrentQuiz] = createSignal<any>(null);
   const [answers, setAnswers] = createSignal<number[]>([]);
   const [score, setScore] = createSignal<number | null>(null);
+  const [feedback, setFeedback] = createSignal<string | null>(null);
+  const [difficultyMap, setDifficultyMap] = createSignal<Record<string, number>>({});
+
+  createEffect(() => {
+    const items = pending();
+    if (items && items.length > 0) {
+      const ids = items.map((q: any) => q.id);
+      authFetch("/api/quiz/difficulty-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizIds: ids }),
+      }).then(r => r.json()).then(j => {
+        if (j.success) setDifficultyMap(j.data);
+      }).catch(() => {});
+    }
+  });
 
   const startQuiz = (quiz: any) => {
     setCurrentQuiz(quiz);
@@ -48,6 +64,18 @@ export default function QuizPage() {
     }
   };
 
+  const submitFeedback = async (type: "good" | "bad") => {
+    setFeedback(type);
+    const currentQuizId = currentQuiz()?.id;
+    if (currentQuizId) {
+      await authFetch(`/api/quiz/${currentQuizId}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating: type }),
+      });
+    }
+  };
+
   return (
     <div class="max-w-2xl mx-auto p-6 space-y-6">
       <h1 class="text-2xl font-display font-bold text-ink-primary">
@@ -76,19 +104,9 @@ export default function QuizPage() {
           <div class="space-y-3">
             <For each={pending()}>
               {(q: any) => {
-                const [difficulty, setDifficulty] = createSignal<number | null>(null);
-                const currentUser = user();
-                if (currentUser && typeof document !== "undefined") {
-                  authFetch("/api/quiz/difficulty", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ quizId: q.id }),
-                  }).then(r => r.json()).then(j => { if (j.success) setDifficulty(j.data.difficulty); }).catch(() => {});
-                }
-
                 const badge = () => {
-                  if (difficulty() === null) return null;
-                  const d = difficulty()!;
+                  const d = difficultyMap()[q.id];
+                  if (d === undefined) return null;
                   if (d > 70) return { label: "Challenging", color: "text-error" };
                   if (d > 40) return { label: "Moderate", color: "text-accent" };
                   return { label: "Easy", color: "text-success" };
@@ -141,10 +159,21 @@ export default function QuizPage() {
                       ? "Great job! Your knowledge is strong!"
                       : "Keep studying! Review your notes and try again."}
                   </p>
+                  <Show when={!feedback()}>
+                    <div class="flex items-center justify-center gap-4 mt-4">
+                      <p class="text-xs text-ink-secondary">Quiz quality:</p>
+                      <button onClick={() => submitFeedback("good")} class="px-3 py-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 text-sm">👍 Good questions</button>
+                      <button onClick={() => submitFeedback("bad")} class="px-3 py-1.5 rounded-lg bg-error/10 text-error hover:bg-error/20 text-sm">👎 Needs improvement</button>
+                    </div>
+                  </Show>
+                  <Show when={feedback()}>
+                    <p class="text-xs text-ink-secondary/60 text-center mt-4">Thanks for your feedback!</p>
+                  </Show>
                   <button
                     onClick={() => {
                       setCurrentQuiz(null);
                       setScore(null);
+                      setFeedback(null);
                     }}
                     class="mt-4 text-accent hover:underline text-sm"
                   >

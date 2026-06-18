@@ -1,3 +1,25 @@
+/**
+ * Spaced Repetition Schedule
+ *
+ * Based on the Ebbinghaus Forgetting Curve (1885): memory retention decays
+ * exponentially over time. Spaced retrieval at increasing intervals strengthens
+ * long-term memory consolidation.
+ *
+ * Intervals: 0 (immediate), 3 days, 7 days, 30 days
+ *
+ * Reference implementations:
+ * - SM-2 Algorithm (SuperMemo, Wozniak 1990): uses E-Factor to adjust intervals
+ * - Leitner System (1972): 5-box flashcard method
+ * - Duolingo (Settles & Meeder 2016): half-life regression for optimal review timing
+ *
+ * Our adaptive variant (personalized group) adjusts intervals based on accuracy:
+ * - accuracy >= 85% → interval × 1.5 (can review less frequently)
+ * - accuracy >= 60% → interval unchanged
+ * - accuracy < 60% → interval × 0.6 (needs more frequent review)
+ *
+ * This is based on the "desirable difficulty" principle (Bjork 1994):
+ * optimal learning occurs at ~70-80% success rate.
+ */
 import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";

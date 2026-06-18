@@ -50,6 +50,14 @@ export async function getRecommendedQuizzes(userId: string): Promise<string[]> {
   return scored.sort((a, b) => b.priority - a.priority).map(s => s.quizId);
 }
 
+/**
+ * Adaptive interval adjustment based on the "desirable difficulty" principle
+ * (Bjork 1994). Optimal learning occurs at ~70-80% success rate.
+ *
+ * - accuracy >= 85% → interval × 1.5 (less frequent review needed)
+ * - accuracy >= 60% → interval unchanged
+ * - accuracy < 60% → interval × 0.6 (more frequent review needed)
+ */
 export function getAdaptiveInterval(baseDays: number, lastAccuracy: number | null): number {
   if (lastAccuracy === null) return baseDays;
   if (lastAccuracy >= 85) return Math.round(baseDays * 1.5);

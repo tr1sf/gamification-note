@@ -1,6 +1,8 @@
 import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
+import { rateLimit } from "~/lib/rate-limit";
+import { getIO } from "~/lib/socket";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -25,6 +27,7 @@ export async function GET({ request, params }: { request: Request; params: { id:
       content: true,
       createdAt: true,
       userId: true,
+      reactions: true,
       user: {
         select: {
           id: true,
@@ -65,9 +68,26 @@ export async function POST({ request, params }: { request: Request; params: { id
     return error("VALIDATION_ERROR", "Message must be 1-2000 characters", 400);
   }
 
+  if (!rateLimit(`guild_msg:${user.userId}`, 10, 10000)) {
+    return error("RATE_LIMITED", "Too many messages", 429);
+  }
+
   const message = await prisma.guildMessage.create({
     data: { guildId: params.id, userId: user.userId, content },
   });
+
+  try {
+    const io = getIO();
+    io.to(`guild:${params.id}`).emit("guild:message", {
+      id: message.id,
+      guildId: params.id,
+      userId: user.userId,
+      user: { id: user.userId, username: user.username },
+      content: message.content,
+      reactions: [],
+      createdAt: message.createdAt.toISOString(),
+    });
+  } catch {}
 
   return success({
     id: message.id,

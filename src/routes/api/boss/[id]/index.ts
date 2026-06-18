@@ -23,9 +23,11 @@ export async function GET({
       createdAt: { gte: boss.createdAt },
     },
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: 200,
     select: { metadata: true, createdAt: true, xpChange: true },
   });
 
-  return success({ ...boss, attacks });
+  const bossAttacks = attacks.filter(a => ((a.metadata as any)?.bossId) === boss.id);
+
+  return success({ ...boss, attacks: bossAttacks });
 }

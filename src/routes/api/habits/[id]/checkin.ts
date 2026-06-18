@@ -68,11 +68,24 @@ export async function POST({ request, params }: { request: Request; params: { id
   });
   if (activeBoss) {
     const damage = 3 + newStreak;
-    await prisma.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${activeBoss.id}`;
-    const updated = await prisma.challenge.findUnique({ where: { id: activeBoss.id }, select: { bossCurrentHp: true } });
-    if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
-      await prisma.challenge.update({ where: { id: activeBoss.id }, data: { status: "completed", completedAt: new Date() } });
-    }
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${activeBoss.id}::uuid`;
+        const updated = await tx.challenge.findUnique({ where: { id: activeBoss.id }, select: { bossCurrentHp: true } });
+        if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
+          await tx.challenge.update({ where: { id: activeBoss.id }, data: { status: "completed", completedAt: new Date() } });
+        }
+        await tx.auditLog.create({
+          data: {
+            userId: user.userId,
+            actionType: "boss_damage",
+            xpChange: 0,
+            coinChange: 0,
+            metadata: { bossId: activeBoss.id, damage, source: "habit", bossName: activeBoss.bossName },
+          },
+        });
+      });
+    } catch (e) { console.error("[boss] auto-damage failed:", e); }
   }
 
   return success({

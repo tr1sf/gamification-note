@@ -9,6 +9,7 @@ export interface InventoryItem {
   description: string;
   icon: string;
   itemType: string;
+  itemCategory?: { usageType?: string };
   rarity: string;
   equipped: boolean;
   owned: boolean;
@@ -124,13 +125,17 @@ export default function InventoryPanel(props: InventoryPanelProps) {
 
                 <div class="mt-2">
                   <Show when={item.itemType === CONSUMABLE_TYPE}>
-                    <button
-                      onClick={() => handleOpen(item.inventoryId)}
-                      disabled={actionId() === item.inventoryId}
-                      class="px-2 py-1 rounded text-[10px] font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors disabled:opacity-50"
-                    >
-                      {actionId() === item.inventoryId ? "..." : "Open"}
-                    </button>
+                    <Show when={item.itemCategory?.usageType === "loot_box"} fallback={
+                      <span class="text-xs text-success font-medium">Active</span>
+                    }>
+                      <button
+                        onClick={() => handleOpen(item.inventoryId)}
+                        disabled={actionId() === item.inventoryId}
+                        class="px-2 py-1 rounded text-[10px] font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors disabled:opacity-50"
+                      >
+                        {actionId() === item.inventoryId ? "..." : "Open"}
+                      </button>
+                    </Show>
                   </Show>
 
                   <Show when={item.itemType !== CONSUMABLE_TYPE && !item.equipped}>

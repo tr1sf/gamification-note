@@ -7,10 +7,14 @@ import { processAction } from "~/lib/gamification/engine";
 import { startSession } from "~/lib/analytics/session";
 import { runNudgeEngine } from "~/lib/notifications/nudge-engine";
 import { spawnDailyBoss, spawnWeeklyBoss } from "~/lib/boss/spawner";
+import { createNotification } from "~/lib/socket/notifications";
 
 async function calculateLoginStreak(userId: string): Promise<number> {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   const auditLogs = await prisma.auditLog.findMany({
-    where: { userId, actionType: "daily_login" },
+    where: { userId, actionType: "daily_login", createdAt: { lt: todayStart } },
     select: { createdAt: true },
     orderBy: { createdAt: "desc" },
     take: 365,
@@ -90,14 +94,17 @@ async function handleLogin({ request }: { request: Request }) {
   let streak = await calculateLoginStreak(user.id);
 
   if (streak === 0) {
-    const freeze = await prisma.userInventory.findFirst({
-      where: { userId: user.id },
-      include: { item: true },
-    });
-    const hasFreeze = freeze && (freeze.item.category as Record<string, unknown> | null)?.usageType === "streak_freeze";
+    const freezes = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT ui.id FROM "UserInventory" ui
+      JOIN "CosmeticItem" ci ON ui."cosmeticItemId" = ci.id
+      WHERE ui."userId" = ${user.id}::uuid
+        AND ci.category->>'usageType' = 'streak_freeze'
+      LIMIT 1
+    `;
+    const hasFreeze = freezes.length > 0;
 
     if (hasFreeze) {
-      await prisma.userInventory.delete({ where: { id: freeze!.id } });
+      await prisma.userInventory.delete({ where: { id: freezes[0].id } });
       streak = user.streak;
     }
   }
@@ -125,8 +132,22 @@ async function handleLogin({ request }: { request: Request }) {
 
   startSession(user.id).catch(() => {});
   runNudgeEngine(user.id).catch(() => {});
-  spawnDailyBoss(user.id, updatedUser?.level ?? 1).catch(() => {});
-  spawnWeeklyBoss(user.id, updatedUser?.level ?? 1).catch(() => {});
+  spawnDailyBoss(user.id, updatedUser?.level ?? 1).then(async (bossId) => {
+    if (bossId) {
+      const boss = await prisma.challenge.findUnique({ where: { id: bossId }, select: { bossName: true } });
+      if (boss) {
+        createNotification(user.id, "boss_spawn", "A foe appears!", `${boss.bossName} is lurking in the shadows. Attack while you can!`).catch(() => {});
+      }
+    }
+  }).catch(() => {});
+  spawnWeeklyBoss(user.id, updatedUser?.level ?? 1).then(async (bossId) => {
+    if (bossId) {
+      const boss = await prisma.challenge.findUnique({ where: { id: bossId }, select: { bossName: true } });
+      if (boss) {
+        createNotification(user.id, "boss_spawn", "A powerful foe appears!", `${boss.bossName} has emerged! Gather your strength this week!`).catch(() => {});
+      }
+    }
+  }).catch(() => {});
 
   const headers = new Headers({ "Content-Type": "application/json" });
   for (const cookie of setAuthCookies(accessToken, refreshToken)) {
