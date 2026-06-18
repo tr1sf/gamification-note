@@ -52,7 +52,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
 
   createEffect(() => {
     const u = user();
-    const allowed = ["/onboarding", "/notes/new", "/profile", "/tavern"];
+    const allowed = ["/onboarding", "/notes/new", "/profile"];
     if (u && !u.onboardingCompleted && !allowed.some(p => location.pathname.startsWith(p))) {
       navigate("/onboarding");
     }

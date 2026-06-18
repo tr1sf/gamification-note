@@ -39,7 +39,7 @@ async function handleRegister({ request }: { request: Request }) {
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
     data: { email, username, passwordHash },
-    select: { id: true, email: true, username: true, avatarUrl: true, level: true, xp: true, coins: true, streak: true, title: true, role: true, createdAt: true },
+    select: { id: true, email: true, username: true, avatarUrl: true, level: true, xp: true, coins: true, streak: true, title: true, role: true, onboardingCompleted: true, createdAt: true },
   });
 
   return success(user);
