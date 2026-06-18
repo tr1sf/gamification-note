@@ -146,6 +146,14 @@ export default function TavernPage() {
     <div class="min-h-full bg-surface text-ink-primary">
       <div class="max-w-6xl mx-auto p-4 sm:p-6">
         <header class="mb-5">
+          {/* Tavern Banner */}
+          <div class="relative rounded-xl overflow-hidden mb-6 h-32 sm:h-40 bg-gradient-to-r from-accent/20 via-surface-elevated to-accent/10 border border-surface-border flex items-center justify-center">
+            <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, var(--color-accent) 10px, var(--color-accent) 11px);" />
+            <div class="relative text-center">
+              <p class="text-3xl sm:text-4xl">🏰</p>
+              <p class="text-xs sm:text-sm text-ink-secondary/60 mt-1 font-display tracking-widest uppercase">Welcome back, adventurer</p>
+            </div>
+          </div>
           <h1 class="font-display text-2xl sm:text-3xl font-bold text-ink-primary">Tavern Hall</h1>
           <p class="text-sm text-ink-secondary mt-0.5">Your adventurer's dashboard</p>
         </header>
