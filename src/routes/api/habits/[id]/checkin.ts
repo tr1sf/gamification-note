@@ -63,17 +63,17 @@ export async function POST({ request, params }: { request: Request; params: { id
     metadata: { habitId: habit.id, habitTitle: habit.title, streakBefore: habit.streak, streakAfter: newStreak, maxStreak: bestStreak },
   });
 
-  const activeBoss = await prisma.challenge.findFirst({
+  const activeBosses = await prisma.challenge.findMany({
     where: { userId: user.userId, bossType: { in: ["daily", "weekly"] }, status: "active" },
   });
-  if (activeBoss) {
+  for (const boss of activeBosses) {
     const damage = 3 + newStreak;
     try {
       await prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${activeBoss.id}::uuid`;
-        const updated = await tx.challenge.findUnique({ where: { id: activeBoss.id }, select: { bossCurrentHp: true } });
+        await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${boss.id}::uuid`;
+        const updated = await tx.challenge.findUnique({ where: { id: boss.id }, select: { bossCurrentHp: true } });
         if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
-          await tx.challenge.update({ where: { id: activeBoss.id }, data: { status: "completed", completedAt: new Date() } });
+          await tx.challenge.update({ where: { id: boss.id }, data: { status: "completed", completedAt: new Date() } });
         }
         await tx.auditLog.create({
           data: {
@@ -81,7 +81,7 @@ export async function POST({ request, params }: { request: Request; params: { id
             actionType: "boss_damage",
             xpChange: 0,
             coinChange: 0,
-            metadata: { bossId: activeBoss.id, damage, source: "habit", bossName: activeBoss.bossName },
+            metadata: { bossId: boss.id, damage, source: "habit", bossName: boss.bossName },
           },
         });
       });

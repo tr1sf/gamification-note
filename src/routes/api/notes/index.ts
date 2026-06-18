@@ -158,18 +158,18 @@ export async function POST({ request }: { request: Request }) {
       .catch(e => console.error("[quiz] auto-generation failed:", e?.message || e));
   }
 
-  // Apply boss damage
-  const activeBoss = await prisma.challenge.findFirst({
+  // Apply boss damage to ALL active bosses
+  const activeBosses = await prisma.challenge.findMany({
     where: { userId: user.userId, bossType: { in: ["daily", "weekly"] }, status: "active" },
   });
-  if (activeBoss) {
+  for (const boss of activeBosses) {
     const dmg = 5 * Math.max(1, (structureScore || 5) / 5);
     try {
       await prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${dmg}) WHERE id = ${activeBoss.id}::uuid`;
-        const updated = await tx.challenge.findUnique({ where: { id: activeBoss.id }, select: { bossCurrentHp: true } });
+        await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${dmg}) WHERE id = ${boss.id}::uuid`;
+        const updated = await tx.challenge.findUnique({ where: { id: boss.id }, select: { bossCurrentHp: true } });
         if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
-          await tx.challenge.update({ where: { id: activeBoss.id }, data: { status: "completed", completedAt: new Date() } });
+          await tx.challenge.update({ where: { id: boss.id }, data: { status: "completed", completedAt: new Date() } });
         }
         await tx.auditLog.create({
           data: {
@@ -177,7 +177,7 @@ export async function POST({ request }: { request: Request }) {
             actionType: "boss_damage",
             xpChange: 0,
             coinChange: 0,
-            metadata: { bossId: activeBoss.id, damage: dmg, source: "note", bossName: activeBoss.bossName },
+            metadata: { bossId: boss.id, damage: dmg, source: "note", bossName: boss.bossName },
           },
         });
       });

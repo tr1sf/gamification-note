@@ -62,28 +62,29 @@ export async function POST({ request, params }: { request: Request; params: { id
   });
 
   const accuracy = correctCount / questions.length;
-  if (true) { // Always check for active boss in transaction
+  if (true) { // Always check for active bosses in transaction
     const damage = calculateBossDamage({ actionType: "quiz", quizAccuracy: accuracy, quizStreak: quiz.reviewCount });
     try {
       await prisma.$transaction(async (tx) => {
-        const boss = await tx.challenge.findFirst({
+        const bosses = await tx.challenge.findMany({
           where: { userId: user.userId, bossType: { in: ["daily", "weekly"] }, status: "active" },
         });
-        if (!boss) return;
-        await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${boss.id}::uuid`;
-        const updated = await tx.challenge.findUnique({ where: { id: boss.id }, select: { bossCurrentHp: true } });
-        if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
-          await tx.challenge.update({ where: { id: boss.id }, data: { status: "completed", completedAt: new Date() } });
+        for (const boss of bosses) {
+          await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${boss.id}::uuid`;
+          const updated = await tx.challenge.findUnique({ where: { id: boss.id }, select: { bossCurrentHp: true } });
+          if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
+            await tx.challenge.update({ where: { id: boss.id }, data: { status: "completed", completedAt: new Date() } });
+          }
+          await tx.auditLog.create({
+            data: {
+              userId: user.userId,
+              actionType: "boss_damage",
+              xpChange: 0,
+              coinChange: 0,
+              metadata: { bossId: boss.id, damage, source: "quiz", isDead: (updated?.bossCurrentHp ?? 0) <= 0, bossName: boss.bossName },
+            },
+          });
         }
-        await tx.auditLog.create({
-          data: {
-            userId: user.userId,
-            actionType: "boss_damage",
-            xpChange: 0,
-            coinChange: 0,
-            metadata: { bossId: boss.id, damage, source: "quiz", isDead: (updated?.bossCurrentHp ?? 0) <= 0, bossName: boss.bossName },
-          },
-        });
       });
     } catch (e) { console.error("[boss] auto-damage failed:", e); }
   }
