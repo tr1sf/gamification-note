@@ -109,7 +109,9 @@ export default function InventoryPanel(props: InventoryPanelProps) {
                     : "border-surface-border bg-surface hover:shadow-sm"
                 }`}
               >
-                <span class="text-2xl" aria-hidden="true">{item.icon}</span>
+                <Show when={item.icon.startsWith("/")} fallback={<span class="text-2xl" aria-hidden="true">{item.icon}</span>}>
+                  <img src={item.icon} alt={item.name} class="w-8 h-8 object-contain" />
+                </Show>
                 <p class="text-xs font-semibold text-ink-primary mt-1 truncate">{item.name}</p>
                 <span
                   class={`inline-block text-[10px] px-1.5 py-0.5 rounded-full mt-1 font-medium border ${
