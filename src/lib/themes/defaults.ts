@@ -7,6 +7,22 @@ export function applyThemeVariables(variables: Record<string, string>): void {
     root.style.setProperty(key, `rgb(${value})`);
   }
   localStorage.setItem("equippedTheme", JSON.stringify(variables));
+  localStorage.setItem("equippedThemeActive", "true");
+}
+
+// Remove all custom theme inline styles (for light mode)
+export function clearThemeVariables(): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  // Theme variables that could be set
+  const themeVars = [
+    "--color-surface", "--color-surface-elevated", "--color-surface-border", "--color-surface-hover",
+    "--color-ink-primary", "--color-ink-secondary", "--color-accent", "--color-accent-hover",
+    "--color-xp", "--color-coin", "--color-error", "--color-success",
+  ];
+  for (const key of themeVars) {
+    root.style.removeProperty(key);
+  }
 }
 
 // Restore previously equipped theme from localStorage
@@ -14,7 +30,10 @@ export function restoreThemeVariables(): void {
   if (typeof document === "undefined") return;
   try {
     const saved = localStorage.getItem("equippedTheme");
-    if (saved) {
+    const active = localStorage.getItem("equippedThemeActive");
+    const mode = localStorage.getItem("theme"); // "dark" or "light"
+    // Only apply custom theme in dark mode
+    if (saved && active === "true" && mode !== "light") {
       applyThemeVariables(JSON.parse(saved));
     }
   } catch {}

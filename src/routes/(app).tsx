@@ -18,7 +18,7 @@ import NotificationBell from "~/components/shared/NotificationBell";
 import SurveyWidget from "~/components/survey/SurveyWidget";
 import InstallPrompt from "~/components/pwa/InstallPrompt";
 import { getUnlockedFeatures, getNextUnlock, type UserPath } from "~/lib/path-unlocks";
-import { applyThemeVariables, restoreThemeVariables } from "~/lib/themes/defaults";
+import { applyThemeVariables, restoreThemeVariables, clearThemeVariables } from "~/lib/themes/defaults";
 import { getCurrentLang, applyLanguage } from "~/lib/i18n";
 
 export default function AppLayout(props: { children?: JSX.Element }) {
@@ -234,7 +234,12 @@ export default function AppLayout(props: { children?: JSX.Element }) {
 
             <button
               class="text-sm text-ink-secondary hover:text-ink-primary p-1.5 rounded-md hover:bg-surface-hover transition-colors"
-              onClick={() => setTheme(uiStore.theme === "dark" ? "light" : "dark")}
+              onClick={() => {
+                const next = uiStore.theme === "dark" ? "light" : "dark";
+                setTheme(next);
+                if (next === "light") clearThemeVariables();
+                else restoreThemeVariables();
+              }}
               aria-label={`Switch to ${uiStore.theme === "dark" ? "light" : "dark"} mode`}
               title={`Switch to ${uiStore.theme === "dark" ? "light" : "dark"} mode`}
             >
