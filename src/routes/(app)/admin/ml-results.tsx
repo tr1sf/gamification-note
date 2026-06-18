@@ -1,5 +1,6 @@
-import { createResource, For, Show } from "solid-js";
-import { authFetch } from "~/stores/auth";
+import { createResource, For, Show, onMount } from "solid-js";
+import { authFetch, user } from "~/stores/auth";
+import { useNavigate } from "@solidjs/router";
 
 interface Metric {
   label: string;
@@ -10,6 +11,9 @@ interface Metric {
 }
 
 export default function MLResultsPage() {
+  const navigate = useNavigate();
+  onMount(() => { if (user()?.role !== "admin") navigate("/tavern", { replace: true }); });
+
   const [data] = createResource(async () => {
     const res = await authFetch("/api/admin/ml/results");
     const json = await res.json();
