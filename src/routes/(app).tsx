@@ -18,7 +18,8 @@ import NotificationBell from "~/components/shared/NotificationBell";
 import SurveyWidget from "~/components/survey/SurveyWidget";
 import InstallPrompt from "~/components/pwa/InstallPrompt";
 import { getUnlockedFeatures, getNextUnlock, type UserPath } from "~/lib/path-unlocks";
-import { applyThemeVariables } from "~/lib/themes/defaults";
+import { applyThemeVariables, restoreThemeVariables } from "~/lib/themes/defaults";
+import { getCurrentLang, applyLanguage } from "~/lib/i18n";
 
 export default function AppLayout(props: { children?: JSX.Element }) {
   const navigate = useNavigate();
@@ -89,52 +90,24 @@ export default function AppLayout(props: { children?: JSX.Element }) {
   const isUnlocked = (feature: string) => unlockedFeatures().includes(feature);
 
   async function restoreEquippedTheme() {
-    // Check if theme was saved locally
-    const savedId = typeof localStorage !== "undefined" ? localStorage.getItem("equippedThemeId") : null;
-    if (!savedId) return;
-    try {
-      const res = await authFetch("/api/themes");
-      const json = await res.json();
-      if (json.success) {
-        const theme = (json.data as any[]).find((t: any) => t.id === savedId);
-        if (theme?.cssVariables) {
-          applyThemeVariables(theme.cssVariables);
-        }
-      }
-    } catch {}
+    restoreThemeVariables();
   }
 
   return (
     <Show when={!loading() && user()} fallback={
-      <div class="min-h-screen flex flex-col bg-surface">
-        <div class="min-h-screen flex">
-        <div class="hidden lg:block w-64 bg-surface-elevated border-r border-surface-border p-4 space-y-4">
-          <div class="h-7 w-32 bg-surface-border rounded animate-pulse" />
-          <div class="space-y-3 mt-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div class="h-8 bg-surface-hover rounded-md" style="animation: shimmer 1.5s infinite linear; background: linear-gradient(90deg, var(--color-surface-hover) 25%, var(--color-surface-border) 50%, var(--color-surface-hover) 75%); background-size: 200% 100%;" />
-            ))}
+      <div class="min-h-screen bg-surface flex items-center justify-center">
+        <div class="text-center space-y-4">
+          <div class="w-20 h-20 mx-auto rounded-2xl bg-accent/10 flex items-center justify-center animate-pulse">
+            <span class="text-4xl">🏰</span>
+          </div>
+          <h1 class="text-xl font-display font-bold text-ink-primary">TavernoteX</h1>
+          <p class="text-sm text-ink-secondary">The tavern doors are opening...</p>
+          <div class="flex gap-1 justify-center">
+            <div class="w-2 h-2 rounded-full bg-accent animate-bounce" style="animation-delay:0s" />
+            <div class="w-2 h-2 rounded-full bg-accent animate-bounce" style="animation-delay:0.15s" />
+            <div class="w-2 h-2 rounded-full bg-accent animate-bounce" style="animation-delay:0.3s" />
           </div>
         </div>
-        <div class="flex-1 flex flex-col">
-          <div class="h-14 border-b border-surface-border bg-surface px-4 flex items-center gap-3">
-            <div class="h-5 w-5 bg-surface-border rounded lg:hidden" />
-            <div class="flex-1" />
-            <div class="h-8 w-8 bg-surface-border rounded-full" />
-            <div class="h-8 w-8 bg-surface-border rounded-full" />
-            <div class="h-8 w-8 bg-surface-border rounded-full" />
-          </div>
-          <div class="flex-1 p-6 space-y-4">
-            <div class="h-8 w-48 bg-surface-border rounded animate-pulse" />
-            <div class="h-4 w-64 bg-surface-border rounded animate-pulse" />
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-              {[1, 2, 3, 4].map((i) => (
-                <div class="h-32 bg-surface-border rounded-lg animate-pulse" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
       </div>
     }>
       <Show when={isOnboarding()} fallback={
@@ -167,6 +140,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             </div>
             <NavItem href="/boss/active" icon={isUnlocked("Boss Fight") ? "⚔️" : "🔒"} label={isUnlocked("Boss Fight") ? "Boss Fight" : "Boss (Lv.7+)"} locked={!isUnlocked("Boss Fight")} />
             <NavItem href="/quiz" icon={isUnlocked("AI Quiz") || isUnlocked("Spaced Repetition") ? "🧠" : "🔒"} label={isUnlocked("AI Quiz") ? "Quiz Review" : "Quiz (Lv.4+)"} locked={!isUnlocked("AI Quiz") && !isUnlocked("Spaced Repetition")} />
+            <NavItem href="/minigames/potion" icon="🧪" label="Potion Match" />
             <NavItem href="/quests" icon="📋" label="Quests" />
             <Show when={!isSolo()}>
               <NavItem href="/guilds" icon={isUnlocked("Guild Creation") || isUnlocked("Team Workspace") ? "🏛️" : "🔒"} label={isUnlocked("Guild Creation") || isUnlocked("Team Workspace") ? "Guilds" : "Guilds (Lv.10+)"} locked={!isUnlocked("Guild Creation") && !isUnlocked("Team Workspace")} />
@@ -207,6 +181,17 @@ export default function AppLayout(props: { children?: JSX.Element }) {
                 </div>
               )}
             </Show>
+            {/* Language toggle */}
+            <div class="mt-2 pt-2 border-t border-surface-border/30">
+              <button
+                onClick={() => { const next = getCurrentLang() === "en" ? "vi" : "en"; applyLanguage(next); window.location.reload(); }}
+                class="text-xs text-ink-secondary/50 hover:text-ink-secondary transition-colors flex items-center gap-1"
+                title={getCurrentLang() === "en" ? "Switch to Tiếng Việt" : "Switch to English"}
+              >
+                <span class="text-sm">{getCurrentLang() === "en" ? "🇻🇳" : "🇬🇧"}</span>
+                <span>{getCurrentLang() === "en" ? "Tiếng Việt" : "English"}</span>
+              </button>
+            </div>
           </div>
         </aside>
 

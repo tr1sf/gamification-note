@@ -116,7 +116,7 @@ export default function NewNotePage() {
   const modeLabels: Record<ViewMode, string> = { edit: "Edit", split: "Split", preview: "Preview" };
 
   return (
-    <div class="max-w-5xl mx-auto p-6">
+    <div class="max-w-5xl mx-auto p-4 sm:p-6">
       <Breadcrumb items={[
         { label: "Notes", href: "/notes", icon: "📜" },
         { label: "New Note" },
