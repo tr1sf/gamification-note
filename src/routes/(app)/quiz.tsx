@@ -1,5 +1,5 @@
 import { createResource, For, Show, createSignal } from "solid-js";
-import { authFetch } from "~/stores/auth";
+import { authFetch, user } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 
 export default function QuizPage() {
@@ -75,26 +75,53 @@ export default function QuizPage() {
         >
           <div class="space-y-3">
             <For each={pending()}>
-              {(q: any) => (
-                <div
-                  class="bg-surface-elevated rounded-xl p-4 border border-surface-border hover:border-accent/30 cursor-pointer"
-                  onClick={() => startQuiz(q)}
-                >
-                  <div class="flex items-center gap-3">
-                    <span class="text-2xl">🧠</span>
-                    <div class="flex-1">
-                      <p class="font-medium text-ink-primary">
-                        Quiz #{q.reviewCount + 1}
-                      </p>
-                      <p class="text-xs text-ink-secondary">
-                        {(q.questions as any)?.length ?? 3} questions · Review{" "}
-                        {q.reviewCount + 1} of 4
-                      </p>
+              {(q: any) => {
+                const [difficulty, setDifficulty] = createSignal<number | null>(null);
+                const currentUser = user();
+                if (currentUser && typeof document !== "undefined") {
+                  authFetch("/api/quiz/difficulty", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ quizId: q.id }),
+                  }).then(r => r.json()).then(j => { if (j.success) setDifficulty(j.data.difficulty); }).catch(() => {});
+                }
+
+                const badge = () => {
+                  if (difficulty() === null) return null;
+                  const d = difficulty()!;
+                  if (d > 70) return { label: "Challenging", color: "text-error" };
+                  if (d > 40) return { label: "Moderate", color: "text-accent" };
+                  return { label: "Easy", color: "text-success" };
+                };
+
+                return (
+                  <div
+                    class="bg-surface-elevated rounded-xl p-4 border border-surface-border hover:border-accent/30 cursor-pointer"
+                    onClick={() => startQuiz(q)}
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-2xl">🧠</span>
+                      <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                          <p class="font-medium text-ink-primary">
+                            Quiz #{q.reviewCount + 1}
+                          </p>
+                          {badge() && (
+                            <span class={`text-xs font-medium ${badge()!.color} bg-surface px-2 py-0.5 rounded-full`}>
+                              {badge()!.label}
+                            </span>
+                          )}
+                        </div>
+                        <p class="text-xs text-ink-secondary">
+                          {(q.questions as any)?.length ?? 3} questions · Review{" "}
+                          {q.reviewCount + 1} of 4
+                        </p>
+                      </div>
+                      <span class="text-accent text-sm">Start →</span>
                     </div>
-                    <span class="text-accent text-sm">Start →</span>
                   </div>
-                </div>
-              )}
+                );
+              }}
             </For>
           </div>
         </Show>

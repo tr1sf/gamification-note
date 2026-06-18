@@ -1,12 +1,24 @@
 import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
+import { getRecommendedQuizzes, getExperimentGroup } from "~/lib/ml/quiz-recommender";
 
 const REVIEW_INTERVALS = [0, 3, 7, 30];
 
 export async function GET({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
+
+  const group = getExperimentGroup(user.userId);
+
+  if (group === "personalized") {
+    const recommended = await getRecommendedQuizzes(user.userId);
+    if (recommended.length === 0) return success([]);
+    const quizzes = await prisma.quiz.findMany({ where: { id: { in: recommended } } });
+    const quizMap = new Map(quizzes.map(q => [q.id, q]));
+    const ordered = recommended.map(id => quizMap.get(id)).filter(Boolean);
+    return success(ordered);
+  }
 
   const quizzes = await prisma.quiz.findMany({
     where: { userId: user.userId, reviewCount: { lt: 4 } },

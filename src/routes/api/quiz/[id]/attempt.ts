@@ -1,6 +1,7 @@
 import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
+import { getExperimentGroup } from "~/lib/ml/quiz-recommender";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -24,6 +25,8 @@ export async function POST({ request, params }: { request: Request; params: { id
 
   const score = Math.round((correctCount / questions.length) * 100);
 
+  const experimentGroup = getExperimentGroup(user.userId);
+
   const attempt = await prisma.quizAttempt.create({
     data: { quizId: quiz.id, userId: user.userId, score, answers: gradedAnswers as any },
   });
@@ -33,6 +36,21 @@ export async function POST({ request, params }: { request: Request; params: { id
   await prisma.quiz.update({
     where: { id: quiz.id },
     data: { lastReviewedAt: new Date(), reviewCount: { increment: 1 }, avgScore },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      userId: user.userId,
+      actionType: "QUIZ_ATTEMPT",
+      xpChange: 0,
+      coinChange: 0,
+      metadata: {
+        quizId: quiz.id,
+        score,
+        reviewCount: quiz.reviewCount + 1,
+        experimentGroup,
+      },
+    },
   });
 
   const accuracy = correctCount / questions.length;
@@ -48,5 +66,5 @@ export async function POST({ request, params }: { request: Request; params: { id
     }
   }
 
-  return success({ attempt, score, avgScore });
+  return success({ attempt, score, avgScore, experimentGroup });
 }
