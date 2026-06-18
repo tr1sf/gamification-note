@@ -13,7 +13,7 @@ interface PublicNote {
 }
 
 async function fetchPublicNote(id: string): Promise<PublicNote> {
-  if (typeof document === "undefined") throw new Error("SSR");
+  if (typeof document === "undefined") return null as any; // SSR skip
   const res = await fetch(`/api/notes/public/${id}`);
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message || "Not found");

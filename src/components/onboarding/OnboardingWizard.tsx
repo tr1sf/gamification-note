@@ -2,7 +2,7 @@ import { createSignal, For, Show } from "solid-js";
 import { authFetch, fetchMe } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 import { PATH_DESCRIPTIONS, type UserPath } from "~/lib/path-unlocks";
-import { applyLanguage, getCurrentLang } from "~/lib/i18n";
+import { applyLanguage, getCurrentLang, t } from "~/lib/i18n";
 
 type Motivation = "adventurer" | "scholar" | "collaborator";
 
@@ -254,11 +254,11 @@ function StepConsent(props: { accepted: () => boolean; setAccepted: (v: boolean)
   return (
     <div>
       <h2 class="text-xl font-display font-bold text-ink-primary mb-1">Privacy & Data Usage</h2>
-      <p class="text-sm text-ink-secondary mb-5">We care about your data. Your notes are private by default.</p>
+      <p class="text-sm text-ink-secondary mb-5">Your notes are private. AI processing is anonymous. Nothing is shared without your consent.</p>
       <div class="bg-surface rounded-xl p-4 border border-surface-border text-sm text-ink-secondary space-y-2 mb-4">
-        <p>\u2022 Your notes are stored securely and are <span class="font-medium text-ink-primary">private by default</span></p>
-        <p>\u2022 AI features (quiz generation, summarization) send note content to our AI provider (Neuralwatt). <span class="font-medium text-ink-primary">No personal data</span> is shared.</p>
-        <p>• Analytics data (XP, quests, quiz scores) is collected to improve the app. This data is <span class="font-medium text-ink-primary">anonymous</span>.</p>
+        <p>• Your notes are <span class="font-medium text-ink-primary">private by default</span> — only you can see them</p>
+        <p>• AI features process your notes <span class="font-medium text-ink-primary">anonymously</span> to generate quizzes and summaries</p>
+        <p>• Analytics data (XP, quests) is collected only to improve your experience</p>
         <p>\u2022 You can request data deletion anytime by contacting the developer.</p>
         <p>\u2022 <span class="text-accent underline cursor-pointer" onClick={() => window.open("/privacy", "_blank")}>Full Privacy Policy</span></p>
       </div>

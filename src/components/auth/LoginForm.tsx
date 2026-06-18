@@ -80,9 +80,9 @@ export function LoginForm() {
         <p class="text-sm bg-error-bg text-error rounded-lg px-4 py-2.5" role="alert">{generalError()}</p>
       )}
       <div>
-        <label for="login-email" class="block text-sm font-medium text-ink-secondary mb-1.5">Email</label>
-        <input id="login-email" type="email" value={email()} onInput={(e) => { setEmail(e.currentTarget.value); clearField("email"); }} class={inputClass("email")} required autocomplete="email" autofocus aria-describedby={fieldErrors().email ? "login-email-error" : undefined} aria-invalid={!!fieldErrors().email} />
-        {fieldErrors().email && <p id="login-email-error" class="mt-1 text-xs text-error">{fieldErrors().email}</p>}
+        <label for="login-email" class="block text-sm font-medium text-ink-secondary mb-1.5">Email or Username</label>
+        <input id="login-email" type="text" value={email()} onInput={(e) => { setEmail(e.currentTarget.value); clearField("login"); }} class={inputClass("login")} required autocomplete="username" autofocus aria-describedby={fieldErrors().login ? "login-email-error" : undefined} aria-invalid={!!fieldErrors().login} />
+        {fieldErrors().login && <p id="login-email-error" class="mt-1 text-xs text-error">{fieldErrors().login}</p>}
       </div>
       <div>
         <label for="login-password" class="block text-sm font-medium text-ink-secondary mb-1.5">Password</label>

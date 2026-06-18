@@ -70,8 +70,10 @@ async function handleLogin({ request }: { request: Request }) {
     return error("VALIDATION_ERROR", "Invalid input", 400, parsed.error.flatten());
   }
 
-  const { email, password } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const { login, password } = parsed.data;
+  const user = await prisma.user.findFirst({
+    where: { OR: [{ email: login }, { username: login }] },
+  });
   if (!user || user.isBanned) {
     return error("UNAUTHORIZED", "Invalid credentials", 401);
   }

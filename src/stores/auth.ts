@@ -86,7 +86,7 @@ export async function login(email: string, password: string): Promise<{ user?: A
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ login: email, password }),
     });
   } catch {
     return { error: { code: "NETWORK", message: "Can't reach the server. Check your connection and try again." } };
