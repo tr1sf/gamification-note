@@ -106,6 +106,11 @@ export async function register(email: string, username: string, password: string
   } catch {
     return { error: { code: "NETWORK", message: "Can't reach the server. Check your connection and try again." } };
   }
+  // Clear theme from previous user session
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("equippedTheme");
+    localStorage.removeItem("equippedThemeId");
+  }
   return readAuthResponse(res);
 }
 
@@ -114,6 +119,10 @@ export async function logout() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
   } finally {
     setUser(null);
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem("equippedTheme");
+      localStorage.removeItem("equippedThemeId");
+    }
   }
 }
 

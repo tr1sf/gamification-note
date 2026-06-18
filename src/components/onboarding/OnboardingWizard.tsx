@@ -258,14 +258,14 @@ function StepConsent(props: { accepted: () => boolean; setAccepted: (v: boolean)
       <div class="bg-surface rounded-xl p-4 border border-surface-border text-sm text-ink-secondary space-y-2 mb-4">
         <p>\u2022 Your notes are stored securely and are <span class="font-medium text-ink-primary">private by default</span></p>
         <p>\u2022 AI features (quiz generation, summarization) send note content to our AI provider (Neuralwatt). <span class="font-medium text-ink-primary">No personal data</span> is shared.</p>
-        <p>\u2022 Analytics data (XP, quests, quiz scores) is collected to improve the app. This data is <span class="font-medium text-ink-primary">anonymous</span> in research reports.</p>
+        <p>• Analytics data (XP, quests, quiz scores) is collected to improve the app. This data is <span class="font-medium text-ink-primary">anonymous</span>.</p>
         <p>\u2022 You can request data deletion anytime by contacting the developer.</p>
         <p>\u2022 <span class="text-accent underline cursor-pointer" onClick={() => window.open("/privacy", "_blank")}>Full Privacy Policy</span></p>
       </div>
       <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-surface-border hover:border-accent/30 transition-colors">
         <input type="checkbox" checked={props.accepted()} onChange={(e) => props.setAccepted(e.currentTarget.checked)}
           class="mt-0.5 w-4 h-4 rounded border-surface-border accent-accent" />
-        <span class="text-sm text-ink-primary">I understand and agree to the data usage policy. I consent to my anonymized data being used for academic research purposes.</span>
+        <span class="text-sm text-ink-primary">I understand and agree to the data usage policy.</span>
       </label>
     </div>
   );
