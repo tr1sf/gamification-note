@@ -17,7 +17,7 @@ import LevelUpModal from "~/components/gamification/LevelUpModal";
 import NotificationBell from "~/components/shared/NotificationBell";
 import SurveyWidget from "~/components/survey/SurveyWidget";
 import InstallPrompt from "~/components/pwa/InstallPrompt";
-import { getUnlockedFeatures, getNextUnlock, type UserPath } from "~/lib/path-unlocks";
+import { getUnlockedFeatures, getNextUnlock, PATH_UNLOCKS, type UserPath } from "~/lib/path-unlocks";
 import { applyThemeVariables, restoreThemeVariables, clearThemeVariables } from "~/lib/themes/defaults";
 import { getCurrentLang, applyLanguage } from "~/lib/i18n";
 
@@ -139,12 +139,12 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             <div class="px-3 py-1.5 mb-1 mt-2">
               <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Adventures</p>
             </div>
-            <NavItem href="/boss/active" icon={isUnlocked("Boss Fight") ? "⚔️" : "🔒"} label={isUnlocked("Boss Fight") ? "Boss Fight" : "Boss (Lv.7+)"} locked={!isUnlocked("Boss Fight")} />
-            <NavItem href="/quiz" icon={isUnlocked("AI Quiz") || isUnlocked("Spaced Repetition") ? "🧠" : "🔒"} label={isUnlocked("AI Quiz") ? "Quiz Review" : "Quiz (Lv.4+)"} locked={!isUnlocked("AI Quiz") && !isUnlocked("Spaced Repetition")} />
+            <NavItem href="/boss/active" icon={isUnlocked("Boss Fight") ? "⚔️" : "🔒"} label={isUnlocked("Boss Fight") ? "Boss Fight" : `Boss (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "Boss Fight")?.level ?? 7}+)`} locked={!isUnlocked("Boss Fight")} />
+            <NavItem href="/quiz" icon={isUnlocked("AI Quiz") || isUnlocked("Spaced Repetition") ? "🧠" : "🔒"} label={isUnlocked("AI Quiz") ? "Quiz Review" : `Quiz (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "AI Quiz")?.level ?? 4}+)`} locked={!isUnlocked("AI Quiz") && !isUnlocked("Spaced Repetition")} />
             <NavItem href="/minigames/potion" icon="🧪" label="Potion Match" />
             <NavItem href="/quests" icon="📋" label="Quests" />
             <Show when={!isSolo()}>
-              <NavItem href="/guilds" icon={isUnlocked("Guild Creation") || isUnlocked("Team Workspace") ? "🏛️" : "🔒"} label={isUnlocked("Guild Creation") || isUnlocked("Team Workspace") ? "Guilds" : "Guilds (Lv.10+)"} locked={!isUnlocked("Guild Creation") && !isUnlocked("Team Workspace")} />
+              <NavItem href="/guilds" icon={isUnlocked("Guilds") ? "🏛️" : "🔒"} label={isUnlocked("Guilds") ? "Guilds" : `Guilds (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "Guilds")?.level ?? 10}+)`} locked={!isUnlocked("Guilds")} />
             </Show>
             <NavItem href="/progress" icon="📊" label="Progress" />
             <NavItem href="/insights" icon="💡" label="Insights" />
