@@ -42,6 +42,21 @@ export interface GuildMember {
   };
 }
 
+export interface GuildGoal {
+  id: string;
+  guildId: string;
+  title: string;
+  description: string | null;
+  targetCount: number;
+  currentCount: number;
+  startDate: string;
+  endDate: string;
+  rewardXp: number;
+  rewardCoins: number;
+  isCompleted: boolean;
+  createdAt: string;
+}
+
 export interface ChatMessage {
   id: string;
   guildId: string;
@@ -128,8 +143,10 @@ export async function fetchMembers(guildId: string): Promise<GuildMember[]> {
 
 export async function fetchMessages(guildId: string, cursor?: string): Promise<ChatMessage[]> {
   try {
-    const params = cursor ? `?cursor=${cursor}` : "";
-    const res = await authFetch(`/api/guilds/${guildId}/messages${params}`);
+    const params = new URLSearchParams();
+    if (cursor) params.set("cursor", cursor);
+    const qs = params.toString();
+    const res = await authFetch(`/api/guilds/${guildId}/messages${qs ? `?${qs}` : ""}`);
     const json = await res.json();
     if (json.success) {
       const msgs = (json.data?.items || []).sort(
@@ -276,6 +293,58 @@ export async function unshareNoteFromGuild(guildId: string, noteId: string): Pro
     return json.success;
   } catch {
     return false;
+  }
+}
+
+export async function fetchGoals(guildId: string): Promise<GuildGoal[]> {
+  try {
+    const res = await authFetch(`/api/guilds/${guildId}/goals`);
+    const json = await res.json();
+    return json.success ? (json.data ?? []) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function createGoal(
+  guildId: string,
+  data: {
+    title: string;
+    description?: string;
+    targetCount: number;
+    startDate?: string;
+    endDate: string;
+    rewardXp?: number;
+    rewardCoins?: number;
+  }
+): Promise<GuildGoal | null> {
+  try {
+    const res = await authFetch(`/api/guilds/${guildId}/goals`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function contributeGoal(
+  guildId: string,
+  goalId: string
+): Promise<{ currentCount: number; isCompleted: boolean } | null> {
+  try {
+    const res = await authFetch(`/api/guilds/${guildId}/goals`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goalId }),
+    });
+    const json = await res.json();
+    return json.success ? json.data : null;
+  } catch {
+    return null;
   }
 }
 

@@ -32,21 +32,32 @@ export async function POST({ request, params }: { request: Request; params: { id
   }
 
   // Atomic read-modify-write in transaction
-  const result = await prisma.$transaction(async (tx) => {
-    const message = await tx.guildMessage.findUnique({ where: { id: params.messageId } });
-    if (!message || message.guildId !== params.id) throw new Error("NOT_FOUND");
+  let result: Reaction[];
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      const message = await tx.guildMessage.findUnique({ where: { id: params.messageId } });
+      if (!message || message.guildId !== params.id) throw new Error("NOT_FOUND");
 
-    const reactions: Reaction[] = (message.reactions as unknown as Reaction[]) || [];
-    const filtered = reactions.filter((r) => r.userId !== user.userId);
-    filtered.push({ emoji, userId: user.userId, createdAt: new Date().toISOString() });
+      const reactions: Reaction[] = (message.reactions as unknown as Reaction[]) || [];
+      const filtered = reactions.filter((r) => r.userId !== user.userId);
+      const existing = reactions.find((r) => r.userId === user.userId);
+      if (!existing || existing.emoji !== emoji) {
+        filtered.push({ emoji, userId: user.userId, createdAt: new Date().toISOString() });
+      }
 
-    await tx.guildMessage.update({
-      where: { id: params.messageId },
-      data: { reactions: filtered as any },
+      await tx.guildMessage.update({
+        where: { id: params.messageId },
+        data: { reactions: filtered as any },
+      });
+
+      return filtered;
     });
-
-    return filtered;
-  });
+  } catch (e: any) {
+    if (e?.message === "NOT_FOUND") {
+      return error("NOT_FOUND", "Message not found", 404);
+    }
+    throw e;
+  }
 
   // Socket broadcast
   try {
@@ -68,20 +79,28 @@ export async function DELETE({ request, params }: { request: Request; params: { 
   });
   if (!membership) return error("FORBIDDEN", "Not a member of this guild", 403);
 
-  const result = await prisma.$transaction(async (tx) => {
-    const message = await tx.guildMessage.findUnique({ where: { id: params.messageId } });
-    if (!message || message.guildId !== params.id) throw new Error("NOT_FOUND");
+  let result: Reaction[];
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      const message = await tx.guildMessage.findUnique({ where: { id: params.messageId } });
+      if (!message || message.guildId !== params.id) throw new Error("NOT_FOUND");
 
-    const reactions: Reaction[] = (message.reactions as unknown as Reaction[]) || [];
-    const filtered = reactions.filter((r) => r.userId !== user.userId);
+      const reactions: Reaction[] = (message.reactions as unknown as Reaction[]) || [];
+      const filtered = reactions.filter((r) => r.userId !== user.userId);
 
-    await tx.guildMessage.update({
-      where: { id: params.messageId },
-      data: { reactions: filtered as any },
+      await tx.guildMessage.update({
+        where: { id: params.messageId },
+        data: { reactions: filtered as any },
+      });
+
+      return filtered;
     });
-
-    return filtered;
-  });
+  } catch (e: any) {
+    if (e?.message === "NOT_FOUND") {
+      return error("NOT_FOUND", "Message not found", 404);
+    }
+    throw e;
+  }
 
   try {
     getIO().to(`guild:${params.id}`).emit("guild:message-reaction", {

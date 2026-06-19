@@ -40,16 +40,18 @@ export async function GET({ request, params }: { request: Request; params: { id:
   const hasMore = messages.length > take;
   if (hasMore) messages.pop();
 
+  const reversed = messages.reverse();
   return success({
-    items: messages.reverse().map((m) => ({
+    items: reversed.map((m) => ({
       id: m.id,
       guildId: params.id,
       content: m.content,
       createdAt: m.createdAt,
       userId: m.userId,
       user: m.user,
+      reactions: (m.reactions as unknown as Array<{ emoji: string; userId: string; createdAt: string }>) ?? [],
     })),
-    nextCursor: hasMore ? messages[messages.length - 1]?.id : null,
+    nextCursor: hasMore ? reversed[0]?.id : null,
   });
 }
 
@@ -96,5 +98,6 @@ export async function POST({ request, params }: { request: Request; params: { id
     createdAt: message.createdAt,
     userId: message.userId,
     user: { id: user.userId, username: user.username },
+    reactions: [],
   });
 }
