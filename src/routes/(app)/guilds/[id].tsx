@@ -1,6 +1,6 @@
 import { createSignal, createMemo, Show, onMount, onCleanup } from "solid-js";
 import { useParams, useSearchParams } from "@solidjs/router";
-import { user } from "~/stores/auth";
+import { user, authFetch } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 import {
   fetchGuild,
@@ -15,10 +15,12 @@ import {
   shareNoteToGuild,
   unshareNoteFromGuild,
   addSocketMessage,
+  fetchGoals,
   type Guild,
   type GuildMember,
   type ChatMessage,
   type GuildNote,
+  type GuildGoal,
 } from "~/stores/guild";
 import { fetchTasks, type GuildTask } from "~/stores/tasks";
 import { useSocket } from "~/lib/socket/client";
@@ -26,6 +28,7 @@ import GuildChat from "~/components/guild/GuildChat";
 import MemberList from "~/components/guild/MemberList";
 import GuildNotes from "~/components/guild/GuildNotes";
 import GuildTasks from "~/components/guild/GuildTasks";
+import GuildGoals from "~/components/guild/GuildGoals";
 
 type Role = "owner" | "admin" | "member";
 
@@ -40,8 +43,9 @@ export default function GuildDetailPage() {
   const [messages, setMessages] = createSignal<ChatMessage[]>([]);
   const [notes, setNotes] = createSignal<GuildNote[]>([]);
   const [tasks, setTasks] = createSignal<GuildTask[]>([]);
+  const [goals, setGoals] = createSignal<GuildGoal[]>([]);
   const [loading, setLoading] = createSignal(true);
-  const [tab, setTab] = createSignal<"chat" | "scrolls" | "tasks" | "members">("chat");
+  const [tab, setTab] = createSignal<"chat" | "scrolls" | "tasks" | "goals" | "members">("chat");
   const [joining, setJoining] = createSignal(false);
   const [leaving, setLeaving] = createSignal(false);
   const [inviteInput, setInviteInput] = createSignal(
@@ -66,8 +70,14 @@ export default function GuildDetailPage() {
   const refreshTasks = async (): Promise<void> => {
     setTasks(await fetchTasks(guildId()));
   };
+  const refreshGoals = async (): Promise<void> => {
+    setGoals(await fetchGoals(guildId()));
+  };
 
   const enterSocketRoom = () => {
+    // Only join the socket room if we are actually a member. The server rejects
+    // non-members anyway, but joining blindly floods the client with error events.
+    if (!isMember()) return;
     // Ensure a connection is in flight; the join is buffered and delivered once
     // connected, so we don't have to gate on the current connection state.
     ensureConnected();
@@ -87,7 +97,7 @@ export default function GuildDetailPage() {
         setMembers(memberList);
         setMessages(msgList);
         if (memberList.some((m) => m.userId === currentUser()?.id)) {
-          await Promise.all([refreshNotes(), refreshTasks()]);
+          await Promise.all([refreshNotes(), refreshTasks(), refreshGoals()]);
         }
       }
     } finally {
@@ -131,11 +141,23 @@ export default function GuildDetailPage() {
       setGuild((g) => g ? { ...g, name: data.name, description: data.description } : g);
     };
 
+    const handleReactionUpdate = (data: { messageId: string; reactions: ChatMessage["reactions"] }) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === data.messageId ? { ...m, reactions: data.reactions } : m))
+      );
+    };
+
+    const handleSocketError = (err: { code: string; message: string }) => {
+      addToast(err.message || "Chat connection error", "error");
+    };
+
     on("guild:message", handleNewMessage);
     on("guild:user-joined", handleMemberJoined);
     on("guild:user-left", handleMemberLeft);
     on("guild:role-changed", handleRoleChanged);
     on("guild:updated", handleGuildUpdated);
+    on("guild:message-reaction", handleReactionUpdate);
+    on("error", handleSocketError);
 
     onCleanup(() => {
       emit("guild:leave", { guildId: guildId() });
@@ -144,16 +166,102 @@ export default function GuildDetailPage() {
       off("guild:user-left", handleMemberLeft);
       off("guild:role-changed", handleRoleChanged);
       off("guild:updated", handleGuildUpdated);
+      off("guild:message-reaction", handleReactionUpdate);
+      off("error", handleSocketError);
     });
   });
 
   const handleSendMessage = async (content: string) => {
-    // Make sure a connection is established/in-flight first; the emit itself is
-    // buffered by socket.io and flushed on connect, so the message isn't lost
-    // even if the socket is mid-reconnect.
-    const ok = await ensureConnected();
-    emit("guild:send-message", { guildId: guildId(), content });
-    if (!ok) addToast("Reconnecting to chat — your message will send shortly.", "info");
+    // Use REST as the source of truth so messages work even when the standalone
+    // socket server is not running. Socket broadcasts are still emitted by the
+    // API for real-time updates when the socket server is available.
+    const tempId = `temp-${Date.now()}`;
+    const me = currentUser();
+    const optimistic: ChatMessage = {
+      id: tempId,
+      guildId: guildId(),
+      userId: me?.id || "",
+      user: { id: me?.id || "", username: me?.username || "You", avatarUrl: me?.avatarUrl || null },
+      content,
+      createdAt: new Date().toISOString(),
+      reactions: [],
+    };
+    setMessages((prev) => [...prev, optimistic]);
+
+    const res = await authFetch(`/api/guilds/${guildId()}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+
+    if (!res.ok) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      addToast("Failed to send message", "error");
+      return false;
+    }
+
+    const json = await res.json();
+    if (json.success && json.data) {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...json.data, reactions: json.data.reactions || [] } : m))
+      );
+      return true;
+    }
+
+    setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    addToast(json.error?.message || "Failed to send message", "error");
+    return false;
+  };
+
+  const handleReact = async (messageId: string, emoji: string) => {
+    const me = currentUser();
+    if (!me) return;
+
+    // Optimistically patch local state
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const reactions = m.reactions ? [...m.reactions] : [];
+        const existingIndex = reactions.findIndex((r) => r.userId === me.id);
+        if (existingIndex >= 0) {
+          // Toggle off if same emoji, switch emoji if different
+          if (reactions[existingIndex].emoji === emoji) {
+            reactions.splice(existingIndex, 1);
+          } else {
+            reactions[existingIndex] = { ...reactions[existingIndex], emoji };
+          }
+        } else {
+          reactions.push({ emoji, userId: me.id, createdAt: new Date().toISOString() });
+        }
+        return { ...m, reactions };
+      })
+    );
+
+    const existing = messages().find((m) => m.id === messageId)?.reactions?.find((r) => r.userId === me.id);
+    let res: Response;
+    if (existing) {
+      res = await authFetch(`/api/guilds/${guildId()}/messages/${messageId}/react`, { method: "DELETE" });
+    } else {
+      res = await authFetch(`/api/guilds/${guildId()}/messages/${messageId}/react`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji }),
+      });
+    }
+
+    if (!res.ok) {
+      addToast("Failed to update reaction", "error");
+      // Re-fetch messages to restore correct state
+      setMessages(await fetchMessages(guildId()));
+      return;
+    }
+
+    const json = await res.json();
+    if (json.success && json.data?.reactions) {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, reactions: json.data.reactions } : m))
+      );
+    }
   };
 
   const handleJoin = async () => {
@@ -163,7 +271,7 @@ export default function GuildDetailPage() {
       const success = await joinGuild(guildId(), code);
       if (success) {
         addToast("Joined guild!", "success");
-        await Promise.all([refreshMembers(), refreshNotes(), refreshTasks()]);
+        await Promise.all([refreshMembers(), refreshNotes(), refreshTasks(), refreshGoals()]);
         const g = await fetchGuild(guildId());
         if (g) setGuild(g);
         enterSocketRoom();
@@ -393,6 +501,17 @@ export default function GuildDetailPage() {
             Tasks
           </button>
             <button
+              onClick={() => setTab("goals")}
+              class={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 ${
+                tab() === "goals"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-secondary hover:text-ink-primary"
+            }`}
+          >
+            <span aria-hidden="true" class="mr-1.5">🎯</span>
+            Goals
+          </button>
+            <button
               onClick={() => setTab("members")}
               class={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 ${
                 tab() === "members"
@@ -419,6 +538,7 @@ export default function GuildDetailPage() {
               guildId={guildId()}
               messages={messages()}
               onSend={handleSendMessage}
+              onReact={handleReact}
             />
           </Show>
         </Show>
@@ -460,6 +580,25 @@ export default function GuildDetailPage() {
               currentUserId={currentUser()?.id}
               canManage={canModerate()}
               onChanged={refreshTasks}
+            />
+          </Show>
+        </Show>
+
+        <Show when={tab() === "goals"}>
+          <Show
+            when={isMember()}
+            fallback={
+              <div class="text-center py-12 text-ink-secondary">
+                <p class="text-3xl mb-2">🎯</p>
+                <p class="text-sm">Join the guild to see and contribute to shared goals.</p>
+              </div>
+            }
+          >
+            <GuildGoals
+              guildId={guildId()}
+              goals={goals()}
+              canManage={canModerate()}
+              onChanged={refreshGoals}
             />
           </Show>
         </Show>

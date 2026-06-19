@@ -16,11 +16,13 @@ function renderMentions(content: string) {
 interface GuildChatProps {
   guildId: string;
   messages: ChatMessage[];
-  onSend: (content: string) => void;
+  onSend: (content: string) => Promise<boolean> | boolean;
+  onReact: (messageId: string, emoji: string) => Promise<void>;
 }
 
 export default function GuildChat(props: GuildChatProps) {
   const [newMessage, setNewMessage] = createSignal("");
+  const [sending, setSending] = createSignal(false);
   let scrollContainer: HTMLDivElement | undefined;
 
   const scrollToBottom = () => {
@@ -34,17 +36,41 @@ export default function GuildChat(props: GuildChatProps) {
     scrollToBottom();
   });
 
-  const handleSubmit = (e: Event) => {
+  const handleSubmit = async (e: Event) => {
     e.preventDefault();
     const content = newMessage().trim();
-    if (!content) return;
-    props.onSend(content);
-    setNewMessage("");
+    if (!content || sending()) return;
+    setSending(true);
+    try {
+      const ok = await props.onSend(content);
+      if (ok) setNewMessage("");
+    } finally {
+      setSending(false);
+    }
   };
 
   const timeAgoText = (dateStr: string) => timeAgo(dateStr);
 
   const currentUser = () => user();
+
+  const reactionSummary = (msg: ChatMessage) => {
+    const reactions = msg.reactions || [];
+    const counts = new Map<string, number>();
+    for (const r of reactions) {
+      counts.set(r.emoji, (counts.get(r.emoji) || 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([emoji, count]) => ({ emoji, count }));
+  };
+
+  const userReactedEmoji = (msg: ChatMessage) => {
+    const myId = currentUser()?.id;
+    return msg.reactions?.find((r) => r.userId === myId)?.emoji;
+  };
+
+  const toggleReaction = async (msg: ChatMessage) => {
+    const existing = userReactedEmoji(msg);
+    await props.onReact(msg.id, existing || "👍");
+  };
 
   return (
     <div class="flex flex-col h-[40vh] sm:h-[60vh] rounded-lg border border-surface-border bg-surface">
@@ -106,13 +132,35 @@ export default function GuildChat(props: GuildChatProps) {
                     >
                       {renderMentions(msg.content)}
                     </div>
-                    <Show when={msg.reactions && msg.reactions.length > 0}>
-                      <div class="flex gap-1 mt-1">
-                        {msg.reactions?.map((r) => (
-                          <span class="text-xs bg-surface-border rounded px-1.5 py-0.5">{r.emoji}</span>
-                        ))}
-                      </div>
-                    </Show>
+                    <div class="flex items-center gap-1 mt-1">
+                      <Show when={reactionSummary(msg).length > 0}>
+                        <For each={reactionSummary(msg)}>
+                          {(r) => (
+                            <span
+                              class={`text-xs rounded px-1.5 py-0.5 border ${
+                                userReactedEmoji(msg) === r.emoji
+                                  ? "bg-accent/15 border-accent text-accent"
+                                  : "bg-surface-border border-transparent text-ink-secondary"
+                              }`}
+                            >
+                              {r.emoji} {r.count}
+                            </span>
+                          )}
+                        </For>
+                      </Show>
+                      <button
+                        type="button"
+                        onClick={() => toggleReaction(msg)}
+                        class={`text-xs rounded px-1.5 py-0.5 border transition-colors ${
+                          userReactedEmoji(msg)
+                            ? "bg-accent/15 border-accent text-accent hover:bg-accent/25"
+                            : "bg-surface-border border-transparent text-ink-secondary hover:text-accent hover:border-accent/30"
+                        }`}
+                        title={userReactedEmoji(msg) ? "Remove reaction" : "React with 👍"}
+                      >
+                        {userReactedEmoji(msg) ? userReactedEmoji(msg) : "👍"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </Show>
@@ -130,25 +178,27 @@ export default function GuildChat(props: GuildChatProps) {
           id="chat-input"
           type="text"
           value={newMessage()}
+          disabled={sending()}
           onInput={(e) => setNewMessage(e.currentTarget.value)}
           placeholder="Type a message..."
-          class="flex-1 rounded-md border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
+          class="flex-1 rounded-md border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
           maxLength={2000}
         />
         <button
           type="button"
+          disabled={sending()}
           onClick={() => setNewMessage((prev) => prev + "@")}
-          class="px-3 py-2 border border-surface-border rounded-md text-xs text-ink-secondary hover:text-accent hover:border-accent transition-colors shrink-0"
+          class="px-3 py-2 border border-surface-border rounded-md text-xs text-ink-secondary hover:text-accent hover:border-accent transition-colors shrink-0 disabled:opacity-50"
           title="Mention a member"
         >
           @
         </button>
         <button
           type="submit"
-          disabled={!newMessage().trim()}
+          disabled={!newMessage().trim() || sending()}
           class="px-4 py-2 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
-          Send
+          {sending() ? "Sending..." : "Send"}
         </button>
       </form>
     </div>
