@@ -39,9 +39,9 @@ export default function ShopPage() {
   const visibleItems = () => {
     const items = shopItems() || [];
     switch (shopTab()) {
-      case "consumables": return items.filter((i) => (i as any).itemType === "consumable");
+      case "consumables": return items.filter((i) => (i as any).type === "consumable");
       case "themes": return items.filter((i) => (i as any).type === "theme");
-      default: return items.filter((i) => (i as any).itemType !== "consumable" && (i as any).itemType !== "theme");
+      default: return items.filter((i) => (i as any).type !== "consumable" && (i as any).type !== "theme");
     }
   };
 

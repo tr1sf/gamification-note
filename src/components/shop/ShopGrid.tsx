@@ -39,7 +39,7 @@ export default function ShopGrid(props: ShopGridProps) {
             <Show when={!item.owned}>
               <div class="p-4 rounded-lg border border-surface-border bg-surface-elevated flex flex-col">
                 <div class="flex items-start gap-3">
-                  <span class="text-2xl shrink-0" aria-hidden="true">{item.icon}</span>
+                  <span class="text-2xl shrink-0" aria-hidden="true">{item.icon || "🎁"}</span>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between gap-2">
                       <h3 class="font-semibold text-ink-primary text-sm truncate">{item.name}</h3>
