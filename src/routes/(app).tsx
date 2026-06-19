@@ -185,7 +185,17 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             {/* Language toggle */}
             <div class="mt-2 pt-2 border-t border-surface-border/30">
               <button
-                onClick={() => { const next = getCurrentLang() === "en" ? "vi" : "en"; applyLanguage(next); window.location.reload(); }}
+                onClick={async () => {
+                  const next = getCurrentLang() === "en" ? "vi" : "en";
+                  applyLanguage(next);
+                  // Persist to account so it survives login/logout cycles.
+                  await authFetch("/api/users/language", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ lang: next }),
+                  }).catch(() => {});
+                  window.location.reload();
+                }}
                 class="text-xs text-ink-secondary/50 hover:text-ink-secondary transition-colors flex items-center gap-1"
                 title={getCurrentLang() === "en" ? "Switch to Tiếng Việt" : "Switch to English"}
               >

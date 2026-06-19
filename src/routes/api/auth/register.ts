@@ -27,6 +27,7 @@ async function handleRegister({ request }: { request: Request }) {
   }
 
   const { email, username, password } = parsed.data;
+  const preferredLanguage = (body.preferredLanguage === "vi" ? "vi" : "en") as "en" | "vi";
 
   const existing = await prisma.user.findFirst({
     where: { OR: [{ email }, { username }] },
@@ -38,8 +39,8 @@ async function handleRegister({ request }: { request: Request }) {
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { email, username, passwordHash },
-    select: { id: true, email: true, username: true, avatarUrl: true, level: true, xp: true, coins: true, streak: true, title: true, role: true, onboardingCompleted: true, createdAt: true },
+    data: { email, username, passwordHash, preferredLanguage },
+    select: { id: true, email: true, username: true, avatarUrl: true, level: true, xp: true, coins: true, streak: true, title: true, role: true, onboardingCompleted: true, preferredLanguage: true, createdAt: true },
   });
 
   // Grant 2 free Alchemy Tickets for the Potion Match minigame.

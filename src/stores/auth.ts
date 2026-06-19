@@ -1,4 +1,5 @@
 import { createSignal } from "solid-js";
+import { applyLanguage } from "~/lib/i18n";
 
 export interface AuthUser {
   id: string;
@@ -14,6 +15,7 @@ export interface AuthUser {
   gamificationStyle?: string;
   path?: string | null;
   onboardingCompleted?: boolean;
+  preferredLanguage?: string;
   createdAt: string;
 }
 
@@ -30,12 +32,21 @@ const [loading, setLoading] = createSignal(true);
 
 export { currentUser as user, loading };
 
+function applyUserLanguage(user: AuthUser | null) {
+  if (user?.preferredLanguage && typeof localStorage !== "undefined") {
+    applyLanguage(user.preferredLanguage as "en" | "vi");
+  }
+}
+
 export async function fetchMe(): Promise<AuthUser | null> {
   try {
     const res = await authFetch("/api/auth/me");
     if (!res.ok) return null;
     const json = await res.json();
-    if (json.data) setUser(json.data);
+    if (json.data) {
+      setUser(json.data);
+      applyUserLanguage(json.data);
+    }
     return json.data;
   } catch {
     return null;
@@ -76,6 +87,7 @@ async function readAuthResponse(
     return { error: json.error ?? { code: "SERVER_ERROR", message: `Request failed (HTTP ${res.status}).` } };
   }
   setUser(json.data!);
+  applyUserLanguage(json.data!);
   return { user: json.data };
 }
 
@@ -96,12 +108,13 @@ export async function login(email: string, password: string): Promise<{ user?: A
 
 export async function register(email: string, username: string, password: string): Promise<{ user?: AuthUser; error?: AuthError }> {
   let res: Response;
+  const preferredLanguage = (typeof localStorage !== "undefined" ? localStorage.getItem("lang") : null) || "en";
   try {
     res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email, username, password }),
+      body: JSON.stringify({ email, username, password, preferredLanguage }),
     });
   } catch {
     return { error: { code: "NETWORK", message: "Can't reach the server. Check your connection and try again." } };
@@ -110,6 +123,7 @@ export async function register(email: string, username: string, password: string
   if (typeof localStorage !== "undefined") {
     localStorage.removeItem("equippedTheme");
     localStorage.removeItem("equippedThemeId");
+    localStorage.removeItem("equippedThemeActive");
   }
   return readAuthResponse(res);
 }
@@ -120,8 +134,12 @@ export async function logout() {
   } finally {
     setUser(null);
     if (typeof localStorage !== "undefined") {
+      // Reset public/session state to defaults; language is account-specific.
+      localStorage.setItem("lang", "en");
       localStorage.removeItem("equippedTheme");
       localStorage.removeItem("equippedThemeId");
+      localStorage.removeItem("equippedThemeActive");
+      document.documentElement.setAttribute("lang", "en");
     }
   }
 }
