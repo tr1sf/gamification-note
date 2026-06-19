@@ -106,6 +106,7 @@ export async function GET({ request }: { request: Request }) {
       orderBy: { purchasedAt: "desc" },
       select: {
         id: true,
+        quantity: true,
         isEquipped: true,
         expiresAt: true,
         item: {
@@ -159,6 +160,7 @@ export async function GET({ request }: { request: Request }) {
     itemType: inv.item.type,
     itemCategory: inv.item.category as { usageType?: string } | undefined,
     rarity: inv.item.rarity,
+    quantity: inv.quantity ?? 1,
     equipped: inv.isEquipped,
     owned: true,
     expiresAt: inv.expiresAt ? inv.expiresAt.toISOString() : null,

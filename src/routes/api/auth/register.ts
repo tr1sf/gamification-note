@@ -42,5 +42,25 @@ async function handleRegister({ request }: { request: Request }) {
     select: { id: true, email: true, username: true, avatarUrl: true, level: true, xp: true, coins: true, streak: true, title: true, role: true, onboardingCompleted: true, createdAt: true },
   });
 
+  // Grant 2 free Alchemy Tickets for the Potion Match minigame.
+  try {
+    const alchemyTicket = await prisma.cosmeticItem.findFirst({
+      where: { name: "Alchemy Ticket", type: "consumable" },
+      select: { id: true },
+    });
+    if (alchemyTicket) {
+      await prisma.userInventory.create({
+        data: {
+          userId: user.id,
+          cosmeticItemId: alchemyTicket.id,
+          quantity: 2,
+        },
+      });
+    }
+  } catch (e) {
+    console.error("[auth/register] failed to grant free alchemy tickets:", e);
+    // Non-fatal: user registration still succeeds.
+  }
+
   return success(user);
 }
