@@ -3,6 +3,7 @@ import { A, useNavigate } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
 import { applyReward, gamification } from "~/stores/user";
 import { showReward } from "~/stores/ui";
+import { t } from "~/lib/i18n";
 
 interface ChallengeItem {
   id: string;
@@ -96,38 +97,38 @@ export default function ChallengeListPage() {
   };
 
   return (
-    <div class="max-w-4xl mx-auto p-6 space-y-6">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-display font-bold text-ink-primary">Challenges</h1>
-          <p class="text-sm text-ink-secondary mt-1">Set goals and track your journey</p>
+          <h1 class="text-2xl font-display font-bold text-ink-primary">{t("Challenges")}</h1>
+          <p class="text-sm text-ink-secondary mt-1">{t("Set goals and track your journey")}</p>
         </div>
         <div class="flex gap-2">
           <button
             onClick={() => setShowTemplates(!showTemplates())}
             class="px-4 py-2 rounded-lg text-sm font-medium border border-surface-border text-ink-secondary hover:text-ink-primary hover:bg-surface-hover transition-colors"
           >
-            {showTemplates() ? "Hide Templates" : "Templates"}
+            {showTemplates() ? t("Hide Templates") : t("Templates")}
           </button>
           <A
             href="/challenges/new"
             class="px-4 py-2 rounded-lg text-sm font-medium bg-accent text-white hover:bg-accent/90 transition-colors"
           >
-            + New Challenge
+            + {t("New Challenge")}
           </A>
         </div>
       </div>
 
       {/* Tabs */}
       <div class="flex gap-1 bg-surface-elevated rounded-lg p-1 border border-surface-border w-fit">
-        {["active", "completed", "paused", "archived"].map((t) => (
+        {(["active", "completed", "paused", "archived"] as const).map((tabId) => (
           <button
-            onClick={() => setTab(t)}
+            onClick={() => setTab(tabId)}
             class={`px-4 py-1.5 rounded-md text-sm font-medium capitalize transition-colors ${
-              tab() === t ? "bg-accent text-white shadow-sm" : "text-ink-secondary hover:text-ink-primary"
+              tab() === tabId ? "bg-accent text-white shadow-sm" : "text-ink-secondary hover:text-ink-primary"
             }`}
           >
-            {t}
+            {t(tabId)}
           </button>
         ))}
       </div>
@@ -135,7 +136,7 @@ export default function ChallengeListPage() {
       {/* Templates Panel */}
       <Show when={showTemplates() && !templates.loading}>
         <div class="bg-surface-elevated rounded-xl p-5 border border-surface-border">
-          <h3 class="text-sm font-semibold text-ink-primary mb-4">Quick Start Templates</h3>
+          <h3 class="text-sm font-semibold text-ink-primary mb-4">{t("Quick Start Templates")}</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <For each={templates()?.slice(0, 6)}>
               {(tpl) => (
@@ -152,7 +153,7 @@ export default function ChallengeListPage() {
                     <span class={`text-xs px-1.5 py-0.5 rounded border ${DIFFICULTY_CLASSES[tpl.difficulty] || ""}`}>
                       {tpl.difficulty}
                     </span>
-                    <span class="text-xs text-ink-secondary/60">{tpl.usageCount} uses</span>
+                    <span class="text-xs text-ink-secondary/60">{tpl.usageCount} {t("uses")}</span>
                   </div>
                 </button>
               )}
@@ -177,9 +178,9 @@ export default function ChallengeListPage() {
           fallback={
             <div class="text-center py-16 text-ink-secondary">
               <p class="text-5xl mb-4">🏆</p>
-              <p class="text-lg font-medium mb-2">No {tab()} challenges</p>
-              <p class="text-sm mb-4">Start a new challenge or use a template!</p>
-              <A href="/challenges/new" class="text-accent hover:underline text-sm">Create your first challenge</A>
+              <p class="text-lg font-medium mb-2">{t(`No ${tab()} challenges`)}</p>
+              <p class="text-sm mb-4">{t("Start a new challenge or use a template!")}</p>
+              <A href="/challenges/new" class="text-accent hover:underline text-sm">{t("Create your first challenge")}</A>
             </div>
           }
         >
@@ -196,16 +197,16 @@ export default function ChallengeListPage() {
                         <span class="text-2xl">{challenge.bossEmoji || "👻"}</span>
                         <div>
                           <h3 class="font-semibold text-ink-primary group-hover:text-error transition-colors">{challenge.bossName || challenge.title}</h3>
-                          <p class="text-xs text-ink-secondary mt-0.5">{challenge.bossType === "daily" ? "Daily Minion" : challenge.bossType === "weekly" ? "Weekly Elite" : challenge.bossType}</p>
+                          <p class="text-xs text-ink-secondary mt-0.5">{challenge.bossType === "daily" ? t("Daily Minion") : challenge.bossType === "weekly" ? t("Weekly Elite") : challenge.bossType}</p>
                         </div>
                       </div>
                       <span class={`text-xs px-1.5 py-0.5 rounded border ${challenge.status === "completed" ? "text-success bg-success/10 border-success/20" : "text-error bg-error/10 border-error/20"}`}>
-                        {challenge.status === "completed" ? "Defeated" : challenge.bossType}
+                        {challenge.status === "completed" ? t("Defeated") : challenge.bossType}
                       </span>
                     </div>
                     <div class="space-y-1.5">
                       <div class="flex items-center justify-between text-xs">
-                        <span class="text-ink-secondary">HP</span>
+                        <span class="text-ink-secondary">{t("HP")}</span>
                         <span class="text-ink-secondary/60">{challenge.bossCurrentHp}/{challenge.bossMaxHp}</span>
                       </div>
                       <div class="h-2 bg-surface-border rounded-full overflow-hidden">
@@ -226,7 +227,7 @@ export default function ChallengeListPage() {
                         <span class="text-2xl">{challenge.iconEmoji || THEME_ICONS[challenge.theme] || "🎯"}</span>
                         <div>
                           <h3 class="font-semibold text-ink-primary group-hover:text-accent transition-colors">{challenge.title}</h3>
-                          <p class="text-xs text-ink-secondary mt-0.5">{challenge._count.actions} actions</p>
+                          <p class="text-xs text-ink-secondary mt-0.5">{challenge._count.actions} {t("actions")}</p>
                         </div>
                       </div>
                       <span class={`text-xs px-1.5 py-0.5 rounded border ${DIFFICULTY_CLASSES[challenge.difficulty] || ""}`}>

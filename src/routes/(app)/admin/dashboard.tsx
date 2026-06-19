@@ -1,4 +1,4 @@
-import { createResource, For, Show, onMount } from "solid-js";
+import { createResource, For, Show, createEffect } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { authFetch, user } from "~/stores/auth";
 
@@ -23,7 +23,7 @@ function downloadCSV(filename: string, headers: string[], rows: string[][]) {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  onMount(() => {
+  createEffect(() => {
     if (user()?.role !== "admin") {
       navigate("/tavern", { replace: true });
     }
@@ -54,8 +54,8 @@ export default function AdminDashboard() {
   });
 
   return (
-    <div class="max-w-6xl mx-auto p-6 space-y-8">
-      <h1 class="text-2xl font-display font-bold text-ink-primary">Admin Dashboard</h1>
+    <div class="max-w-6xl mx-auto p-4 sm:p-6 space-y-8">
+      <h1 class="text-xl sm:text-2xl font-display font-bold text-ink-primary">Admin Dashboard</h1>
 
       {/* Quick Stats */}
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">

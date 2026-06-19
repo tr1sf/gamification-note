@@ -3,6 +3,7 @@ import { authFetch } from "~/stores/auth";
 import { gamification, setCoins } from "~/stores/user";
 import { addToast } from "~/stores/ui";
 import { applyThemeVariables } from "~/lib/themes/defaults";
+import { t } from "~/lib/i18n";
 
 interface ThemeItem {
   id: string;
@@ -68,12 +69,12 @@ export default function ThemePicker() {
       if (json.success) {
         setCoins(json.data.coins);
         setOwnedThemes((prev) => new Set([...prev, themeId]));
-        addToast("Theme purchased!", "success");
+        addToast(t("Theme purchased!"), "success");
       } else {
-        addToast(json.error?.message || "Failed to buy theme", "error");
+        addToast(json.error?.message || t("Failed to buy theme"), "error");
       }
     } catch {
-      addToast("Failed to purchase", "error");
+      addToast(t("Failed to purchase"), "error");
     } finally {
       setActionId(null);
     }
@@ -93,12 +94,12 @@ export default function ThemePicker() {
           applyThemeVariables(json.data.theme.cssVariables);
           localStorage.setItem("equippedThemeId", themeId);
         }
-        addToast(`Equipped ${json.data.theme?.name || "theme"}!`, "success");
+        addToast(`${t("Equipped")} ${json.data.theme?.name || "theme"}!`, "success");
       } else {
-        addToast(json.error?.message || "Failed to equip", "error");
+        addToast(json.error?.message || t("Failed to equip"), "error");
       }
     } catch {
-      addToast("Failed to equip theme", "error");
+      addToast(t("Failed to equip theme"), "error");
     } finally {
       setActionId(null);
     }
@@ -107,9 +108,9 @@ export default function ThemePicker() {
   return (
     <div class="space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-lg font-display font-bold text-ink-primary">Themes</h3>
+        <h3 class="text-lg font-display font-bold text-ink-primary">{t("Themes")}</h3>
         <span class="text-sm text-ink-secondary">
-          Coins: <span class="text-coin font-bold">{gamification().coins.toLocaleString()}</span>
+          {t("Coins")}: <span class="text-coin font-bold">{gamification().coins.toLocaleString()}</span>
         </span>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -163,20 +164,20 @@ export default function ThemePicker() {
                           : "bg-accent/10 text-accent hover:bg-accent/20"
                       }`}
                     >
-                      {theme.coinCost > 0 ? `${theme.coinCost} coins` : "Free"}
+                      {theme.coinCost > 0 ? `${theme.coinCost} ${t("Coins")}` : t("Free")}
                     </button>
                   }
                 >
                   <Show
                     when={equippedId() !== theme.id}
-                    fallback={<span class="text-xs text-success font-medium">Equipped</span>}
+                    fallback={<span class="text-xs text-success font-medium">{t("Equipped")}</span>}
                   >
                     <button
                       onClick={() => handleEquip(theme.id)}
                       disabled={actionId() === theme.id}
                       class="px-3 py-1.5 rounded-lg text-xs font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
                     >
-                      Equip
+                      {t("Equip")}
                     </button>
                   </Show>
                 </Show>

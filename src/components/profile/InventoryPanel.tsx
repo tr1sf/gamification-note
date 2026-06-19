@@ -1,6 +1,7 @@
 import { Show, For, createSignal, createMemo, onCleanup } from "solid-js";
 import { authFetch } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
+import { t } from "~/lib/i18n";
 
 export interface InventoryItem {
   id: string;
@@ -38,7 +39,7 @@ function TimeRemaining(props: { expiresAt: string }) {
 
   const remaining = createMemo(() => {
     const diff = new Date(props.expiresAt).getTime() - now();
-    if (diff <= 0) return "Expired";
+    if (diff <= 0) return t("Expired");
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -60,13 +61,13 @@ export default function InventoryPanel(props: InventoryPanelProps) {
       const res = await authFetch(`/api/inventory/${inventoryId}/equip`, { method: "POST" });
       const json = await res.json();
       if (json.success) {
-        addToast("Item equipped!", "success");
+        addToast(t("Item equipped!"), "success");
         props.onRefresh?.();
       } else {
-        addToast(json.error?.message || "Failed to equip", "error");
+        addToast(json.error?.message || t("Failed to equip"), "error");
       }
     } catch {
-      addToast("Failed to equip item", "error");
+      addToast(t("Failed to equip item"), "error");
     } finally {
       setActionId(null);
     }
@@ -78,13 +79,13 @@ export default function InventoryPanel(props: InventoryPanelProps) {
       const res = await authFetch(`/api/inventory/${inventoryId}/open`, { method: "POST" });
       const json = await res.json();
       if (json.success) {
-        addToast(`Opened! You got ${json.data.name}`, "success");
+        addToast(`${t("Open")}! ${t("You got")} ${json.data.name}`, "success");
         props.onRefresh?.();
       } else {
-        addToast(json.error?.message || "Failed to open", "error");
+        addToast(json.error?.message || t("Failed to open"), "error");
       }
     } catch {
-      addToast("Failed to open loot box", "error");
+      addToast(t("Failed to open loot box"), "error");
     } finally {
       setActionId(null);
     }
@@ -92,11 +93,11 @@ export default function InventoryPanel(props: InventoryPanelProps) {
 
   return (
     <div class="p-6 rounded-xl border border-surface-border bg-surface-elevated">
-      <h2 class="text-lg font-display font-bold text-ink-primary mb-4">Inventory</h2>
+      <h2 class="text-lg font-display font-bold text-ink-primary mb-4">{t("Inventory")}</h2>
       <Show
         when={props.items.length > 0}
         fallback={
-          <p class="text-sm text-ink-secondary py-4 text-center">No items yet</p>
+          <p class="text-sm text-ink-secondary py-4 text-center">{t("No items yet")}</p>
         }
       >
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -118,7 +119,7 @@ export default function InventoryPanel(props: InventoryPanelProps) {
                     rarityColors[item.rarity] || rarityColors.common
                   }`}
                 >
-                  {item.rarity}
+                  {t(item.rarity)}
                 </span>
 
                 <Show when={item.expiresAt}>
@@ -128,14 +129,14 @@ export default function InventoryPanel(props: InventoryPanelProps) {
                 <div class="mt-2">
                   <Show when={item.itemType === CONSUMABLE_TYPE}>
                     <Show when={item.itemCategory?.usageType === "loot_box"} fallback={
-                      <span class="text-xs text-success font-medium">Active</span>
+                      <span class="text-xs text-success font-medium">{t("Active")}</span>
                     }>
                       <button
                         onClick={() => handleOpen(item.inventoryId)}
                         disabled={actionId() === item.inventoryId}
                         class="px-2 py-1 rounded text-[10px] font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors disabled:opacity-50"
                       >
-                        {actionId() === item.inventoryId ? "..." : "Open"}
+                        {actionId() === item.inventoryId ? "..." : t("Open")}
                       </button>
                     </Show>
                   </Show>
@@ -146,12 +147,12 @@ export default function InventoryPanel(props: InventoryPanelProps) {
                       disabled={actionId() === item.inventoryId}
                       class="px-2 py-1 rounded text-[10px] font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors disabled:opacity-50"
                     >
-                      {actionId() === item.inventoryId ? "..." : "Equip"}
+                      {actionId() === item.inventoryId ? "..." : t("Equip")}
                     </button>
                   </Show>
 
                   <Show when={item.itemType !== CONSUMABLE_TYPE && item.equipped}>
-                    <p class="text-[10px] text-accent font-semibold mt-1">Equipped</p>
+                    <p class="text-[10px] text-accent font-semibold mt-1">{t("Equipped")}</p>
                   </Show>
                 </div>
               </div>

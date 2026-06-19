@@ -77,8 +77,8 @@ export default function QuizPage() {
   };
 
   return (
-    <div class="max-w-2xl mx-auto p-6 space-y-6">
-      <h1 class="text-2xl font-display font-bold text-ink-primary">
+    <div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <h1 class="text-xl sm:text-2xl font-display font-bold text-ink-primary">
         Quiz Review
       </h1>
       <Show
@@ -186,7 +186,7 @@ export default function QuizPage() {
                 <For each={(q().questions as any[]) ?? []}>
                   {(question: any, i: () => number) => (
                     <div class="mb-6">
-                      <p class="font-medium text-ink-primary mb-3">
+                      <p class="font-medium text-ink-primary mb-3 text-sm sm:text-base">
                         {i() + 1}. {question.question}
                       </p>
                       <div class="space-y-2">

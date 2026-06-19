@@ -4,6 +4,7 @@ import { authFetch, user as authUser } from "~/stores/auth";
 import { gamification, xpProgressInLevel } from "~/stores/user";
 import { quests, fetchActiveQuests, type Quest } from "~/stores/quests";
 import { getUnlockedFeatures, type UserPath } from "~/lib/path-unlocks";
+import { t } from "~/lib/i18n";
 import RadarChart, { type RadarStat } from "~/components/gamification/RadarChart";
 import MoodPicker from "~/components/mood/MoodPicker";
 import GratitudeGarden from "~/components/gratitude/GratitudeGarden";
@@ -169,15 +170,15 @@ export default function TavernPage() {
       <div class="max-w-6xl mx-auto p-4 sm:p-6">
         <header class="mb-5">
           {/* Tavern Banner */}
-          <div class="relative rounded-xl overflow-hidden mb-6 h-32 sm:h-40 bg-gradient-to-r from-accent/20 via-surface-elevated to-accent/10 border border-surface-border flex items-center justify-center">
+          <div class="relative rounded-xl overflow-hidden mb-6 h-28 sm:h-40 bg-gradient-to-r from-accent/20 via-surface-elevated to-accent/10 border border-surface-border flex items-center justify-center">
             <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, var(--color-accent) 10px, var(--color-accent) 11px);" />
             <div class="relative text-center">
               <p class="text-3xl sm:text-4xl">🏰</p>
-              <p class="text-xs sm:text-sm text-ink-secondary/60 mt-1 font-display tracking-widest uppercase">Welcome back, adventurer</p>
+              <p class="text-xs sm:text-sm text-ink-secondary/60 mt-1 font-display tracking-widest uppercase">{t("Welcome back, adventurer")}</p>
             </div>
           </div>
-          <h1 class="font-display text-2xl sm:text-3xl font-bold text-ink-primary">Tavern Hall</h1>
-          <p class="text-sm text-ink-secondary mt-0.5">Your adventurer's dashboard</p>
+          <h1 class="font-display text-2xl sm:text-3xl font-bold text-ink-primary">{t("Tavern Hall")}</h1>
+          <p class="text-sm text-ink-secondary mt-0.5">{t("Your adventurer's dashboard")}</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
@@ -206,7 +207,7 @@ export default function TavernPage() {
 
             <div class="flex items-center justify-between">
               <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-elevated border border-surface-border text-xs text-accent">
-                <span aria-hidden="true">☀️</span> Today
+                <span aria-hidden="true">☀️</span> {t("Today")}
               </span>
               <button
                 type="button"
@@ -222,7 +223,7 @@ export default function TavernPage() {
               <h2 class="font-display text-lg text-ink-primary mb-3">{weekday()}</h2>
 
               <div class="flex items-center gap-2 mb-3">
-                <span class="text-xs text-ink-secondary">Progress:</span>
+                <span class="text-xs text-ink-secondary">{t("Progress:")}</span>
                 <span
                   class="font-mono tracking-tight text-accent"
                   role="progressbar"
@@ -239,33 +240,33 @@ export default function TavernPage() {
               </div>
 
               <p class="text-sm italic text-ink-secondary">
-                You've gained <span class="font-mono not-italic text-accent">{xpToday()}</span> XP today.
+                {t("You've gained")} <span class="font-mono not-italic text-accent">{xpToday()}</span> {t("XP today.")}
               </p>
               <p class="text-sm italic text-ink-secondary">
-                You've completed <span class="font-mono not-italic text-accent">{tasksToday()}</span> tasks today.
+                {t("You've completed")} <span class="font-mono not-italic text-accent">{tasksToday()}</span> {t("tasks today.")}
               </p>
-              <p class="text-sm italic text-coin mt-2">You got this!</p>
+              <p class="text-sm italic text-coin mt-2">{t("You got this!")}</p>
 
               <a
                 href="/notes/new"
                 class="mt-4 w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-surface-border py-2 text-sm text-ink-secondary/80 hover:text-accent hover:border-accent/40 transition-colors"
               >
-                <span aria-hidden="true">+</span> New scroll
+                  <span aria-hidden="true">+</span> {t("New scroll")}
               </a>
             </div>
           </section>
 
           {/* ─────────── MIDDLE: Stats Radar ─────────── */}
           <section class="lg:col-span-5">
-            <p class="text-xs italic text-ink-secondary mb-1">Stats Radar</p>
+            <p class="text-xs italic text-ink-secondary mb-1">{t("Stats Radar")}</p>
             <div class="rounded-2xl border border-surface-border bg-surface-elevated p-4 sm:p-6 flex items-center justify-center shadow-sm">
               <div class="w-full max-w-sm">
                 <Show when={d()?.totalNotes === 0} fallback={<RadarChart stats={radarStats()} />}>
                   <div class="bg-surface-elevated rounded-xl p-6 border border-surface-border text-center space-y-4">
                     <p class="text-5xl">📜</p>
-                    <h3 class="text-lg font-bold text-ink-primary">Your adventure begins!</h3>
-                    <p class="text-sm text-ink-secondary max-w-xs mx-auto">Write your first scroll to unlock your character stats, quests, and boss fights.</p>
-                    <A href="/notes/new" class="inline-block px-6 py-2 bg-accent text-white rounded-lg font-medium text-sm">Write Your First Scroll</A>
+                    <h3 class="text-lg font-bold text-ink-primary">{t("Your adventure begins!")}</h3>
+                    <p class="text-sm text-ink-secondary max-w-xs mx-auto">{t("Write your first scroll to unlock your character stats, quests, and boss fights.")}</p>
+                    <A href="/notes/new" class="inline-block px-6 py-2 bg-accent text-white rounded-lg font-medium text-sm">{t("Write Your First Scroll")}</A>
                   </div>
                 </Show>
               </div>
@@ -278,7 +279,7 @@ export default function TavernPage() {
               {/* header */}
               <div class="flex items-center justify-between px-4 py-3 border-b border-surface-border">
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-surface-border text-xs text-accent">
-                  <span aria-hidden="true">🛡️</span> Player ID
+                  <span aria-hidden="true">🛡️</span> {t("Player ID")}
                 </span>
                 <button
                   type="button"
@@ -294,29 +295,29 @@ export default function TavernPage() {
                   <h2 class="font-display text-xl font-bold text-ink-primary flex items-center gap-1.5">
                     <span aria-hidden="true">⭐</span> {name()}
                   </h2>
-                  <p class="text-xs text-ink-secondary">Update Status</p>
+                  <p class="text-xs text-ink-secondary">{t("Update Status")}</p>
                 </div>
 
                 {/* key/value rows */}
                 <dl class="space-y-1 text-sm">
                   <div class="flex justify-between">
-                    <dt class="text-ink-secondary">Class:</dt>
+                    <dt class="text-ink-secondary">{t("Class:")}</dt>
                     <dd class="font-mono text-ink-primary">{gamification().title}</dd>
                   </div>
                   <div class="flex justify-between">
-                    <dt class="text-ink-secondary">Streak:</dt>
-                    <dd class="font-mono text-ink-primary">🔥 {gamification().streak} days</dd>
+                    <dt class="text-ink-secondary">{t("Streak:")}</dt>
+                    <dd class="font-mono text-ink-primary">🔥 {gamification().streak} {t("days")}</dd>
                   </div>
                   <div class="flex justify-between">
-                    <dt class="text-ink-secondary">Owned:</dt>
-                    <dd class="font-mono text-coin">{coins()} Coins</dd>
+                    <dt class="text-ink-secondary">{t("Owned:")}</dt>
+                    <dd class="font-mono text-coin">{coins()} {t("Coins")}</dd>
                   </div>
                 </dl>
 
                 {/* Level + XP bar */}
                 <div class="flex items-center gap-3">
                   <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-accent/15 border border-accent/30 text-xs font-mono text-accent shrink-0">
-                    Level {lvl()}
+                    {t("Level")} {lvl()}
                   </span>
                   <div class="flex-1">
                     <div class="flex items-center justify-between text-xs mb-1">
@@ -341,7 +342,7 @@ export default function TavernPage() {
                 {/* divider */}
                 <div class="flex items-center justify-center gap-2 text-ink-secondary/50 text-xs py-1" aria-hidden="true">
                   <span class="flex-1 border-t border-dotted border-surface-border" />
-                  <span>· Stats Summary ·</span>
+                  <span>{t("· Stats Summary ·")}</span>
                   <span class="flex-1 border-t border-dotted border-surface-border" />
                 </div>
 
@@ -359,21 +360,21 @@ export default function TavernPage() {
                   </For>
                 </ul>
 
-                <p class="text-sm font-mono text-coin">Total: {totalXP()} XP</p>
+                <p class="text-sm font-mono text-coin">{t("Total:")} {totalXP()} {t("XP")}</p>
 
                 <p class="text-sm text-ink-secondary">
-                  {d()?.totalNotes === 0 ? "Complete quests to earn XP" : `Earned ${gamification().xp} XP`}
+                  {d()?.totalNotes === 0 ? t("Complete quests to earn XP") : `${t("Earned")} ${gamification().xp} ${t("XP")}`}
                 </p>
 
                 <p class="text-sm text-ink-secondary flex items-center gap-1.5">
-                  <span aria-hidden="true">📊</span> Log Status
+                  <span aria-hidden="true">📊</span> {t("Log Status")}
                 </p>
 
                 <a
                   href="/profile"
                   class="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-surface-border py-2 text-sm text-ink-secondary/80 hover:text-accent hover:border-accent/40 transition-colors"
                 >
-                  <span aria-hidden="true">→</span> View full profile
+                  <span aria-hidden="true">→</span> {t("View full profile")}
                 </a>
               </div>
             </div>
@@ -383,7 +384,7 @@ export default function TavernPage() {
           <section class="lg:col-span-9 lg:col-start-4">
             <div class="rounded-2xl border border-surface-border bg-surface-elevated p-4 shadow-sm">
               <h2 class="font-display text-lg text-accent italic flex items-center gap-1.5 mb-3">
-                <span aria-hidden="true">🎮</span> Today's Quests <span class="text-xs" aria-hidden="true">▼</span>
+                <span aria-hidden="true">🎮</span> {t("Today's Quests")} <span class="text-xs" aria-hidden="true">▼</span>
               </h2>
 
               {/* tabs */}
@@ -391,9 +392,9 @@ export default function TavernPage() {
                 <For
                   each={
                     [
-                      { id: "plan" as const, label: "📝 Plan" },
-                      { id: "today" as const, label: "☀️ Today" },
-                      { id: "done" as const, label: "✓ Done" },
+                      { id: "plan" as const, label: `📝 ${t("Plan")}` },
+                      { id: "today" as const, label: `☀️ ${t("Today")}` },
+                      { id: "done" as const, label: `✓ ${t("Done")}` },
                     ]
                   }
                 >
@@ -444,7 +445,7 @@ export default function TavernPage() {
                           }`}
                           aria-disabled={done()}
                         >
-                          {done() ? "Completed" : "Complete"}
+                          {done() ? t("Completed") : t("Complete")}
                         </a>
                       </div>
                     );
@@ -456,7 +457,7 @@ export default function TavernPage() {
                   href="/quests"
                   class="rounded-xl border border-dashed border-surface-border flex items-center justify-center gap-1.5 p-6 text-sm text-ink-secondary/80 hover:text-accent hover:border-accent/40 transition-colors min-h-[7rem]"
                 >
-                  <span aria-hidden="true">+</span> All quests
+                  <span aria-hidden="true">+</span> {t("All quests")}
                 </a>
               </div>
             </div>
@@ -469,18 +470,18 @@ export default function TavernPage() {
                 {/* Smart Inbox Digest */}
                 <div class="bg-surface-elevated rounded-xl p-5 border border-surface-border">
                   <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-sm font-semibold text-ink-primary">Smart Inbox Digest</h3>
+                    <h3 class="text-sm font-semibold text-ink-primary">{t("Smart Inbox Digest")}</h3>
                     <button
                       onClick={loadDigest}
                       disabled={digestLoading()}
                       class="text-xs px-2 py-1 rounded-md bg-surface hover:bg-surface-hover text-ink-secondary transition-colors disabled:opacity-50"
                     >
-                      {digestLoading() ? "Loading..." : "Refresh"}
+                      {digestLoading() ? t("Loading...") : t("Refresh")}
                     </button>
                   </div>
                   <Show
                     when={digestData()}
-                    fallback={<p class="text-sm text-ink-secondary/60 italic">Click Refresh to generate your daily digest</p>}
+                    fallback={<p class="text-sm text-ink-secondary/60 italic">{t("Click Refresh to generate your daily digest")}</p>}
                   >
                     <p class="text-sm text-ink-primary leading-relaxed whitespace-pre-line">{digestData()}</p>
                   </Show>
@@ -510,11 +511,11 @@ export default function TavernPage() {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Show when={getUnlockedFeatures(authUser()?.path as UserPath, gamification().level).includes("Boss Fight")}>
                 <div class="bg-surface-elevated rounded-xl p-5 border border-surface-border">
-                  <h3 class="text-sm font-semibold text-ink-primary mb-3">⚔️ Active Bosses</h3>
+                  <h3 class="text-sm font-semibold text-ink-primary mb-3">⚔️ {t("Active Bosses")}</h3>
                   <Show when={(bosses() || []).length > 0} fallback={
                     <div class="text-center py-6 text-ink-secondary">
                       <p class="text-3xl mb-2">👻</p>
-                      <p class="text-sm">No active bosses. Keep writing to summon them!</p>
+                      <p class="text-sm">{t("No active bosses. Keep writing to summon them!")}</p>
                     </div>
                   }>
                     <For each={(bosses() || []).slice(0, 2)}>{(boss: any) => (
@@ -531,18 +532,18 @@ export default function TavernPage() {
                 </Show>
                 <Show when={getUnlockedFeatures(authUser()?.path as UserPath, gamification().level).includes("AI Quiz")}>
                 <div class="bg-surface-elevated rounded-xl p-5 border border-surface-border">
-                  <h3 class="text-sm font-semibold text-ink-primary mb-3">🧠 Pending Quizzes</h3>
+                  <h3 class="text-sm font-semibold text-ink-primary mb-3">🧠 {t("Pending Quizzes")}</h3>
                   <Show when={(pendingQuizzes() || []).length > 0} fallback={
                     <div class="text-center py-6 text-ink-secondary">
                       <p class="text-3xl mb-2">📝</p>
-                      <p class="text-sm">Write 100+ word notes to generate quizzes!</p>
+                      <p class="text-sm">{t("Write 100+ word notes to generate quizzes!")}</p>
                     </div>
                   }>
                     <For each={(pendingQuizzes() || []).slice(0, 3)}>{(q: any) => (
                       <A href="/quiz" class="flex items-center gap-3 py-2 hover:bg-surface-hover rounded-lg px-2 transition-colors">
                         <span class="text-lg">🧠</span>
                         <div class="flex-1 min-w-0">
-                          <p class="text-sm text-ink-primary truncate">Review #{q.reviewCount + 1}</p>
+                          <p class="text-sm text-ink-primary truncate">{t("Review #")}{q.reviewCount + 1}</p>
                           <p class="text-xs text-ink-secondary">{new Date(q.generatedAt).toLocaleDateString()}</p>
                         </div>
                       </A>

@@ -19,7 +19,7 @@ import SurveyWidget from "~/components/survey/SurveyWidget";
 import InstallPrompt from "~/components/pwa/InstallPrompt";
 import { getUnlockedFeatures, getNextUnlock, PATH_UNLOCKS, type UserPath } from "~/lib/path-unlocks";
 import { applyThemeVariables, restoreThemeVariables, clearThemeVariables } from "~/lib/themes/defaults";
-import { getCurrentLang, applyLanguage } from "~/lib/i18n";
+import { getCurrentLang, applyLanguage, t } from "~/lib/i18n";
 
 export default function AppLayout(props: { children?: JSX.Element }) {
   const navigate = useNavigate();
@@ -102,7 +102,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             <span class="text-4xl">🏰</span>
           </div>
           <h1 class="text-xl font-display font-bold text-ink-primary">TavernoteX</h1>
-          <p class="text-sm text-ink-secondary">The tavern doors are opening...</p>
+          <p class="text-sm text-ink-secondary">{t("The tavern doors are opening...")}</p>
           <div class="flex gap-1 justify-center">
             <div class="w-2 h-2 rounded-full bg-accent animate-bounce" style="animation-delay:0s" />
             <div class="w-2 h-2 rounded-full bg-accent animate-bounce" style="animation-delay:0.15s" />
@@ -124,36 +124,36 @@ export default function AppLayout(props: { children?: JSX.Element }) {
           <div class="relative p-4 border-b border-surface-border">
             <div class="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" aria-hidden="true" />
             <h1 class="text-xl font-display font-bold text-ink-primary">TavernoteX</h1>
-            <p class="text-xs text-ink-secondary/60 mt-0.5">Your tavern of knowledge</p>
+            <p class="text-xs text-ink-secondary/60 mt-0.5">{t("Your tavern of knowledge")}</p>
           </div>
           <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto" aria-label="Main navigation">
             <div class="px-3 py-1.5 mb-1">
-              <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Main Hall</p>
+              <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">{t("Main Hall")}</p>
             </div>
-            <NavItem href="/tavern" icon="🏰" label="Tavern Hall" />
+            <NavItem href="/tavern" icon="🏰" label={t("Tavern Hall")} />
             <div class="px-3 py-1.5 mb-1 mt-2">
-              <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Scrolls</p>
+              <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">{t("Scrolls")}</p>
             </div>
-            <NavItem href="/notes" icon="📜" label="My Scrolls" />
-            <NavItem href="/notes/new" icon="🖊️" label="New Scroll" />
+            <NavItem href="/notes" icon="📜" label={t("My Scrolls")} />
+            <NavItem href="/notes/new" icon="🖊️" label={t("New Scroll")} />
             <div class="px-3 py-1.5 mb-1 mt-2">
-              <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Adventures</p>
+              <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">{t("Adventures")}</p>
             </div>
-            <NavItem href="/boss/active" icon={isUnlocked("Boss Fight") ? "⚔️" : "🔒"} label={isUnlocked("Boss Fight") ? "Boss Fight" : `Boss (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "Boss Fight")?.level ?? 7}+)`} locked={!isUnlocked("Boss Fight")} />
-            <NavItem href="/quiz" icon={isUnlocked("AI Quiz") || isUnlocked("Spaced Repetition") ? "🧠" : "🔒"} label={isUnlocked("AI Quiz") ? "Quiz Review" : `Quiz (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "AI Quiz")?.level ?? 4}+)`} locked={!isUnlocked("AI Quiz") && !isUnlocked("Spaced Repetition")} />
-            <NavItem href="/minigames/potion" icon="🧪" label="Potion Match" />
-            <NavItem href="/quests" icon="📋" label="Quests" />
+            <NavItem href="/boss/active" icon={isUnlocked("Boss Fight") ? "⚔️" : "🔒"} label={isUnlocked("Boss Fight") ? t("Boss Fight") : `${t("Boss")} (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "Boss Fight")?.level ?? 7}+)`} locked={!isUnlocked("Boss Fight")} />
+            <NavItem href="/quiz" icon={isUnlocked("AI Quiz") || isUnlocked("Spaced Repetition") ? "🧠" : "🔒"} label={isUnlocked("AI Quiz") ? t("Quiz Review") : `${t("Quiz")} (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "AI Quiz")?.level ?? 4}+)`} locked={!isUnlocked("AI Quiz") && !isUnlocked("Spaced Repetition")} />
+            <NavItem href="/minigames/potion" icon="🧪" label={t("Potion Match")} />
+            <NavItem href="/quests" icon="📋" label={t("Quests")} />
             <Show when={!isSolo()}>
-              <NavItem href="/guilds" icon={isUnlocked("Guilds") ? "🏛️" : "🔒"} label={isUnlocked("Guilds") ? "Guilds" : `Guilds (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "Guilds")?.level ?? 10}+)`} locked={!isUnlocked("Guilds")} />
+              <NavItem href="/guilds" icon={isUnlocked("Guilds") ? "🏛️" : "🔒"} label={isUnlocked("Guilds") ? t("Guilds") : `${t("Guilds")} (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "Guilds")?.level ?? 10}+)`} locked={!isUnlocked("Guilds")} />
             </Show>
-            <NavItem href="/progress" icon="📊" label="Progress" />
-            <NavItem href="/insights" icon="💡" label="Insights" />
+            <NavItem href="/progress" icon="📊" label={t("Progress")} />
+            <NavItem href="/insights" icon="💡" label={t("Insights")} />
             <div class="px-3 py-1.5 mb-1 mt-2">
-              <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">Account</p>
+              <p class="text-[0.65rem] font-semibold tracking-widest uppercase text-ink-secondary/50">{t("Account")}</p>
             </div>
-            <NavItem href="/profile" icon="🛡️" label="Profile" />
-            <NavItem href="/shop" icon="🏪" label="Shop" />
-            <NavItem href="/analytics" icon="📊" label="Analytics" />
+            <NavItem href="/profile" icon="🛡️" label={t("Profile")} />
+            <NavItem href="/shop" icon="🏪" label={t("Shop")} />
+            <NavItem href="/analytics" icon="📊" label={t("Analytics")} />
           </nav>
           <div class="p-3 border-t border-surface-border space-y-2 bg-surface-hover/30">
             <QuestProgress quests={quests()} />
@@ -174,11 +174,11 @@ export default function AppLayout(props: { children?: JSX.Element }) {
                     <p class="text-xs text-ink-secondary">Lv.{g().level} {g().title}</p>
                     <Show when={nextUnlock()}>
                       {(nu) => (
-                        <p class="text-[0.6rem] text-accent/60 mt-0.5" title={`Unlocks at Level ${nu().level}`}>Next: {nu().feature} at Lv.{nu().level}</p>
+                        <p class="text-[0.6rem] text-accent/60 mt-0.5" title={t("Unlocks at a higher level")}>{t("Next:")} {t(nu().feature)} {t("at")} Lv.{nu().level}</p>
                       )}
                     </Show>
                   </div>
-                  <button onClick={async () => { await logout(); navigate("/login"); }} class="text-xs text-ink-secondary/70 hover:text-error transition-colors px-1.5 py-0.5 rounded hover:bg-error/5" title="Exit tavern">Exit</button>
+                  <button onClick={async () => { await logout(); navigate("/login"); }} class="text-xs text-ink-secondary/70 hover:text-error transition-colors px-1.5 py-0.5 rounded hover:bg-error/5" title={t("Exit tavern")}>{t("Exit tavern")}</button>
                 </div>
               )}
             </Show>
@@ -203,7 +203,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
 
         {/* Main content */}
         <div class="flex-1 flex flex-col min-w-0">
-          <header class="h-14 border-b border-surface-border bg-surface flex items-center gap-3 px-4 shrink-0 relative">
+          <header class="h-14 border-b border-surface-border bg-surface flex items-center gap-2 sm:gap-3 px-3 sm:px-4 shrink-0 relative">
             <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/10 to-transparent" aria-hidden="true" />
             <button
               class="lg:hidden p-2 text-ink-secondary hover:text-ink-primary"
@@ -273,7 +273,7 @@ function NavItem(props: { href: string; icon: string; label: string; locked?: bo
   );
   if (props.locked) {
     return (
-      <div class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-ink-secondary/30 cursor-not-allowed bg-surface-hover/10" title={`Unlocks at a higher level`}>
+      <div class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-ink-secondary/30 cursor-not-allowed bg-surface-hover/10" title={t("Unlocks at a higher level")}>
         {content}
       </div>
     );

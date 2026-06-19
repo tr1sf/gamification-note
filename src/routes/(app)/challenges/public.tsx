@@ -99,7 +99,7 @@ export default function PublicChallengesPage() {
   };
 
   return (
-    <div class="max-w-4xl mx-auto p-6 space-y-6">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-display font-bold text-ink-primary">Public Challenges</h1>

@@ -4,6 +4,7 @@ import { gamification, setCoins } from "~/stores/user";
 import { addToast } from "~/stores/ui";
 import ShopGrid, { type ShopItem } from "~/components/shop/ShopGrid";
 import ThemePicker from "~/components/shop/ThemePicker";
+import { t } from "~/lib/i18n";
 
 async function fetchShop(): Promise<ShopItem[]> {
   try {
@@ -55,14 +56,14 @@ export default function ShopPage() {
         });
         const json = await res.json();
         if (json.success) {
-          addToast("Theme purchased!", "success");
+          addToast(t("Theme purchased!"), "success");
           if (typeof json.data?.coins === "number") {
             setCoins(json.data.coins);
           }
           refetch();
           refetchRec();
         } else {
-          addToast(json.error?.message || "Failed to buy theme", "error");
+          addToast(json.error?.message || t("Failed to buy theme"), "error");
         }
         return;
       }
@@ -70,34 +71,34 @@ export default function ShopPage() {
       const res = await authFetch(`/api/shop/${itemId}/purchase`, { method: "POST" });
       const json = await res.json();
       if (json.success) {
-        addToast("Item purchased!", "success");
+        addToast(t("Item purchased!"), "success");
         if (typeof json.data?.coins === "number") {
           setCoins(json.data.coins);
         }
         refetch();
         refetchRec();
       } else {
-        addToast(json.error?.message || "Purchase failed", "error");
+        addToast(json.error?.message || t("Purchase failed"), "error");
       }
     } catch {
-      addToast("Network error", "error");
+      addToast(t("Network error"), "error");
     } finally {
       setBuyingId(null);
     }
   };
 
   const tabs = [
-    { id: "cosmetics" as const, label: "Cosmetics", icon: "✨" },
-    { id: "consumables" as const, label: "Consumables", icon: "⚗️" },
-    { id: "themes" as const, label: "Themes", icon: "🎨" },
+    { id: "cosmetics" as const, label: t("Cosmetics"), icon: "✨" },
+    { id: "consumables" as const, label: t("Consumables"), icon: "⚗️" },
+    { id: "themes" as const, label: t("Themes"), icon: "🎨" },
   ];
 
   return (
-    <div class="max-w-4xl mx-auto p-6 space-y-6">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-display font-bold text-ink-primary">Tavern Shop</h1>
-          <p class="text-sm text-ink-secondary mt-1">Spend your coins on cosmetics</p>
+          <h1 class="text-2xl font-display font-bold text-ink-primary">{t("Tavern Shop")}</h1>
+          <p class="text-sm text-ink-secondary mt-1">{t("Spend your coins on cosmetics")}</p>
         </div>
         <div class="flex items-center gap-1 text-coin font-bold text-lg">
           <span aria-hidden="true">🪙</span>
@@ -108,7 +109,7 @@ export default function ShopPage() {
       {/* Recommended For You */}
       <Show when={recommended() && (recommended()!.length > 0)}>
         <div class="space-y-3">
-          <h2 class="text-sm font-semibold text-ink-secondary uppercase tracking-wide">Recommended For You</h2>
+          <h2 class="text-sm font-semibold text-ink-secondary uppercase tracking-wide">{t("Recommended For You")}</h2>
           <div class="flex gap-3 overflow-x-auto pb-2">
             <For each={recommended()}>
               {(item) => {
@@ -118,7 +119,7 @@ export default function ShopPage() {
                   <div class="flex-shrink-0 w-48 p-4 rounded-lg border border-accent/20 bg-accent/5">
                     <div class="flex items-center gap-2 mb-2">
                       <span class="text-xl" aria-hidden="true">{item.icon}</span>
-                      <span class="text-xs px-1.5 py-0.5 rounded-full bg-accent/10 text-accent font-medium">For You</span>
+                      <span class="text-xs px-1.5 py-0.5 rounded-full bg-accent/10 text-accent font-medium">{t("For You")}</span>
                     </div>
                     <h3 class="font-semibold text-ink-primary text-sm truncate">{item.name}</h3>
                     <p class="text-xs text-ink-secondary mt-1 line-clamp-2">{item.description}</p>
@@ -132,7 +133,7 @@ export default function ShopPage() {
                         disabled={!canAfford() || isBuying()}
                         class="px-3 py-1 text-xs font-semibold rounded-md bg-accent text-surface-overlay hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        {isBuying() ? "Buying..." : !canAfford() ? "No coins" : "Buy"}
+                        {isBuying() ? t("Buying...") : !canAfford() ? t("No coins") : t("Buy")}
                       </button>
                     </div>
                   </div>
@@ -180,7 +181,7 @@ export default function ShopPage() {
             fallback={
               <div class="text-center py-12 text-ink-secondary">
                 <p class="text-4xl mb-3">🏪</p>
-                <p>No items available in this category.</p>
+                <p>{t("No items available in this category.")}</p>
               </div>
             }
           >

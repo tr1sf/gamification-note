@@ -12,6 +12,8 @@ dist
 .turbo
 .vinxi
 .opencode
+opencode.json
+google*.html
 *.docx
 *.doc
 *.pdf

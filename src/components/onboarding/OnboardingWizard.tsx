@@ -157,7 +157,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
 
         {/* Step content */}
         <div
-          class="rounded-2xl border border-surface-border bg-surface-elevated p-6 shadow-md"
+          class="rounded-2xl border border-surface-border bg-surface-elevated p-4 sm:p-6 shadow-md"
           style={`animation: fade-up 0.35s ease-out`}
         >
           <Show when={step() === 0}>
@@ -183,13 +183,13 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
           </Show>
 
           {/* Navigation */}
-          <div class="flex items-center justify-between mt-6 pt-4 border-t border-surface-border">
-            <Show when={step() > 0} fallback={<div />}>
+          <div class="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t border-surface-border">
+            <Show when={step() > 0} fallback={<div class="hidden sm:block" />}>
               <button
                 onClick={prevStep}
-                class="px-4 py-2 text-sm text-ink-secondary hover:text-ink-primary transition-colors"
+                class="w-full sm:w-auto px-4 py-2 text-sm text-ink-secondary hover:text-ink-primary transition-colors order-2 sm:order-1"
               >
-                &larr; Back
+                &larr; {t("Back")}
               </button>
             </Show>
 
@@ -203,7 +203,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
                     : "bg-surface-border text-ink-secondary cursor-not-allowed"
                 }`}
               >
-                Continue &rarr;
+                {t("Continue →")}
               </button>
             </Show>
 
@@ -217,7 +217,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
                     : "bg-surface-border text-ink-secondary cursor-not-allowed"
                 }`}
               >
-                Enter the Tavern &rarr;
+                {t("Enter the Tavern →")}
               </button>
             </Show>
           </div>
@@ -232,18 +232,18 @@ function StepLanguage() {
   const select = (l: "en" | "vi") => applyLanguage(l);
   return (
     <div>
-      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">Language / Ngôn Ngữ</h2>
-      <p class="text-sm text-ink-secondary mb-5">Choose your preferred language</p>
+      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">{t("Language / Ngôn Ngữ")}</h2>
+      <p class="text-sm text-ink-secondary mb-5">{t("Choose your preferred language")}</p>
       <div class="grid grid-cols-2 gap-3">
         <button onClick={() => select("en")} class={`p-4 rounded-xl border-2 text-left transition-all ${lang() === "en" ? "border-accent bg-accent/5 shadow-sm" : "border-surface-border hover:border-accent/30"}`}>
           <p class="text-2xl mb-1">🇬🇧</p>
-          <p class="font-semibold text-ink-primary">English</p>
-          <p class="text-xs text-ink-secondary">Default</p>
+          <p class="font-semibold text-ink-primary">{t("English")}</p>
+          <p class="text-xs text-ink-secondary">{t("Default")}</p>
         </button>
         <button onClick={() => select("vi")} class={`p-4 rounded-xl border-2 text-left transition-all ${lang() === "vi" ? "border-accent bg-accent/5 shadow-sm" : "border-surface-border hover:border-accent/30"}`}>
           <p class="text-2xl mb-1">🇻🇳</p>
-          <p class="font-semibold text-ink-primary">Tiếng Việt</p>
-          <p class="text-xs text-ink-secondary">Beta</p>
+          <p class="font-semibold text-ink-primary">{t("Tiếng Việt")}</p>
+          <p class="text-xs text-ink-secondary">{t("Beta")}</p>
         </button>
       </div>
     </div>
@@ -253,8 +253,8 @@ function StepLanguage() {
 function StepConsent(props: { accepted: () => boolean; setAccepted: (v: boolean) => void }) {
   return (
     <div>
-      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">Privacy & Data Usage</h2>
-      <p class="text-sm text-ink-secondary mb-5">Your notes are private. AI processing is anonymous. Nothing is shared without your consent.</p>
+      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">{t("Privacy & Data Usage")}</h2>
+      <p class="text-sm text-ink-secondary mb-5">{t("Your notes are private. AI processing is anonymous.")}</p>
       <div class="bg-surface rounded-xl p-4 border border-surface-border text-sm text-ink-secondary space-y-2 mb-4">
         <p>• Your notes are <span class="font-medium text-ink-primary">private by default</span> — only you can see them</p>
         <p>• AI features process your notes <span class="font-medium text-ink-primary">anonymously</span> to generate quizzes and summaries</p>
@@ -265,7 +265,7 @@ function StepConsent(props: { accepted: () => boolean; setAccepted: (v: boolean)
       <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-surface-border hover:border-accent/30 transition-colors">
         <input type="checkbox" checked={props.accepted()} onChange={(e) => props.setAccepted(e.currentTarget.checked)}
           class="mt-0.5 w-4 h-4 rounded border-surface-border accent-accent" />
-        <span class="text-sm text-ink-primary">I understand and agree to the data usage policy.</span>
+        <span class="text-sm text-ink-primary">{t("I understand and agree to the data usage policy.")}</span>
       </label>
     </div>
   );
@@ -274,8 +274,8 @@ function StepConsent(props: { accepted: () => boolean; setAccepted: (v: boolean)
 function StepChoosePath(props: { path: () => UserPath; setPath: (p: UserPath) => void }) {
   return (
     <div>
-      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">Choose Your Path</h2>
-      <p class="text-sm text-ink-secondary mb-5">Each path unlocks features at different paces — all features available to everyone eventually.</p>
+      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">{t("Choose Your Path")}</h2>
+      <p class="text-sm text-ink-secondary mb-5">{t("Each path unlocks features at different paces")}</p>
       <div class="grid gap-3">
         <For each={PATH_OPTIONS}>
           {(option) => (
@@ -289,8 +289,8 @@ function StepChoosePath(props: { path: () => UserPath; setPath: (p: UserPath) =>
             >
               <span class="text-3xl shrink-0">{option.icon}</span>
               <div class="min-w-0 flex-1">
-                <p class="font-semibold text-ink-primary">{option.title}</p>
-                <p class="text-sm text-ink-secondary">{option.subtitle}</p>
+                <p class="font-semibold text-ink-primary">{t(option.title)}</p>
+                <p class="text-sm text-ink-secondary">{t(option.subtitle)}</p>
                 <p class="text-[0.65rem] text-accent/50 mt-1 leading-relaxed line-clamp-2" title={PATH_DESCRIPTIONS[option.id]}>
                   {PATH_DESCRIPTIONS[option.id]}
                 </p>
@@ -317,8 +317,8 @@ function StepChoosePath(props: { path: () => UserPath; setPath: (p: UserPath) =>
 function StepMotivation(props: { motivation: () => Motivation; setMotivation: (m: Motivation) => void }) {
   return (
     <div>
-      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">What Motivates You?</h2>
-      <p class="text-sm text-ink-secondary mb-5">Choose your adventure style</p>
+      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">{t("What Motivates You?")}</h2>
+      <p class="text-sm text-ink-secondary mb-5">{t("Choose your adventure style")}</p>
       <div class="grid gap-3">
         <For each={MOTIVATION_OPTIONS}>
           {(option) => (
@@ -332,9 +332,9 @@ function StepMotivation(props: { motivation: () => Motivation; setMotivation: (m
             >
               <span class="text-3xl shrink-0">{option.icon}</span>
               <div class="min-w-0">
-                <p class="font-semibold text-ink-primary">{option.title}</p>
-                <p class="text-sm text-ink-secondary">{option.subtitle}</p>
-                <p class="text-xs text-accent/70 mt-1 font-mono">{option.preview}</p>
+                <p class="font-semibold text-ink-primary">{t(option.title)}</p>
+                <p class="text-sm text-ink-secondary">{t(option.subtitle)}</p>
+                <p class="text-xs text-accent/70 mt-1 font-mono">{t(option.preview)}</p>
               </div>
               <span
                 class={`ml-auto shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -364,8 +364,8 @@ function StepFirstQuest(props: {
 }) {
   return (
     <div>
-      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">Your First Quest</h2>
-      <p class="text-sm text-ink-secondary mb-5">Complete these tasks to begin your journey</p>
+      <h2 class="text-xl font-display font-bold text-ink-primary mb-1">{t("Your First Quest")}</h2>
+      <p class="text-sm text-ink-secondary mb-5">{t("Complete these tasks to begin your journey")}</p>
       <div class="grid gap-3">
         <For each={FIRST_QUEST_TASKS}>
           {(task) => {
@@ -380,7 +380,7 @@ function StepFirstQuest(props: {
               >
                 <span class="text-2xl shrink-0">{isDone() ? "\u2705" : "\u2B55"}</span>
                 <p class={`flex-1 text-sm font-medium ${isDone() ? "text-success line-through opacity-70" : "text-ink-primary"}`}>
-                  {task.label}
+                  {t(task.label)}
                 </p>
                 <Show
                   when={task.id === "gift"}
@@ -394,7 +394,7 @@ function StepFirstQuest(props: {
                           : "bg-accent/10 text-accent hover:bg-accent/20"
                       }`}
                     >
-                      {task.button}
+                      {t(task.button)}
                     </a>
                   }
                 >
@@ -409,7 +409,7 @@ function StepFirstQuest(props: {
                           : "bg-coin/15 text-coin hover:bg-coin/25"
                     }`}
                   >
-                    {props.submitting() ? "Claiming..." : props.giftClaimed() ? "Claimed!" : task.button}
+                    {props.submitting() ? t("Claiming...") : props.giftClaimed() ? t("Claimed!") : t(task.button)}
                   </button>
                 </Show>
               </div>

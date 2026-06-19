@@ -121,7 +121,7 @@ export default function NewNotePage() {
         { label: "Notes", href: "/notes", icon: "📜" },
         { label: "New Note" },
       ]} />
-      <h1 class="text-2xl font-display font-bold text-ink-primary mb-6">New Note</h1>
+      <h1 class="text-xl sm:text-2xl font-display font-bold text-ink-primary mb-6">New Note</h1>
 
       <form onSubmit={handleCreate} class="space-y-4" novalidate>
         <div>
@@ -137,7 +137,7 @@ export default function NewNotePage() {
           />
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <label for="note-category" class="sr-only">Category</label>
           <input
             id="note-category"
@@ -145,7 +145,7 @@ export default function NewNotePage() {
             placeholder="Category (optional)"
             value={category()}
             onInput={(e) => setCategory(e.currentTarget.value)}
-            class="flex-1 text-sm border border-surface-border rounded px-2 py-1 bg-surface text-ink-primary focus:outline-none focus:ring-1 focus:ring-accent"
+            class="flex-1 w-full text-sm border border-surface-border rounded px-2 py-1 bg-surface text-ink-primary focus:outline-none focus:ring-1 focus:ring-accent"
           />
           <label class="flex items-center gap-1.5 text-sm text-ink-secondary cursor-pointer whitespace-nowrap">
             <input type="checkbox" checked={isPublic()} onChange={(e) => setIsPublic(e.currentTarget.checked)} class="rounded" />
@@ -177,7 +177,7 @@ export default function NewNotePage() {
           </div>
         </div>
 
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center bg-surface-elevated border border-surface-border rounded-lg p-0.5 gap-0.5">
             {(["edit", "split", "preview"] as ViewMode[]).map((mode) => (
               <button
@@ -198,7 +198,7 @@ export default function NewNotePage() {
           </button>
         </div>
 
-        <div class={`${viewMode() === "split" ? "grid grid-cols-2 gap-4" : ""}`}>
+        <div class={`${viewMode() === "split" ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : ""}`}>
           <Show when={viewMode() !== "preview"}>
             <div class="rounded-md border border-surface-border bg-surface p-3 focus-within:ring-1 focus-within:ring-accent transition-all min-h-[300px]">
               <BlockEditor blocks={blocks()} onBlocksChange={setBlocks} />

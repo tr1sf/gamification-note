@@ -125,7 +125,7 @@ export default function ChallengeCreatePage() {
   const totalProgress = () => actions().reduce((sum, a) => sum + a.progressValue, 0);
 
   return (
-    <div class="max-w-2xl mx-auto p-6 space-y-6">
+    <div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
       <h1 class="text-2xl font-display font-bold text-ink-primary">New Challenge</h1>
 
       {/* Basic Info */}

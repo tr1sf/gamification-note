@@ -6,6 +6,7 @@ import CharacterSheet from "~/components/profile/CharacterSheet";
 import StatsPanel from "~/components/profile/StatsPanel";
 import AchievementList, { type Achievement } from "~/components/profile/AchievementList";
 import InventoryPanel, { type InventoryItem } from "~/components/profile/InventoryPanel";
+import { t } from "~/lib/i18n";
 
 interface DashboardData {
   stats: Array<{ label: string; value: string | number; icon: string }>;
@@ -39,18 +40,18 @@ export default function ProfilePage() {
   });
 
   const tabs = [
-    { id: "stats" as const, label: "Stats", icon: "📊" },
-    { id: "achievements" as const, label: "Achievements", icon: "🏆" },
-    { id: "inventory" as const, label: "Inventory", icon: "🎒" },
+    { id: "stats" as const, label: t("Stats"), icon: "📊" },
+    { id: "achievements" as const, label: t("Achievements"), icon: "🏆" },
+    { id: "inventory" as const, label: t("Inventory"), icon: "🎒" },
   ];
 
   const userData = () => authUser();
   const g = () => gamification();
 
   return (
-    <div class="max-w-4xl mx-auto p-6 space-y-6">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
       <Show when={userData() && !authLoading()} fallback={
-        <div class="animate-pulse text-ink-secondary py-12 text-center">Loading profile...</div>
+        <div class="animate-pulse text-ink-secondary py-12 text-center">{t("Loading profile...")}</div>
       }>
         <CharacterSheet
           username={userData()!.username}
@@ -59,11 +60,11 @@ export default function ProfilePage() {
           inventory={dashboard()?.inventory}
         />
 
-        <div class="flex gap-1 border-b border-surface-border">
+        <div class="flex gap-1 border-b border-surface-border overflow-x-auto">
           {tabs.map((tab) => (
             <button
               onClick={() => setActiveTab(tab.id)}
-              class={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              class={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 ${
                 activeTab() === tab.id
                   ? "border-accent text-accent"
                   : "border-transparent text-ink-secondary hover:text-ink-primary"
@@ -86,8 +87,8 @@ export default function ProfilePage() {
         >
           <Show when={dashboard.error || !dashboard()}>
             <div class="text-center py-8">
-              <p class="text-error text-sm">Failed to load profile data</p>
-              <button onClick={() => refetch()} class="text-accent hover:underline text-sm mt-2">Try again</button>
+              <p class="text-error text-sm">{t("Failed to load profile data")}</p>
+              <button onClick={() => refetch()} class="text-accent hover:underline text-sm mt-2">{t("Try again")}</button>
             </div>
           </Show>
 

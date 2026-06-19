@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import { register, login } from "~/stores/auth";
 import { useNavigate } from "@solidjs/router";
+import { t } from "~/lib/i18n";
 
 function EyeIcon(props: { open: boolean }) {
   return (
@@ -49,7 +50,7 @@ export function RegisterForm() {
     setGeneralError("");
 
     if (password() !== confirmPassword()) {
-      setFieldErrors({ confirmPassword: "Passwords do not match" });
+      setFieldErrors({ confirmPassword: t("Passwords do not match") });
       return;
     }
 
@@ -71,7 +72,7 @@ export function RegisterForm() {
       }
       const { error: loginError } = await login(email(), password());
       if (loginError) {
-        setGeneralError("Account created but login failed. Please sign in.");
+        setGeneralError(t("Account created but login failed. Please sign in."));
         navigate("/login");
         return;
       }
@@ -91,16 +92,17 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} class="space-y-5" novalidate>
       <div class="text-center mb-2">
-        <h2 class="text-2xl font-display font-bold text-ink-primary">Join the Tavern</h2>
-        <p class="text-sm text-ink-secondary mt-1">Create your adventurer account</p>
+        <p class="text-3xl mb-2">📜</p>
+        <h2 class="text-2xl font-display font-bold text-ink-primary">{t("Join the Tavern")}</h2>
+        <p class="text-sm text-ink-secondary mt-1">{t("Create your adventurer identity")}</p>
       </div>
 
       {generalError() && (
-        <p class="text-sm bg-error-bg text-error rounded-lg px-4 py-2.5" role="alert">{generalError()}</p>
+        <p class="text-sm bg-error-bg text-error rounded-lg px-4 py-2.5 animate-fade-up" role="alert">{generalError()}</p>
       )}
 
       <div>
-        <label for="reg-email" class="block text-sm font-medium text-ink-secondary mb-1.5">Email address</label>
+        <label for="reg-email" class="block text-sm font-medium text-ink-secondary mb-1.5">{t("Email address")}</label>
         <input
           id="reg-email" type="email"
           placeholder="you@example.com"
@@ -115,7 +117,7 @@ export function RegisterForm() {
       </div>
 
       <div>
-        <label for="reg-username" class="block text-sm font-medium text-ink-secondary mb-1.5">Username</label>
+        <label for="reg-username" class="block text-sm font-medium text-ink-secondary mb-1.5">{t("Username")}</label>
         <input
           id="reg-username" type="text"
           placeholder="Choose a unique name"
@@ -133,7 +135,7 @@ export function RegisterForm() {
       </div>
 
       <div>
-        <label for="reg-password" class="block text-sm font-medium text-ink-secondary mb-1.5">Password</label>
+        <label for="reg-password" class="block text-sm font-medium text-ink-secondary mb-1.5">{t("Password")}</label>
         <div class="relative">
           <input
             id="reg-password" type={showPassword() ? "text" : "password"}
@@ -149,8 +151,8 @@ export function RegisterForm() {
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-secondary/50 hover:text-ink-secondary transition-colors p-1"
-            aria-label={showPassword() ? "Hide password" : "Show password"}
-            title={showPassword() ? "Hide password" : "Show password"}
+            aria-label={showPassword() ? t("Hide password") : t("Show password")}
+            title={showPassword() ? t("Hide password") : t("Show password")}
           >
             <EyeIcon open={showPassword()} />
           </button>
@@ -159,7 +161,7 @@ export function RegisterForm() {
       </div>
 
       <div>
-        <label for="reg-confirm" class="block text-sm font-medium text-ink-secondary mb-1.5">Confirm password</label>
+        <label for="reg-confirm" class="block text-sm font-medium text-ink-secondary mb-1.5">{t("Confirm password")}</label>
         <div class="relative">
           <input
             id="reg-confirm" type={showConfirmPassword() ? "text" : "password"}
@@ -175,8 +177,8 @@ export function RegisterForm() {
             type="button"
             onClick={() => setShowConfirmPassword((v) => !v)}
             class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-secondary/50 hover:text-ink-secondary transition-colors p-1"
-            aria-label={showConfirmPassword() ? "Hide confirm password" : "Show confirm password"}
-            title={showConfirmPassword() ? "Hide confirm password" : "Show confirm password"}
+            aria-label={showConfirmPassword() ? t("Hide confirm password") : t("Show confirm password")}
+            title={showConfirmPassword() ? t("Hide confirm password") : t("Show confirm password")}
           >
             <EyeIcon open={showConfirmPassword()} />
           </button>
@@ -192,12 +194,12 @@ export function RegisterForm() {
                disabled:opacity-50 disabled:cursor-not-allowed
                transition-all duration-150"
       >
-        {submitting() ? "Creating account..." : "Register"}
+        {submitting() ? t("Creating account...") : t("Register")}
       </button>
 
       <p class="text-center text-sm text-ink-secondary">
-        Already have an account?{" "}
-        <a href="/login" class="text-accent hover:underline font-medium">Sign in</a>
+        {t("Already have an account?")}{" "}
+        <a href="/login" class="text-accent hover:underline font-medium">{t("Sign in")}</a>
       </p>
     </form>
   );

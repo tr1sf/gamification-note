@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import { login } from "~/stores/auth";
 import { useNavigate } from "@solidjs/router";
+import { t } from "~/lib/i18n";
 
 function EyeIcon(props: { open: boolean }) {
   return (
@@ -75,17 +76,21 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} class="space-y-4" novalidate>
-      <h2 class="text-xl font-display font-bold text-ink-primary text-center">Sign in to the Tavern</h2>
+      <div class="text-center mb-2">
+        <p class="text-3xl mb-2">🏰</p>
+        <h2 class="text-xl font-display font-bold text-ink-primary">{t("Welcome back")}</h2>
+        <p class="text-sm text-ink-secondary mt-0.5">{t("Sign in to continue your adventure")}</p>
+      </div>
       {generalError() && (
-        <p class="text-sm bg-error-bg text-error rounded-lg px-4 py-2.5" role="alert">{generalError()}</p>
+        <p class="text-sm bg-error-bg text-error rounded-lg px-4 py-2.5 animate-fade-up" role="alert">{generalError()}</p>
       )}
       <div>
-        <label for="login-email" class="block text-sm font-medium text-ink-secondary mb-1.5">Email or Username</label>
+        <label for="login-email" class="block text-sm font-medium text-ink-secondary mb-1.5">{t("Email or Username")}</label>
         <input id="login-email" type="text" value={email()} onInput={(e) => { setEmail(e.currentTarget.value); clearField("login"); }} class={inputClass("login")} required autocomplete="username" autofocus aria-describedby={fieldErrors().login ? "login-email-error" : undefined} aria-invalid={!!fieldErrors().login} />
         {fieldErrors().login && <p id="login-email-error" class="mt-1 text-xs text-error">{fieldErrors().login}</p>}
       </div>
       <div>
-        <label for="login-password" class="block text-sm font-medium text-ink-secondary mb-1.5">Password</label>
+        <label for="login-password" class="block text-sm font-medium text-ink-secondary mb-1.5">{t("Password")}</label>
         <div class="relative mt-1">
           <input
             id="login-password"
@@ -102,8 +107,8 @@ export function LoginForm() {
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-secondary/50 hover:text-ink-secondary transition-colors p-1"
-            aria-label={showPassword() ? "Hide password" : "Show password"}
-            title={showPassword() ? "Hide password" : "Show password"}
+            aria-label={showPassword() ? t("Hide password") : t("Show password")}
+            title={showPassword() ? t("Hide password") : t("Show password")}
           >
             <EyeIcon open={showPassword()} />
           </button>
@@ -111,10 +116,10 @@ export function LoginForm() {
         {fieldErrors().password && <p id="login-password-error" class="mt-1 text-xs text-error">{fieldErrors().password}</p>}
       </div>
       <button type="submit" disabled={submitting()} class="w-full rounded-lg bg-accent px-4 py-2.5 text-surface-overlay font-semibold hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150">
-        {submitting() ? "Entering..." : "Enter Tavern"}
+        {submitting() ? t("Entering...") : t("Enter Tavern")}
       </button>
       <p class="text-center text-sm text-ink-secondary">
-        No account? <a href="/register" class="text-accent hover:underline">Register</a>
+        {t("No account?")} <a href="/register" class="text-accent hover:underline">{t("Register")}</a>
       </p>
     </form>
   );

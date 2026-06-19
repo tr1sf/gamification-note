@@ -1,4 +1,5 @@
 import { A } from "@solidjs/router";
+import { t } from "~/lib/i18n";
 
 export default function Home() {
   return (
@@ -8,7 +9,7 @@ export default function Home() {
       <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-px h-32 bg-gradient-to-t from-accent/30 to-transparent" aria-hidden="true" />
 
       <div class="relative z-10 max-w-2xl mx-auto">
-        <p class="text-sm font-medium text-accent tracking-widest uppercase mb-6">A Gamified Note-Taking Experience</p>
+        <p class="text-sm font-medium text-accent tracking-widest uppercase mb-6">{t("A Gamified Note-Taking Experience")}</p>
         <h1 class="text-6xl sm:text-7xl font-display font-extrabold text-ink-primary mb-6 leading-tight">
           TavernoteX
         </h1>
@@ -18,18 +19,18 @@ export default function Home() {
           <span class="block h-px flex-1 max-w-16 bg-gradient-to-l from-transparent to-surface-border" />
         </div>
         <p class="text-xl sm:text-2xl text-ink-secondary mb-10 max-w-lg mx-auto leading-relaxed">
-          Your tavern of knowledge. Write scrolls, complete quests, and level up your learning journey.
+          {t("Your tavern of knowledge")}. {t("Write scrolls, complete quests, and level up your learning journey.")}
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
           <A href="/login" class="px-8 py-3.5 bg-accent text-surface-overlay rounded-lg font-semibold text-lg hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20 transition-all duration-200 active:scale-[0.98]">
-            Enter the Tavern
+            {t("Enter the Tavern →")}
           </A>
           <A href="/register" class="px-8 py-3.5 border-2 border-surface-border text-ink-primary rounded-lg font-semibold text-lg hover:border-accent/40 hover:bg-surface-elevated hover:shadow-md transition-all duration-200 active:scale-[0.98]">
-            Create Account
+            {t("Create account")}
           </A>
         </div>
         <p class="text-sm text-ink-secondary">
-          Start your knowledge journey today
+          {t("Start your knowledge journey today")}
         </p>
       </div>
     </main>

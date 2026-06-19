@@ -47,7 +47,7 @@ export default function GuildChat(props: GuildChatProps) {
   const currentUser = () => user();
 
   return (
-    <div class="flex flex-col h-[60vh] rounded-lg border border-surface-border bg-surface">
+    <div class="flex flex-col h-[40vh] sm:h-[60vh] rounded-lg border border-surface-border bg-surface">
       <div
         ref={scrollContainer}
         class="flex-1 overflow-y-auto p-4 space-y-3"
@@ -79,7 +79,7 @@ export default function GuildChat(props: GuildChatProps) {
                   }`}
                 >
                   <div
-                    class="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold shrink-0"
+                    class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold shrink-0"
                     aria-label={msg.user.username}
                   >
                     {msg.user.username.charAt(0).toUpperCase()}
@@ -123,7 +123,7 @@ export default function GuildChat(props: GuildChatProps) {
 
       <form
         onSubmit={handleSubmit}
-        class="border-t border-surface-border p-3 flex gap-2"
+        class="border-t border-surface-border p-2 sm:p-3 flex gap-1.5 sm:gap-2 sticky bottom-0 bg-surface"
       >
         <label for="chat-input" class="sr-only">Message</label>
         <input

@@ -2,6 +2,7 @@ import { Show, createMemo, createSignal } from "solid-js";
 import { gamification, xpProgressInLevel } from "~/stores/user";
 import { authFetch } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
+import { t } from "~/lib/i18n";
 import XPBar from "~/components/gamification/XPBar";
 import CoinDisplay from "~/components/gamification/CoinDisplay";
 import StreakTracker from "~/components/gamification/StreakTracker";
@@ -60,9 +61,9 @@ export default function CharacterSheet(props: CharacterSheetProps) {
     try {
       const res = await authFetch("/api/users/avatar", { method: "POST", body: formData });
       const json = await res.json();
-      if (json.success) { addToast("Avatar updated!", "success"); location.reload(); }
-      else addToast(json.error?.message || "Upload failed", "error");
-    } catch { addToast("Upload failed", "error"); }
+      if (json.success) { addToast(t("Avatar updated!"), "success"); location.reload(); }
+      else addToast(json.error?.message || t("Upload failed"), "error");
+    } catch { addToast(t("Upload failed"), "error"); }
     setUploading(false);
   };
 
@@ -73,7 +74,7 @@ export default function CharacterSheet(props: CharacterSheetProps) {
   };
 
   return (
-    <div class="p-6 rounded-xl border border-surface-border bg-surface-elevated">
+    <div class="p-4 sm:p-6 rounded-xl border border-surface-border bg-surface-elevated">
       <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
         <div class="relative shrink-0 group cursor-pointer" onClick={() => fileInput?.click()} title="Click to change avatar">
           <div
@@ -90,7 +91,7 @@ export default function CharacterSheet(props: CharacterSheetProps) {
           </div>
           {uploading() && (
             <div class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
-              <span class="text-white text-xs">Uploading...</span>
+              <span class="text-white text-xs">{t("Uploading...")}</span>
             </div>
           )}
           <div class="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -115,7 +116,7 @@ export default function CharacterSheet(props: CharacterSheetProps) {
             </Show>
           </div>
           <p class="text-sm text-accent font-semibold">{g().title}</p>
-          <p class="text-xs text-ink-secondary mt-0.5">No Guild</p>
+          <p class="text-xs text-ink-secondary mt-0.5">{t("No Guild")}</p>
 
           <div class="flex items-center justify-center sm:justify-start gap-4 mt-3">
             <CoinDisplay coins={g().coins} />
@@ -127,7 +128,7 @@ export default function CharacterSheet(props: CharacterSheetProps) {
           </div>
 
           <p class="text-xs text-ink-secondary mt-2">
-            {xpProgress().current.toLocaleString()} XP to next level
+            {xpProgress().current.toLocaleString()} {t("XP to next level")}
           </p>
         </div>
       </div>

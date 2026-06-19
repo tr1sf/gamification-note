@@ -41,7 +41,7 @@ export default function BossPage() {
   };
 
   return (
-    <div class="max-w-2xl mx-auto p-6 space-y-6">
+    <div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
       <A
         href="/challenges"
         class="text-sm text-ink-secondary hover:text-ink-primary"
@@ -62,8 +62,8 @@ export default function BossPage() {
               }`}
             >
               <div class="flex items-center gap-4 mb-4">
-                <Show when={b().iconImageUrl} fallback={<span class="text-5xl">{b().bossEmoji ?? "👻"}</span>}>
-                  <img src={b().iconImageUrl} alt={b().bossName} class="w-24 h-24 object-cover rounded-xl ring-2 ring-error/20" />
+                <Show when={b().iconImageUrl} fallback={<span class="text-4xl sm:text-5xl">{b().bossEmoji ?? "👻"}</span>}>
+                  <img src={b().iconImageUrl} alt={b().bossName} class="w-16 h-16 sm:w-24 sm:h-24 object-cover rounded-xl ring-2 ring-error/20" />
                 </Show>
                 <div>
                   <h1 class="text-2xl font-display font-bold text-ink-primary">
@@ -114,7 +114,7 @@ export default function BossPage() {
               </Show>
             </div>
             <Show when={!isDead()}>
-              <div class="flex gap-3">
+              <div class="flex flex-col sm:flex-row gap-3">
                 <A
                   href="/notes/new"
                   class="flex-1 py-3 bg-surface-elevated border border-surface-border rounded-xl text-center hover:border-accent/30 transition-colors"
@@ -150,7 +150,7 @@ export default function BossPage() {
                   </p>
                 }
               >
-                <div class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="space-y-2 max-h-32 sm:max-h-64 overflow-y-auto">
                   <For each={b().attacks ?? []}>
                     {(a: any) => (
                       <div class="text-xs text-ink-secondary flex justify-between py-1 border-b border-surface-border/30">

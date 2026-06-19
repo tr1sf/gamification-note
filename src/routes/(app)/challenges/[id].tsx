@@ -134,7 +134,7 @@ export default function ChallengeDetailPage() {
   });
 
   return (
-    <div class="max-w-3xl mx-auto p-6 space-y-6">
+    <div class="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
       <A href="/challenges" class="text-sm text-ink-secondary hover:text-ink-primary transition-colors">
         ← Back to Challenges
       </A>

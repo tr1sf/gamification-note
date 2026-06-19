@@ -262,7 +262,7 @@ export default function GuildDetailPage() {
   };
 
   return (
-    <div class="max-w-4xl mx-auto p-6 space-y-4">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
       <Show
         when={!loading() && guild()}
         fallback={
@@ -358,11 +358,11 @@ export default function GuildDetailPage() {
           </div>
         </Show>
 
-        <div class="flex gap-1 border-b border-surface-border">
-          <button
-            onClick={() => setTab("chat")}
-            class={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab() === "chat"
+        <div class="flex gap-1 border-b border-surface-border overflow-x-auto">
+            <button
+              onClick={() => setTab("chat")}
+              class={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 ${
+                tab() === "chat"
                 ? "border-accent text-accent"
                 : "border-transparent text-ink-secondary hover:text-ink-primary"
             }`}
@@ -370,10 +370,10 @@ export default function GuildDetailPage() {
             <span aria-hidden="true" class="mr-1.5">💬</span>
             Chat
           </button>
-          <button
-            onClick={() => setTab("scrolls")}
-            class={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab() === "scrolls"
+            <button
+              onClick={() => setTab("scrolls")}
+              class={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 ${
+                tab() === "scrolls"
                 ? "border-accent text-accent"
                 : "border-transparent text-ink-secondary hover:text-ink-primary"
             }`}
@@ -381,10 +381,10 @@ export default function GuildDetailPage() {
             <span aria-hidden="true" class="mr-1.5">📜</span>
             Scrolls
           </button>
-          <button
-            onClick={() => setTab("tasks")}
-            class={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab() === "tasks"
+            <button
+              onClick={() => setTab("tasks")}
+              class={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 ${
+                tab() === "tasks"
                 ? "border-accent text-accent"
                 : "border-transparent text-ink-secondary hover:text-ink-primary"
             }`}
@@ -392,10 +392,10 @@ export default function GuildDetailPage() {
             <span aria-hidden="true" class="mr-1.5">📋</span>
             Tasks
           </button>
-          <button
-            onClick={() => setTab("members")}
-            class={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab() === "members"
+            <button
+              onClick={() => setTab("members")}
+              class={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 ${
+                tab() === "members"
                 ? "border-accent text-accent"
                 : "border-transparent text-ink-secondary hover:text-ink-primary"
             }`}

@@ -63,10 +63,10 @@ export default function NotesPage() {
   const isSearching = () => search().length >= 2 && searchResults() !== null;
 
   return (
-    <div class="max-w-3xl mx-auto p-6">
+    <div class="max-w-3xl mx-auto p-4 sm:p-6">
       <Breadcrumb items={[{ label: "My Notes" }]} />
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-display font-bold text-ink-primary">My Notes</h1>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+        <h1 class="text-xl sm:text-2xl font-display font-bold text-ink-primary">My Notes</h1>
         <A href="/notes/new" class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-surface-overlay rounded-lg text-sm font-medium hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] transition-all duration-150">
           + New Note
         </A>

@@ -92,8 +92,8 @@ export default function PotionMatch() {
   };
 
   return (
-    <div class="max-w-2xl mx-auto p-6 space-y-6">
-      <h1 class="text-2xl font-display font-bold text-ink-primary">🧪 Potion Match</h1>
+    <div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <h1 class="text-xl sm:text-2xl font-display font-bold text-ink-primary">🧪 Potion Match</h1>
       <Show when={gameState() === "menu"} fallback={
         <Show when={gameState() === "playing"} fallback={
           /* Done screen */
