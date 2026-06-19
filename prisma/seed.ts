@@ -51,114 +51,98 @@ async function main() {
   }
   const quests = await prisma.quest.findMany({ select: { id: true } });
 
-  // Cosmetic items (only when none exist yet)
-  const items = (await prisma.cosmeticItem.count()) > 0 ? [] : await Promise.all([
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Scholar Quill',
-        description: 'A fine quill for the learned scribe',
-        type: 'badge',
-        coinCost: 50,
-        rarity: 'common',
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Golden Frame',
-        description: 'A gilded frame for your avatar',
-        type: 'avatar_frame',
-        coinCost: 100,
-        rarity: 'rare',
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Obsidian Theme',
-        description: 'Dark and elegant tavern theme',
-        type: 'theme',
-        coinCost: 200,
-        rarity: 'epic',
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Emerald Ink',
-        description: 'Vibrant green ink for your name',
-        type: 'name_color',
-        coinCost: 75,
-        rarity: 'uncommon',
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Ancient Map',
-        description: 'A weathered map border for your profile',
-        type: 'avatar_frame',
-        coinCost: 150,
-        rarity: 'rare',
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'XP Booster (1h)',
-        description: 'Double XP for 1 hour',
-        type: 'consumable',
-        coinCost: 30,
-        rarity: 'common',
-        category: { usageType: 'xp_boost', durationMin: 60 },
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Focus Potion',
-        description: 'Double word-count bonus for 30 min',
-        type: 'consumable',
-        coinCost: 20,
-        rarity: 'common',
-        category: { usageType: 'focus_potion', durationMin: 30 },
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Streak Freeze',
-        description: 'Miss 1 day without breaking streak',
-        type: 'consumable',
-        coinCost: 50,
-        rarity: 'rare',
-        category: { usageType: 'streak_freeze' },
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Quest Reroll',
-        description: 'Replace 1 active quest',
-        type: 'consumable',
-        coinCost: 15,
-        rarity: 'common',
-        category: { usageType: 'quest_reroll' },
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Loot Box',
-        description: 'Random badge or effect',
-        type: 'consumable',
-        coinCost: 75,
-        rarity: 'epic',
-        category: { usageType: 'loot_box' },
-      },
-    }),
-    prisma.cosmeticItem.create({
-      data: {
-        name: 'Alchemy Ticket',
-        description: 'Play Potion Match — match the emoji with its English word!',
-        type: 'consumable',
-        coinCost: 15,
-        rarity: 'common',
-        category: { usageType: 'potion_ticket' },
-      },
-    }),
-  ]);
+  // Cosmetic items — seeded idempotently by name so re-running adds only new items.
+  const itemDefs = [
+    {
+      name: 'Scholar Quill',
+      description: 'A fine quill for the learned scribe',
+      type: 'badge',
+      coinCost: 50,
+      rarity: 'common',
+    },
+    {
+      name: 'Golden Frame',
+      description: 'A gilded frame for your avatar',
+      type: 'avatar_frame',
+      coinCost: 100,
+      rarity: 'rare',
+    },
+    {
+      name: 'Obsidian Theme',
+      description: 'Dark and elegant tavern theme',
+      type: 'theme',
+      coinCost: 200,
+      rarity: 'epic',
+    },
+    {
+      name: 'Emerald Ink',
+      description: 'Vibrant green ink for your name',
+      type: 'name_color',
+      coinCost: 75,
+      rarity: 'uncommon',
+    },
+    {
+      name: 'Ancient Map',
+      description: 'A weathered map border for your profile',
+      type: 'avatar_frame',
+      coinCost: 150,
+      rarity: 'rare',
+    },
+    {
+      name: 'XP Booster (1h)',
+      description: 'Double XP for 1 hour',
+      type: 'consumable',
+      coinCost: 30,
+      rarity: 'common',
+      category: { usageType: 'xp_boost', durationMin: 60 },
+    },
+    {
+      name: 'Focus Potion',
+      description: 'Double word-count bonus for 30 min',
+      type: 'consumable',
+      coinCost: 20,
+      rarity: 'common',
+      category: { usageType: 'focus_potion', durationMin: 30 },
+    },
+    {
+      name: 'Streak Freeze',
+      description: 'Miss 1 day without breaking streak',
+      type: 'consumable',
+      coinCost: 50,
+      rarity: 'rare',
+      category: { usageType: 'streak_freeze' },
+    },
+    {
+      name: 'Quest Reroll',
+      description: 'Replace 1 active quest',
+      type: 'consumable',
+      coinCost: 15,
+      rarity: 'common',
+      category: { usageType: 'quest_reroll' },
+    },
+    {
+      name: 'Loot Box',
+      description: 'Random badge or effect',
+      type: 'consumable',
+      coinCost: 75,
+      rarity: 'epic',
+      category: { usageType: 'loot_box' },
+    },
+    {
+      name: 'Alchemy Ticket',
+      description: 'Play Potion Match — match the emoji with its English word!',
+      type: 'consumable',
+      coinCost: 15,
+      rarity: 'common',
+      category: { usageType: 'potion_ticket' },
+    },
+  ];
+
+  let newItems = 0;
+  for (const def of itemDefs) {
+    const exists = await prisma.cosmeticItem.findFirst({ where: { name: def.name }, select: { id: true } });
+    if (!exists) { await prisma.cosmeticItem.create({ data: def as any }); newItems++; }
+  }
 
   // Beginner Badge — idempotent
   const beginnerExists = await prisma.cosmeticItem.findFirst({ where: { name: "Beginner Badge" }, select: { id: true } });
@@ -250,7 +234,7 @@ async function main() {
     if (!exists) { await prisma.achievement.create({ data: def }); newAchievements++; }
   }
 
-  console.log(`Seeded: +${newQuests} new quests (${quests.length} total), ${items.length} new items, +${newAchievements} new achievements`);
+  console.log(`Seeded: +${newQuests} new quests (${quests.length} total), +${newItems} new items, +${newAchievements} new achievements`);
 
   // Challenge Templates
   const templateDefs = [
