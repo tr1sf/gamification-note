@@ -13,10 +13,17 @@ export async function GET({ request }: { request: Request }) {
     })
   ).map((i) => i.cosmeticItemId);
 
+  // Consumables are repeatable, so show them even if owned.
+  // Badges/frames/etc. should only show once.
   const items = await prisma.cosmeticItem.findMany({
     where: {
       isActive: true,
-      id: ownedItemIds.length > 0 ? { notIn: ownedItemIds } : undefined,
+      OR: [
+        { type: "consumable" },
+        ownedItemIds.length > 0
+          ? { type: { not: "consumable" }, id: { notIn: ownedItemIds } }
+          : { type: { not: "consumable" } },
+      ],
     },
     orderBy: { coinCost: "asc" },
   });

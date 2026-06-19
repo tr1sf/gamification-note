@@ -21,7 +21,8 @@ export async function POST({ request, params }: { request: Request; params: { it
     },
   });
 
-  if (existing) {
+  // Non-consumables can only be owned once.
+  if (existing && item.type !== "consumable") {
     return error("ALREADY_OWNED", "You already own this item", 409);
   }
 
@@ -41,19 +42,27 @@ export async function POST({ request, params }: { request: Request; params: { it
         data: { coins: { decrement: item.coinCost } },
       });
 
-      const inventoryItem = await tx.userInventory.create({
-        data: {
-          userId: user.userId,
-          cosmeticItemId: params.itemId,
-        },
-      });
-
+      let inventoryItem;
       const category = item.category as Record<string, unknown> | null;
+      let expiresAt: Date | undefined;
       if (category?.durationMin && typeof category.durationMin === "number") {
-        const expiresAt = new Date(Date.now() + category.durationMin * 60 * 1000);
-        await tx.userInventory.update({
-          where: { id: inventoryItem.id },
-          data: { expiresAt },
+        expiresAt = new Date(Date.now() + category.durationMin * 60 * 1000);
+      }
+
+      if (item.type === "consumable" && existing) {
+        // Stack consumables by incrementing quantity.
+        inventoryItem = await tx.userInventory.update({
+          where: { id: existing.id },
+          data: { quantity: { increment: 1 }, ...(expiresAt ? { expiresAt } : {}) },
+        });
+      } else {
+        inventoryItem = await tx.userInventory.create({
+          data: {
+            userId: user.userId,
+            cosmeticItemId: params.itemId,
+            quantity: 1,
+            ...(expiresAt ? { expiresAt } : {}),
+          },
         });
       }
 
