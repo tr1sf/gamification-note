@@ -1,4 +1,4 @@
-import { createSignal, For, Show, onCleanup } from "solid-js";
+import { createSignal, For, Show, onCleanup, onMount } from "solid-js";
 import { authFetch } from "~/stores/auth";
 import { addToast, showReward } from "~/stores/ui";
 import { applyReward } from "~/stores/user";
@@ -22,7 +22,16 @@ export default function PotionMatch() {
   const [gameState, setGameState] = createSignal<"menu" | "playing" | "done">("menu");
   const [result, setResult] = createSignal<any>(null);
   const [timeLeft, setTimeLeft] = createSignal(45);
+  const [ticketCount, setTicketCount] = createSignal(0);
   let timer: ReturnType<typeof setInterval> | null = null;
+
+  const loadTickets = async () => {
+    const res = await authFetch("/api/minigames/potion/tickets");
+    const json = await res.json();
+    if (json.success) setTicketCount(json.data.count ?? 0);
+  };
+
+  onMount(() => { loadTickets(); });
 
   onCleanup(() => clearInterval(timer as ReturnType<typeof setInterval>));
 
@@ -104,7 +113,7 @@ export default function PotionMatch() {
             <Show when={(result()?.xp > 0 || result()?.coins > 0)}>
               <div class="flex justify-center gap-4 text-sm"><span class="text-xp">+{result()?.xp} XP</span><span class="text-coin">+{result()?.coins} coins</span></div>
             </Show>
-            <button onClick={() => setGameState("menu")} class="px-6 py-2 bg-accent text-white rounded-lg font-medium">Play Again</button>
+            <button onClick={() => { setGameState("menu"); loadTickets(); }} class="px-6 py-2 bg-accent text-white rounded-lg font-medium">Play Again</button>
           </div>
         }>
           {/* Playing screen */}
@@ -139,8 +148,16 @@ export default function PotionMatch() {
             </button>
           )}</For>
         </div>
-        <button onClick={startGame} class="w-full py-3 bg-accent text-white rounded-xl font-semibold text-lg">Play (1 Alchemy Ticket) 🎫</button>
-        <p class="text-xs text-ink-secondary/60 text-center mt-2">Buy Alchemy Tickets from the Shop (15 coins each)</p>
+        <div class="flex items-center justify-between bg-surface-elevated rounded-lg border border-surface-border px-4 py-2 mb-4">
+          <span class="text-sm text-ink-secondary">Alchemy Tickets</span>
+          <span class="text-sm font-bold text-ink-primary">{ticketCount()} 🎫</span>
+        </div>
+        <button onClick={startGame} disabled={ticketCount() <= 0} class="w-full py-3 bg-accent text-white rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+          {ticketCount() > 0 ? "Play (1 Alchemy Ticket) 🎫" : "Out of tickets 🎫"}
+        </button>
+        <Show when={ticketCount() <= 0}>
+          <p class="text-xs text-error/80 text-center mt-2">Buy Alchemy Tickets from the Shop (15 coins each)</p>
+        </Show>
       </Show>
     </div>
   );

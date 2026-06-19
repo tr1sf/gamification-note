@@ -12,6 +12,7 @@ export interface InventoryItem {
   itemType: string;
   itemCategory?: { usageType?: string };
   rarity: string;
+  quantity: number;
   equipped: boolean;
   owned: boolean;
   expiresAt: string | null;
@@ -110,9 +111,16 @@ export default function InventoryPanel(props: InventoryPanelProps) {
                     : "border-surface-border bg-surface hover:shadow-sm"
                 }`}
               >
-                <Show when={item.icon.startsWith("/")} fallback={<span class="text-2xl" aria-hidden="true">{item.icon}</span>}>
-                  <img src={item.icon} alt={item.name} class="w-8 h-8 object-contain" />
-                </Show>
+                <div class="relative inline-block">
+                  <Show when={item.icon.startsWith("/")} fallback={<span class="text-2xl" aria-hidden="true">{item.icon}</span>}>
+                    <img src={item.icon} alt={item.name} class="w-8 h-8 object-contain" />
+                  </Show>
+                  <Show when={item.itemType === CONSUMABLE_TYPE && item.quantity > 1}>
+                    <span class="absolute -top-1.5 -right-2 min-w-[1.25rem] h-5 flex items-center justify-center px-1 text-[10px] font-bold rounded-full bg-error text-white border border-surface">
+                      {item.quantity}
+                    </span>
+                  </Show>
+                </div>
                 <p class="text-xs font-semibold text-ink-primary mt-1 truncate">{item.name}</p>
                 <span
                   class={`inline-block text-[10px] px-1.5 py-0.5 rounded-full mt-1 font-medium border ${
