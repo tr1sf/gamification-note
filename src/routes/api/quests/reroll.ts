@@ -38,7 +38,14 @@ export async function POST({ request }: { request: Request }) {
 
   await prisma.$transaction(async (tx) => {
     await tx.userQuest.delete({ where: { id: userQuest.id } });
-    await tx.userInventory.delete({ where: { id: inventoryId } });
+    if ((reroll.quantity ?? 1) > 1) {
+      await tx.userInventory.update({
+        where: { id: inventoryId },
+        data: { quantity: { decrement: 1 } },
+      });
+    } else {
+      await tx.userInventory.delete({ where: { id: inventoryId } });
+    }
     await tx.userQuest.create({
       data: {
         userId: user.userId,

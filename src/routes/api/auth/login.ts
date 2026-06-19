@@ -96,8 +96,8 @@ async function handleLogin({ request }: { request: Request }) {
   let streak = await calculateLoginStreak(user.id);
 
   if (streak === 0) {
-    const freezes = await prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT ui.id FROM "UserInventory" ui
+    const freezes = await prisma.$queryRaw<Array<{ id: string; quantity: number }>>`
+      SELECT ui.id, ui.quantity FROM "UserInventory" ui
       JOIN "CosmeticItem" ci ON ui."cosmeticItemId" = ci.id
       WHERE ui."userId" = ${user.id}::uuid
         AND ci.category->>'usageType' = 'streak_freeze'
@@ -106,7 +106,14 @@ async function handleLogin({ request }: { request: Request }) {
     const hasFreeze = freezes.length > 0;
 
     if (hasFreeze) {
-      await prisma.userInventory.delete({ where: { id: freezes[0].id } });
+      if ((freezes[0].quantity ?? 1) > 1) {
+        await prisma.userInventory.update({
+          where: { id: freezes[0].id },
+          data: { quantity: { decrement: 1 } },
+        });
+      } else {
+        await prisma.userInventory.delete({ where: { id: freezes[0].id } });
+      }
       streak = user.streak;
     }
   }

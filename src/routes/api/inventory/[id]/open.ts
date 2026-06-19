@@ -26,10 +26,17 @@ export async function POST({ request, params }: { request: Request; params: { id
   await prisma.$transaction(async (tx) => {
     await tx.userInventory.upsert({
       where: { userId_cosmeticItemId: { userId: user.userId, cosmeticItemId: randomItem.id } },
-      create: { userId: user.userId, cosmeticItemId: randomItem.id },
-      update: {},
+      create: { userId: user.userId, cosmeticItemId: randomItem.id, quantity: 1 },
+      update: { quantity: { increment: 1 } },
     });
-    await tx.userInventory.delete({ where: { id: params.id } });
+    if ((inv.quantity ?? 1) > 1) {
+      await tx.userInventory.update({
+        where: { id: params.id },
+        data: { quantity: { decrement: 1 } },
+      });
+    } else {
+      await tx.userInventory.delete({ where: { id: params.id } });
+    }
   });
 
   return success({
