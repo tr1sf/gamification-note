@@ -24,6 +24,8 @@ model User {
   refreshTokenHash   String?
   lastLoginAt      DateTime?
   emailVerifiedAt  DateTime?
+  securityQuestion    String?   // user-chosen prompt for password recovery
+  securityAnswerHash  String?   // bcrypt hash of the normalized answer
   isBanned         Boolean   @default(false)
   notificationPrefs Json?
   createdAt        DateTime  @default(now())
@@ -207,6 +209,7 @@ model UserInventory {
   id             String    @id @default(uuid()) @db.Uuid
   userId         String    @db.Uuid
   cosmeticItemId String    @db.Uuid
+  quantity       Int       @default(1)
   isEquipped     Boolean   @default(false)
   purchasedAt    DateTime  @default(now())
   expiresAt      DateTime?
