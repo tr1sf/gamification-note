@@ -18,10 +18,17 @@ export async function POST({ request }: { request: Request }) {
     where: { userId: user.userId, item: { name: "Alchemy Ticket" } },
     include: { item: true },
   });
-  if (!ticket) return error("NO_TICKET", "You need an Alchemy Ticket to play. Buy one from the shop!", 400);
+  if (!ticket || ticket.quantity <= 0) return error("NO_TICKET", "You need an Alchemy Ticket to play. Buy one from the shop!", 400);
 
-  // Consume ticket
-  await prisma.userInventory.delete({ where: { id: ticket.id } });
+  // Consume one ticket (decrement quantity; delete row when empty)
+  if (ticket.quantity > 1) {
+    await prisma.userInventory.update({
+      where: { id: ticket.id },
+      data: { quantity: { decrement: 1 } },
+    });
+  } else {
+    await prisma.userInventory.delete({ where: { id: ticket.id } });
+  }
 
   // Generate cards
   const pairs = getPairsForGame(category, pairCount);
