@@ -23,6 +23,7 @@ import { getCurrentLang, applyLanguage, t } from "~/lib/i18n";
 import Nelar from "~/components/mascot/Nelar";
 import { toggleSound, soundEnabled, initSoundPref, playSound } from "~/lib/sound";
 import BossDefeatOverlay from "~/components/gamification/BossDefeatOverlay";
+import DailyRewardBar from "~/components/gamification/DailyRewardBar";
 
 export default function AppLayout(props: { children?: JSX.Element }) {
   const navigate = useNavigate();
@@ -271,6 +272,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             <div class="hidden sm:block" classList={{ "ring-2 ring-accent/20 rounded-lg px-1 py-0.5": isCompetitive() }}>
               <Show when={!isMinimal()}>
                 <XPBar xp={g().xp} level={g().level} compact />
+                <DailyRewardBar />
               </Show>
             </div>
 
