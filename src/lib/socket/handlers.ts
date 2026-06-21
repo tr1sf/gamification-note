@@ -6,6 +6,7 @@ import { getEquippedCosmetics } from "~/lib/cosmetics/equipped";
 
 const guildMessageRateLimit = new Map<string, number[]>();
 const noteEditingLocks = new Map<string, { userId: string; expiresAt: number }>();
+const onlineUsers = new Map<string, Set<string>>(); // guildId -> Set<userId>
 
 const EDIT_LOCK_TTL = 5 * 60 * 1000;
 const RATE_LIMIT_WINDOW = 10000;
@@ -74,6 +75,11 @@ export function registerHandlers(socket: Socket): void {
     }
     const room = `guild:${guildId}`;
     socket.join(room);
+    // Track presence
+    if (!onlineUsers.has(guildId)) onlineUsers.set(guildId, new Set());
+    onlineUsers.get(guildId)!.add(userId);
+    const io = getIO();
+    io.to(room).emit("presence:update", { userId, status: "online" });
     socket.to(room).emit("guild:user-joined", { userId, username });
   });
 
@@ -81,6 +87,9 @@ export function registerHandlers(socket: Socket): void {
     if (!guildId) return;
     const room = `guild:${guildId}`;
     socket.leave(room);
+    onlineUsers.get(guildId)?.delete(userId);
+    const io = getIO();
+    io.to(room).emit("presence:update", { userId, status: "offline" });
     socket.to(room).emit("guild:user-left", { userId, username });
   });
 
@@ -156,6 +165,17 @@ export function registerHandlers(socket: Socket): void {
     }
   );
 
+  socket.on("guild:typing", ({ guildId }: { guildId: string }) => {
+    if (!guildId) return;
+    const room = `guild:${guildId}`;
+    socket.to(room).emit("guild:typing", { userId, guildId });
+  });
+
+  socket.on("dm:typing", ({ conversationId }: { conversationId: string }) => {
+    if (!conversationId) return;
+    socket.to(`dm:${conversationId}`).emit("dm:typing", { userId, conversationId });
+  });
+
   socket.on("note:join", async ({ noteId }: { noteId: string }) => {
     if (!noteId) return;
     // Mirror the REST access rule (api/notes/[id].ts): only the owner or a
@@ -221,5 +241,13 @@ export function registerHandlers(socket: Socket): void {
 
   socket.on("disconnect", () => {
     cleanupEditingLocksForUser(userId);
+    // Clean up presence from all guilds
+    const io = getIO();
+    for (const [guildId, members] of onlineUsers) {
+      if (members.has(userId)) {
+        members.delete(userId);
+        io.to(`guild:${guildId}`).emit("presence:update", { userId, status: "offline" });
+      }
+    }
   });
 }
