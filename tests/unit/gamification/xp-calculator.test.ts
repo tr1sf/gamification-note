@@ -7,14 +7,14 @@ describe("XP Calculator", () => {
     expect(xp).toBe(10);
   });
 
-  it("awards diminishing XP for 7th note", () => {
+  it("awards flat XP for 7th note (daily cap enforced in grantReward)", () => {
     const xp = calculateXP("create_note", { wordCount: 50, structureScore: 5 }, 7);
-    expect(xp).toBe(5);
+    expect(xp).toBe(10);
   });
 
-  it("awards 1 XP for 20th note", () => {
+  it("awards flat XP for 20th note (daily cap enforced in grantReward)", () => {
     const xp = calculateXP("create_note", { wordCount: 50, structureScore: 5 }, 20);
-    expect(xp).toBe(1);
+    expect(xp).toBe(10);
   });
 
   it("awards 0 XP for low quality notes (structureScore < 3)", () => {
