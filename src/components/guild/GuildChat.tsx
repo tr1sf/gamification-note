@@ -1,10 +1,11 @@
-import { createSignal, For, Show, createEffect } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show, createEffect } from "solid-js";
 import type { ChatMessage } from "~/stores/guild";
 import { user } from "~/stores/auth";
 import { timeAgo } from "~/lib/time-ago";
 import CosmeticAvatar, { CosmeticName } from "~/components/cosmetics/CosmeticAvatar";
 import Nelar from "~/components/mascot/Nelar";
 import { t } from "~/lib/i18n";
+import { useSocket } from "~/lib/socket/client";
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "🔥", "👏"];
 
@@ -28,6 +29,46 @@ interface GuildChatProps {
 export default function GuildChat(props: GuildChatProps) {
   const [newMessage, setNewMessage] = createSignal("");
   const [sending, setSending] = createSignal(false);
+  const [typingUsers, setTypingUsers] = createSignal(new Map<string, number>());
+  const { socket } = useSocket();
+  let lastTypingEmit = 0;
+  const handleInput = (e: InputEvent) => {
+    const value = (e.target as HTMLInputElement).value;
+    setNewMessage(value);
+    const now = Date.now();
+    if (now - lastTypingEmit > 2000) {
+      socket()?.emit("guild:typing", { guildId: props.guildId });
+      lastTypingEmit = now;
+    }
+  };
+
+  onMount(() => {
+    const s = socket();
+    if (!s) return;
+    const handler = ({ userId }: { userId: string }) => {
+      setTypingUsers((prev) => {
+        const next = new Map(prev);
+        next.set(userId, Date.now() + 3000); // Clear after 3 seconds
+        return next;
+      });
+    };
+    s.on("guild:typing", handler);
+    onCleanup(() => s.off("guild:typing", handler));
+  });
+
+  // Auto-clear typing indicators
+  const interval = setInterval(() => {
+    setTypingUsers((prev) => {
+      const now = Date.now();
+      const next = new Map<string, number>();
+      for (const [uid, expires] of prev) {
+        if (expires > now) next.set(uid, expires);
+      }
+      return next;
+    });
+  }, 1000);
+  onCleanup(() => clearInterval(interval));
+
   let scrollContainer: HTMLDivElement | undefined;
   // Track whether the user is near the bottom so we don't yank them back
   // down when older messages are prepended (pagination) or when they've
@@ -228,7 +269,7 @@ export default function GuildChat(props: GuildChatProps) {
           type="text"
           value={newMessage()}
           disabled={sending()}
-          onInput={(e) => setNewMessage(e.currentTarget.value)}
+          onInput={handleInput}
           placeholder={t("Type a message...")}
           class="flex-1 rounded-md border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
           maxLength={2000}
@@ -250,6 +291,13 @@ export default function GuildChat(props: GuildChatProps) {
           {sending() ? t("Sending...") : t("Send")}
         </button>
       </form>
+      <Show when={typingUsers().size > 0}>
+        <div class="text-xs text-ink-secondary px-2 py-1">
+          {Array.from(typingUsers().keys()).length === 1
+            ? "Someone is typing..."
+            : `${typingUsers().size} people are typing...`}
+        </div>
+      </Show>
     </div>
   );
 }
