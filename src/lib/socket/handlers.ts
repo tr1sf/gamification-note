@@ -176,6 +176,47 @@ export function registerHandlers(socket: Socket): void {
     socket.to(`dm:${conversationId}`).emit("dm:typing", { userId, conversationId });
   });
 
+  socket.on("dm:join", ({ groupId }: { groupId: string }) => {
+    socket.join(`dm:${groupId}`);
+  });
+
+  socket.on("dm:leave", ({ groupId }: { groupId: string }) => {
+    socket.leave(`dm:${groupId}`);
+  });
+
+  socket.on("dm:send-message", async ({ groupId, content }: { groupId: string; content: string }) => {
+    if (!content || content.length > 2000) return;
+
+    // Verify membership
+    const membership = await prisma.directMessageGroupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!membership) return;
+
+    const message = await prisma.directMessage.create({
+      data: {
+        senderId: userId,
+        groupId,
+        content,
+      },
+    });
+
+    const sender = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true, avatarUrl: true },
+    });
+
+    const io = getIO();
+    io.to(`dm:${groupId}`).emit("dm:message", {
+      id: message.id,
+      senderId: userId,
+      groupId,
+      content: message.content,
+      sender,
+      createdAt: message.createdAt.toISOString(),
+    });
+  });
+
   socket.on("note:join", async ({ noteId }: { noteId: string }) => {
     if (!noteId) return;
     // Mirror the REST access rule (api/notes/[id].ts): only the owner or a
