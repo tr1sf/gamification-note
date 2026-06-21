@@ -7,16 +7,16 @@ import { createNotification } from "~/lib/socket/notifications";
 type RouteCtx = { request: Request; params: { id: string; userId: string } };
 
 // PATCH — change a member's role. Owner-only.
-//   role: "admin" | "member"  → promote/demote
-//   role: "owner"             → transfer ownership (demotes the current owner to admin)
+//   roleId: ID of the target GuildRole
+//   If the target role is the "Owner" role, ownership is transferred.
 export async function PATCH({ request, params }: RouteCtx) {
   const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const body = await request.json().catch(() => ({}));
-  const role = body.role as string;
-  if (!["owner", "admin", "member"].includes(role)) {
-    return error("VALIDATION_ERROR", "role must be owner, admin, or member", 400);
+  const roleId = body.roleId as string;
+  if (!roleId) {
+    return error("VALIDATION_ERROR", "roleId is required", 400);
   }
 
   const guild = await prisma.guild.findUnique({ where: { id: params.id } });
@@ -34,17 +34,37 @@ export async function PATCH({ request, params }: RouteCtx) {
   });
   if (!target) return error("NOT_FOUND", "Member not found", 404);
 
-  if (role === "owner") {
+  // Validate role exists and belongs to guild
+  const targetRole = await prisma.guildRole.findFirst({
+    where: { id: roleId, guildId: params.id },
+  });
+  if (!targetRole) return error("NOT_FOUND", "Role not found", 404);
+
+  // Determine the legacy role string for backwards compatibility
+  let legacyRole = "member";
+  if (targetRole.name === "Owner") legacyRole = "owner";
+  else if (targetRole.name === "Admin") legacyRole = "admin";
+  // else keep "member"
+
+  if (targetRole.name === "Owner") {
     // Transfer ownership: target becomes owner, old owner becomes admin.
+    // Find the Admin role for this guild
+    const adminRole = await prisma.guildRole.findFirst({
+      where: { guildId: params.id, name: "Admin" },
+    });
+    // If no Admin role, fallback to using the legacy role string "admin"
+    const adminRoleId = adminRole?.id;
+    const adminLegacyRole = "admin";
+
     await prisma.$transaction([
       prisma.guild.update({ where: { id: params.id }, data: { ownerId: params.userId } }),
       prisma.guildMember.update({
         where: { guildId_userId: { guildId: params.id, userId: params.userId } },
-        data: { role: "owner" },
+        data: { roleId, role: legacyRole },
       }),
       prisma.guildMember.update({
         where: { guildId_userId: { guildId: params.id, userId: user.userId } },
-        data: { role: "admin" },
+        data: { roleId: adminRoleId ?? target.roleId, role: adminLegacyRole },
       }),
     ]);
     createNotification(
@@ -56,26 +76,27 @@ export async function PATCH({ request, params }: RouteCtx) {
   } else {
     await prisma.guildMember.update({
       where: { guildId_userId: { guildId: params.id, userId: params.userId } },
-      data: { role },
+      data: { roleId, role: legacyRole },
     });
     createNotification(
       params.userId,
       "guild_invite",
-      role === "admin" ? `Promoted to admin in ${guild.name}` : `Role changed in ${guild.name}`,
-      role === "admin"
+      legacyRole === "admin" ? `Promoted to admin in ${guild.name}` : `Role changed in ${guild.name}`,
+      legacyRole === "admin"
         ? `${user.username} promoted you to admin.`
-        : `${user.username} set your role to member.`
+        : `${user.username} changed your role.`
     ).catch(() => {});
   }
 
   try {
     getIO().to(`guild:${params.id}`).emit("guild:role-changed", {
       userId: params.userId,
-      role,
+      roleId,
+      role: legacyRole,
     });
   } catch {}
 
-  return success({ userId: params.userId, role });
+  return success({ userId: params.userId, roleId, role: legacyRole });
 }
 
 // DELETE — kick a member. Owner or admin.
