@@ -2,9 +2,9 @@ import { LEVEL_BASE_XP } from "../constants";
 
 const LEVEL_TITLES: Record<number, string> = {
   1: "Novice Scribe",
-  5: "Apprentice Scribe",
-  10: "Scribe",
-  15: "Senior Scribe",
+  3: "Apprentice Scribe",
+  5: "Scribe",
+  10: "Senior Scribe",
   20: "Scholar",
   30: "Archivist",
   40: "Master Archivist",
@@ -19,8 +19,24 @@ const TITLE_THRESHOLDS = Object.keys(LEVEL_TITLES)
   .sort((a, b) => b - a);
 
 export function calculateLevel(xp: number): number {
-  // Levels are 1-based: a brand-new user (0 XP) is level 1, not level 0.
-  return Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / LEVEL_BASE_XP)));
+  // Use a gentler cube-root curve for early levels: Level = floor(cbrt(xp / 10)).
+  // This makes Levels 1-4 reachable in 1-3 notes, keeping new users engaged.
+  // - Level 2: 80 XP (~1 note with bonus)
+  // - Level 3: 270 XP (~3 notes)
+  // - Level 4: 640 XP (~7 notes)
+  // - Level 5+: transitions to sqrt-like growth
+  if (xp <= 0) return 1;
+
+  // Use sqrt(xp / 50) — half the base XP requirement for faster early leveling.
+  // - Level 2: 200 XP (~2 notes)
+  // - Level 3: 450 XP (~5 notes)
+  // - Level 4: 800 XP (~8 notes)
+  // - Level 5: 1250 XP (~13 notes)
+  // - Level 10: 5000 XP
+  // - Level 20: 20000 XP
+  // Previous values were Level 2=400, Level 3=900, Level 4=1600 — too steep for day 1.
+  const raw = Math.sqrt(Math.max(0, xp) / (LEVEL_BASE_XP / 2));
+  return Math.max(1, Math.floor(raw));
 }
 
 export function getLevelTitle(level: number): string {

@@ -80,6 +80,8 @@ function BlockRow(props: {
   onDragEnd: () => void;
   onDragOver: () => void;
   onDrop: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }) {
   const [local, setLocal] = createSignal(props.block.content);
   const [menuOpen, setMenuOpen] = createSignal(false);
@@ -238,9 +240,19 @@ function BlockRow(props: {
           draggable={true}
           onDragStart={props.onDragStart}
           onDragEnd={props.onDragEnd}
-          class="w-4 h-5 flex items-center justify-center rounded cursor-grab active:cursor-grabbing text-ink-secondary/40 hover:text-ink-primary hover:bg-surface-hover transition-colors"
-          title="Drag to reorder"
-          aria-label="Drag to reorder"
+          onKeyDown={(e) => {
+            if (e.key === "ArrowUp") { e.preventDefault(); props.onMoveUp(); }
+            else if (e.key === "ArrowDown") { e.preventDefault(); props.onMoveDown(); }
+            else if (e.key === "Enter" || e.key === " ") {
+              // Enter/Space on the handle announces "drag mode" — pointer only.
+              e.preventDefault();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          class="w-4 h-5 flex items-center justify-center rounded cursor-grab active:cursor-grabbing text-ink-secondary/40 hover:text-ink-primary hover:bg-surface-hover transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
+          title="Drag to reorder, or use Arrow Up/Down to move"
+          aria-label={`Drag handle for ${props.block.type} block. Use arrow keys to move up or down.`}
         >
           <DragHandle />
         </div>
@@ -256,6 +268,7 @@ function BlockRow(props: {
                 value={props.block.language ?? ""}
                 onInput={(e) => props.onUpdateLanguage(e.currentTarget.value)}
                 placeholder="language"
+                aria-label="Code block language"
                 class="w-full text-xs bg-transparent border-0 border-b border-surface-border outline-none text-ink-secondary/70 placeholder:text-ink-secondary/30 px-3 py-1"
               />
               <textarea
@@ -568,6 +581,19 @@ export default function BlockEditor(props: {
     setBlocks(arr);
   };
 
+  // Keyboard reorder: ArrowUp/ArrowDown on the drag handle moves the block
+  // one position in that direction without needing a pointer drag.
+  const moveBlock = (id: string, dir: -1 | 1) => {
+    const arr = [...blocks()];
+    const idx = arr.findIndex((b) => b.id === id);
+    if (idx < 0) return;
+    const target = idx + dir;
+    if (target < 0 || target >= arr.length) return;
+    const [moved] = arr.splice(idx, 1);
+    arr.splice(target, 0, moved);
+    setBlocks(arr);
+  };
+
   return (
     <div class="block-editor min-h-[200px]">
       <For each={blocks()}>
@@ -596,6 +622,8 @@ export default function BlockEditor(props: {
             onDragEnd={() => { setDragId(null); setDragOverId(null); }}
             onDragOver={() => setDragOverId(block.id)}
             onDrop={() => handleDrop(block.id)}
+            onMoveUp={() => moveBlock(block.id, -1)}
+            onMoveDown={() => moveBlock(block.id, 1)}
           />
         )}
       </For>

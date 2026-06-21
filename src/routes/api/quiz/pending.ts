@@ -23,7 +23,7 @@
 import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
-import { getRecommendedQuizzes, getExperimentGroup } from "~/lib/ml/quiz-recommender";
+import { getRecommendedQuizzes, getExperimentGroup, getAdaptiveInterval } from "~/lib/ml/quiz-recommender";
 
 const REVIEW_INTERVALS = [0, 3, 7, 30];
 
@@ -42,15 +42,23 @@ export async function GET({ request }: { request: Request }) {
     return success(ordered);
   }
 
+  // Control group: fixed intervals with adaptive adjustment based on
+  // the user's last quiz accuracy. High accuracy → longer interval (less
+  // frequent review); low accuracy → shorter interval (more frequent).
+  // This implements the "desirable difficulty" principle (Bjork 1994).
   const quizzes = await prisma.quiz.findMany({
     where: { userId: user.userId, reviewCount: { lt: 4 } },
     orderBy: { lastReviewedAt: { sort: "asc", nulls: "first" } },
+    include: { attempts: { orderBy: { completedAt: "desc" }, take: 1, select: { score: true } } },
   });
 
   const pending = quizzes.filter(q => {
-    const interval = REVIEW_INTERVALS[q.reviewCount] || 0;
+    const baseInterval = REVIEW_INTERVALS[q.reviewCount] || 0;
+    // Adjust interval based on last attempt accuracy.
+    const lastScore = q.attempts?.[0]?.score ?? null;
+    const adjustedInterval = getAdaptiveInterval(baseInterval, lastScore);
     const lastReview = q.lastReviewedAt || q.generatedAt;
-    const nextReview = new Date(lastReview.getTime() + interval * 86400000);
+    const nextReview = new Date(lastReview.getTime() + adjustedInterval * 86400000);
     return nextReview <= new Date();
   });
 

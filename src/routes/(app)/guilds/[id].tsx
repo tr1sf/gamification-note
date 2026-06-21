@@ -1,5 +1,5 @@
 import { createSignal, createMemo, Show, onMount, onCleanup } from "solid-js";
-import { useParams, useSearchParams } from "@solidjs/router";
+import { useParams, useSearchParams, useNavigate } from "@solidjs/router";
 import { user, authFetch } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 import {
@@ -29,12 +29,15 @@ import MemberList from "~/components/guild/MemberList";
 import GuildNotes from "~/components/guild/GuildNotes";
 import GuildTasks from "~/components/guild/GuildTasks";
 import GuildGoals from "~/components/guild/GuildGoals";
+import ConfirmModal from "~/components/ui/ConfirmModal";
+import Nelar from "~/components/mascot/Nelar";
 
 type Role = "owner" | "admin" | "member";
 
 export default function GuildDetailPage() {
   const params = useParams();
   const guildId = () => params.id as string;
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { on, off, emit, ensureConnected } = useSocket();
 
@@ -48,10 +51,14 @@ export default function GuildDetailPage() {
   const [tab, setTab] = createSignal<"chat" | "scrolls" | "tasks" | "goals" | "members">("chat");
   const [joining, setJoining] = createSignal(false);
   const [leaving, setLeaving] = createSignal(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = createSignal(false);
   const [inviteInput, setInviteInput] = createSignal(
     typeof searchParams.code === "string" ? searchParams.code : ""
   );
   const [copied, setCopied] = createSignal(false);
+  // Tracks whether the user already left via handleLeave so the onCleanup
+  // guild:leave emit doesn't double-fire for a user who's no longer a member.
+  let hasLeftManually = false;
 
   const currentUser = () => user();
   const isMember = createMemo(() => {
@@ -113,21 +120,28 @@ export default function GuildDetailPage() {
       }
     };
 
-    const handleMemberJoined = (data: { userId: string; username: string }) => {
-      setMembers((prev) => {
-        if (prev.some((m) => m.userId === data.userId)) return prev;
-        return [...prev, {
-          id: `temp-${data.userId}`,
-          userId: data.userId,
-          guildId: guildId(),
-          role: "member",
-          user: { id: data.userId, username: data.username, avatarUrl: null, level: 1, title: "Novice Scribe" },
-        } as GuildMember];
-      });
+    const handleMemberJoined = async (data: { userId: string; username: string }) => {
+      // Pull the authoritative member list so level/title/role are correct.
+      await refreshMembers();
+      // If this is the current user joining, refresh guild-only resources.
+      if (data.userId === currentUser()?.id) {
+        await Promise.all([refreshNotes(), refreshTasks(), refreshGoals()]);
+        const g = await fetchGuild(guildId());
+        if (g) setGuild(g);
+      }
     };
 
-    const handleMemberLeft = (data: { userId: string }) => {
+    const handleMemberLeft = async (data: { userId: string }) => {
       setMembers((prev) => prev.filter((m) => m.userId !== data.userId));
+      // Refresh guild so memberCount stays accurate.
+      const g = await fetchGuild(guildId());
+      if (g) setGuild(g);
+      // If current user was kicked/left, clear guild-only data.
+      if (data.userId === currentUser()?.id) {
+        setNotes([]);
+        setTasks([]);
+        setGoals([]);
+      }
     };
 
     const handleRoleChanged = (data: { userId: string; role: Role }) => {
@@ -160,7 +174,13 @@ export default function GuildDetailPage() {
     on("error", handleSocketError);
 
     onCleanup(() => {
-      emit("guild:leave", { guildId: guildId() });
+      // Only emit guild:leave for page-unmount cases (navigation to another
+      // page). When the user explicitly left via handleLeave, the REST
+      // endpoint already revoked membership and calling emit again would
+      // broadcast a spurious guild:user-left for a non-member.
+      if (!hasLeftManually) {
+        emit("guild:leave", { guildId: guildId() });
+      }
       off("guild:message", handleNewMessage);
       off("guild:user-joined", handleMemberJoined);
       off("guild:user-left", handleMemberLeft);
@@ -217,6 +237,17 @@ export default function GuildDetailPage() {
     const me = currentUser();
     if (!me) return;
 
+    // Capture the user's CURRENT reaction BEFORE the optimistic update.
+    // Reading it afterwards would find the just-patched reaction and send
+    // the wrong request (POST instead of DELETE or vice-versa).
+    const currentReaction = messages()
+      .find((m) => m.id === messageId)
+      ?.reactions?.find((r) => r.userId === me.id);
+
+    // If the user already has this exact emoji, toggle it off (DELETE).
+    // Otherwise add/switch to the new emoji (POST).
+    const shouldDelete = currentReaction?.emoji === emoji;
+
     // Optimistically patch local state
     setMessages((prev) =>
       prev.map((m) => {
@@ -224,22 +255,20 @@ export default function GuildDetailPage() {
         const reactions = m.reactions ? [...m.reactions] : [];
         const existingIndex = reactions.findIndex((r) => r.userId === me.id);
         if (existingIndex >= 0) {
-          // Toggle off if same emoji, switch emoji if different
-          if (reactions[existingIndex].emoji === emoji) {
+          if (shouldDelete) {
             reactions.splice(existingIndex, 1);
           } else {
             reactions[existingIndex] = { ...reactions[existingIndex], emoji };
           }
-        } else {
+        } else if (!shouldDelete) {
           reactions.push({ emoji, userId: me.id, createdAt: new Date().toISOString() });
         }
         return { ...m, reactions };
       })
     );
 
-    const existing = messages().find((m) => m.id === messageId)?.reactions?.find((r) => r.userId === me.id);
     let res: Response;
-    if (existing) {
+    if (shouldDelete) {
       res = await authFetch(`/api/guilds/${guildId()}/messages/${messageId}/react`, { method: "DELETE" });
     } else {
       res = await authFetch(`/api/guilds/${guildId()}/messages/${messageId}/react`, {
@@ -291,10 +320,8 @@ export default function GuildDetailPage() {
       const success = await leaveGuild(guildId());
       if (success) {
         addToast("Left guild", "info");
-        emit("guild:leave", { guildId: guildId() });
-        await refreshMembers();
-        setNotes([]);
-        setMessages([]);
+        hasLeftManually = true;
+        navigate("/guilds");
       } else {
         addToast("Failed to leave guild", "error");
       }
@@ -302,6 +329,15 @@ export default function GuildDetailPage() {
       addToast("Network error", "error");
     } finally {
       setLeaving(false);
+      setShowLeaveConfirm(false);
+    }
+  };
+
+  const confirmLeave = () => {
+    if (isOwner()) {
+      setShowLeaveConfirm(true);
+    } else {
+      void handleLeave();
     }
   };
 
@@ -419,15 +455,17 @@ export default function GuildDetailPage() {
               </button>
             </Show>
 
-            <Show when={isMember() && !isOwner()}>
+            <Show when={isMember()}>
               <button
-                onClick={handleLeave}
+                onClick={confirmLeave}
                 disabled={leaving()}
                 class="px-4 py-2 border border-surface-border text-ink-secondary rounded-md text-sm font-medium hover:border-error hover:text-error transition-colors disabled:opacity-50"
+                title={isOwner() ? "Leave and transfer ownership to the oldest member" : "Leave guild"}
               >
-                {leaving() ? "Leaving..." : "Leave"}
+                {leaving() ? "Leaving..." : isOwner() ? "Leave (transfer owner)" : "Leave"}
               </button>
             </Show>
+
           </div>
         </div>
 
@@ -618,10 +656,25 @@ export default function GuildDetailPage() {
 
       <Show when={!loading() && !guild()}>
         <div class="text-center py-12">
-          <p class="text-4xl mb-3">🏛️</p>
+          <Nelar state="worried" size={56} class="mx-auto mb-2" />
           <p class="text-ink-secondary">Guild not found</p>
         </div>
       </Show>
+
+      <ConfirmModal
+        open={showLeaveConfirm()}
+        title="Leave Guild?"
+        message={
+          (guild()?.memberCount ?? members().length) <= 1
+            ? "You are the last member. Leaving will delete this guild permanently."
+            : "You are the guild owner. Leaving will transfer ownership to the longest-standing member."
+        }
+        variant="danger"
+        confirmLabel={(guild()?.memberCount ?? members().length) <= 1 ? "Delete & Leave" : "Transfer & Leave"}
+        cancelLabel="Cancel"
+        onConfirm={handleLeave}
+        onCancel={() => setShowLeaveConfirm(false)}
+      />
     </div>
   );
 }

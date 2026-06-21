@@ -1,7 +1,24 @@
-import { For, Show } from "solid-js";
+import { For, Show, createEffect } from "solid-js";
 import { rewardQueue } from "~/stores/ui";
+import { playSound } from "~/lib/sound";
 
 export default function RewardPopup() {
+  // Play sound when a new reward is added to the queue.
+  createEffect(() => {
+    const queue = rewardQueue();
+    if (queue.length === 0) return;
+    const latest = queue[queue.length - 1];
+    if (latest.leveledUp) {
+      playSound("levelUp");
+    } else if (latest.achievement) {
+      playSound("achievement");
+    } else if ((latest.coins ?? 0) > 0) {
+      playSound("coin");
+    } else if ((latest.xp ?? 0) > 0) {
+      playSound("xp");
+    }
+  });
+
   return (
     <div class="fixed top-16 right-4 z-50 space-y-2 pointer-events-none" aria-live="polite" role="status">
       <For each={rewardQueue()}>

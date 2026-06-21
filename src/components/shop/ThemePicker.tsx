@@ -16,10 +16,11 @@ interface ThemeItem {
 }
 
 const RARITY_COLORS: Record<string, string> = {
-  common: "text-ink-secondary border-ink-secondary/30 bg-ink-secondary/5",
-  rare: "text-blue-400 border-blue-400/30 bg-blue-400/5",
-  epic: "text-purple-400 border-purple-400/30 bg-purple-400/5",
-  legendary: "text-coin border-coin/30 bg-coin/5",
+  common: "text-rarity-common border-rarity-common/30 bg-rarity-common/5",
+  uncommon: "text-rarity-uncommon border-rarity-uncommon/30 bg-rarity-uncommon/5",
+  rare: "text-rarity-rare border-rarity-rare/30 bg-rarity-rare/5",
+  epic: "text-rarity-epic border-rarity-epic/30 bg-rarity-epic/5",
+  legendary: "text-rarity-legendary border-rarity-legendary/30 bg-rarity-legendary/5",
 };
 
 export default function ThemePicker() {
@@ -137,7 +138,7 @@ export default function ThemePicker() {
 
               {/* Color preview */}
               <div class="flex items-center gap-1 mb-3">
-                {["--color-bg", "--color-bg-elevated", "--color-accent", "--color-text-primary"].map((key) => {
+                {["--color-surface", "--color-surface-elevated", "--color-accent", "--color-ink-primary"].map((key) => {
                   const val = theme.cssVariables?.[key];
                   if (!val) return null;
                   const rgb = val.split(" ").slice(0, 3).join(", ");

@@ -21,6 +21,22 @@ export async function getModel(): Promise<SVD> {
 
 export async function predictDifficulty(userId: string, quizId: string): Promise<number> {
   const m = await getModel();
+  // Cold-start fallback: if the model has no data for this user/quiz (common
+  // for new users or quizzes with <10 attempts), fall back to the quiz's
+  // average score from all attempts. If no attempts exist, return 50 (medium).
+  const hasUser = (m as any).userFactors?.has(userId);
+  const hasQuiz = (m as any).quizFactors?.has(quizId);
+  if (!hasUser || !hasQuiz) {
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      select: { avgScore: true, reviewCount: true },
+    });
+    if (quiz?.avgScore != null && quiz.avgScore > 0) {
+      // Predicted difficulty = 100 - avgScore (low avg score = hard quiz).
+      return Math.max(0, Math.min(100, Math.round(100 - quiz.avgScore)));
+    }
+    return 50; // Neutral difficulty when no data at all.
+  }
   return m.predict(userId, quizId);
 }
 

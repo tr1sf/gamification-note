@@ -2,6 +2,7 @@ import { createSignal, createResource, For, Show } from "solid-js";
 import { fetchHabits, createHabit, deleteHabit, checkinHabit, type Habit } from "~/stores/habits";
 import { applyReward } from "~/stores/user";
 import { showReward, addToast } from "~/stores/ui";
+import Nelar from "~/components/mascot/Nelar";
 
 const ICONS = ["✅", "📖", "🏃", "💧", "🧘", "🖊️", "🌅", "💪", "🎯", "🌙", "🍎", "🧹"];
 
@@ -19,12 +20,10 @@ export default function HabitsPage() {
   const [title, setTitle] = createSignal("");
   const [icon, setIcon] = createSignal(ICONS[0]);
   const [description, setDescription] = createSignal("");
-  const [xpReward, setXpReward] = createSignal(10);
-  const [coinReward, setCoinReward] = createSignal(2);
   const [saving, setSaving] = createSignal(false);
 
   const resetForm = () => {
-    setTitle(""); setIcon(ICONS[0]); setDescription(""); setXpReward(10); setCoinReward(2);
+    setTitle(""); setIcon(ICONS[0]); setDescription("");
   };
 
   const list = () => habits() ?? [];
@@ -38,8 +37,6 @@ export default function HabitsPage() {
       title: title().trim(),
       icon: icon(),
       description: description().trim() || undefined,
-      xpReward: xpReward(),
-      coinReward: coinReward(),
     });
     setSaving(false);
     if (created) {
@@ -125,7 +122,7 @@ export default function HabitsPage() {
           when={list().length > 0}
           fallback={
             <div class="text-center py-16 text-ink-secondary">
-              <p class="text-4xl mb-3">🌅</p>
+              <Nelar state="curious" size={56} class="mx-auto mb-2" />
               <p class="text-ink-primary font-medium mb-1">No rituals yet</p>
               <p class="text-sm mb-4">Create your first daily ritual to start a streak.</p>
               <button onClick={() => setShowCreate(true)} class="text-accent hover:underline text-sm font-medium">
@@ -234,33 +231,6 @@ export default function HabitsPage() {
                 maxLength={300}
                 class="w-full rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
               />
-            </div>
-
-            <div class="flex gap-3">
-              <div class="flex-1">
-                <label for="habit-xp" class="block text-xs text-ink-secondary mb-1.5">XP reward</label>
-                <input
-                  id="habit-xp"
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={xpReward()}
-                  onInput={(e) => setXpReward(parseInt(e.currentTarget.value) || 0)}
-                  class="w-full rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </div>
-              <div class="flex-1">
-                <label for="habit-coins" class="block text-xs text-ink-secondary mb-1.5">Coin reward</label>
-                <input
-                  id="habit-coins"
-                  type="number"
-                  min={0}
-                  max={50}
-                  value={coinReward()}
-                  onInput={(e) => setCoinReward(parseInt(e.currentTarget.value) || 0)}
-                  class="w-full rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </div>
             </div>
 
             <div class="flex justify-end gap-2 pt-1">

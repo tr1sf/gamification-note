@@ -80,6 +80,7 @@ async function main() {
       type: 'name_color',
       coinCost: 75,
       rarity: 'uncommon',
+      category: { color: '#10b981' },
     },
     {
       name: 'Ancient Map',

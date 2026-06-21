@@ -9,7 +9,8 @@ import RadarChart, { type RadarStat } from "~/components/gamification/RadarChart
 import MoodPicker from "~/components/mood/MoodPicker";
 import GratitudeGarden from "~/components/gratitude/GratitudeGarden";
 import FocusTimer from "~/components/focus/FocusTimer";
-import ProjectList from "~/components/projects/ProjectCard";
+import Nelar from "~/components/mascot/Nelar";
+import StreakCalendar from "~/components/gamification/StreakCalendar";
 
 // ── Dashboard stats API ──────────────────────────────────────────────────────
 interface DashboardData {
@@ -174,11 +175,21 @@ export default function TavernPage() {
             <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, var(--color-accent) 10px, var(--color-accent) 11px);" />
             <div class="relative text-center">
               <p class="text-3xl sm:text-4xl">🏰</p>
-              <p class="text-xs sm:text-sm text-ink-secondary/60 mt-1 font-display tracking-widest uppercase">{t("Welcome back, adventurer")}</p>
+              <p class="text-xs sm:text-sm text-ink-secondary/60 mt-1 font-display tracking-widest uppercase">
+                {authUser()?.path === "student" ? t("Welcome back, scholar")
+                : authUser()?.path === "professional" ? t("Welcome back, professional")
+                : authUser()?.path === "journaler" ? t("Welcome back, chronicler")
+                : t("Welcome back, adventurer")}
+              </p>
             </div>
           </div>
           <h1 class="font-display text-2xl sm:text-3xl font-bold text-ink-primary">{t("Tavern Hall")}</h1>
-          <p class="text-sm text-ink-secondary mt-0.5">{t("Your adventurer's dashboard")}</p>
+          <p class="text-sm text-ink-secondary mt-0.5">
+            {authUser()?.path === "student" ? t("Your learning dashboard")
+            : authUser()?.path === "professional" ? t("Your productivity command center")
+            : authUser()?.path === "journaler" ? t("Your reflection sanctuary")
+            : t("Your adventurer's dashboard")}
+          </p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
@@ -254,6 +265,9 @@ export default function TavernPage() {
                   <span aria-hidden="true">+</span> {t("New scroll")}
               </a>
             </div>
+
+            {/* Streak Calendar */}
+            <StreakCalendar />
           </section>
 
           {/* ─────────── MIDDLE: Stats Radar ─────────── */}
@@ -263,7 +277,7 @@ export default function TavernPage() {
               <div class="w-full max-w-sm">
                 <Show when={d()?.totalNotes === 0} fallback={<RadarChart stats={radarStats()} />}>
                   <div class="bg-surface-elevated rounded-xl p-6 border border-surface-border text-center space-y-4">
-                    <p class="text-5xl">📜</p>
+                    <Nelar state="wave" size={56} class="mx-auto mb-2" />
                     <h3 class="text-lg font-bold text-ink-primary">{t("Your adventure begins!")}</h3>
                     <p class="text-sm text-ink-secondary max-w-xs mx-auto">{t("Write your first scroll to unlock your character stats, quests, and boss fights.")}</p>
                     <A href="/notes/new" class="inline-block px-6 py-2 bg-accent text-white rounded-lg font-medium text-sm">{t("Write Your First Scroll")}</A>
@@ -427,11 +441,11 @@ export default function TavernPage() {
                           <span class="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-[10px] font-mono">
                             {q.questType}
                           </span>
-                          <span class="px-2 py-0.5 rounded-full bg-coin/15 text-coin text-[10px] font-mono">
+                          <span class="px-2 py-0.5 rounded-full bg-xp/15 text-xp text-[10px] font-mono">
                             {q.xpReward} XP
                           </span>
                           <Show when={q.coinReward > 0}>
-                            <span class="px-2 py-0.5 rounded-full bg-xp/15 text-xp text-[10px] font-mono">
+                            <span class="px-2 py-0.5 rounded-full bg-coin/15 text-coin text-[10px] font-mono">
                               +{q.coinReward} 🪙
                             </span>
                           </Show>
@@ -489,10 +503,6 @@ export default function TavernPage() {
                 {/* Focus Timer */}
                 <FocusTimer />
               </div>
-              {/* Projects */}
-              <div class="mt-4">
-                <ProjectList />
-              </div>
             </section>
           </Show>
 
@@ -514,7 +524,7 @@ export default function TavernPage() {
                   <h3 class="text-sm font-semibold text-ink-primary mb-3">⚔️ {t("Active Bosses")}</h3>
                   <Show when={(bosses() || []).length > 0} fallback={
                     <div class="text-center py-6 text-ink-secondary">
-                      <p class="text-3xl mb-2">👻</p>
+                      <Nelar state="idle" size={48} class="mx-auto mb-2" />
                       <p class="text-sm">{t("No active bosses. Keep writing to summon them!")}</p>
                     </div>
                   }>
@@ -535,7 +545,7 @@ export default function TavernPage() {
                   <h3 class="text-sm font-semibold text-ink-primary mb-3">🧠 {t("Pending Quizzes")}</h3>
                   <Show when={(pendingQuizzes() || []).length > 0} fallback={
                     <div class="text-center py-6 text-ink-secondary">
-                      <p class="text-3xl mb-2">📝</p>
+                      <Nelar state="curious" size={48} class="mx-auto mb-2" />
                       <p class="text-sm">{t("Write 100+ word notes to generate quizzes!")}</p>
                     </div>
                   }>

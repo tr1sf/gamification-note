@@ -35,8 +35,9 @@ model User {
   notes           Note[]
   attachments     NoteAttachment[]
   userQuests      UserQuest[]
-  guildMemberships GuildMember[]
-  guildMessages   GuildMessage[]
+  guildMemberships       GuildMember[]
+  guildMessages          GuildMessage[]
+  guildMessageReactions  GuildMessageReaction[]
   notifications   Notification[]
   auditLogs       AuditLog[]
   inventory       UserInventory[]
@@ -178,17 +179,31 @@ model GuildMember {
 }
 
 model GuildMessage {
-  id        String   @id @default(uuid()) @db.Uuid
-  guildId   String   @db.Uuid
-  userId    String   @db.Uuid
+  id        String                  @id @default(uuid()) @db.Uuid
+  guildId   String                  @db.Uuid
+  userId    String                  @db.Uuid
   content   String
-  reactions Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime                @default(now())
 
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guild     Guild                   @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions GuildMessageReaction[]
 
   @@index([guildId, createdAt(sort: Desc)])
+}
+
+model GuildMessageReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @db.Uuid
+  userId    String   @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message GuildMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
 }
 
 model CosmeticItem {

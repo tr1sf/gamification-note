@@ -131,9 +131,9 @@ export async function DELETE({ request, params }: { request: Request; params: { 
 
   const existing = await prisma.note.findUnique({
     where: { id: params.id },
-    select: { id: true, userId: true, wordCount: true, createdAt: true },
+    select: { id: true, userId: true, wordCount: true, createdAt: true, isDeleted: true },
   });
-  if (!existing) return error("NOT_FOUND", "Note not found", 404);
+  if (!existing || existing.isDeleted) return error("NOT_FOUND", "Note not found", 404);
   if (existing.userId !== user.userId) return error("FORBIDDEN", "Not your note", 403);
 
   const noteAge = Date.now() - existing.createdAt.getTime();

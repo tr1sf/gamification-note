@@ -56,14 +56,20 @@ export default function PotionMatch() {
 
   const flipCard = (card: Card) => {
     if (card.flipped || card.matched || flipped().length >= 2 || gameState() !== "playing") return;
-    const newCards = cards().map(c => c.id === card.id ? { ...c, flipped: true } : c);
-    setCards(newCards);
-    setFlipped([...flipped(), card]);
+    const currentFlipped = flipped();
+    // Snapshot the previously-flipped card BEFORE we add the new one to the
+    // signal. Reading it afterwards would already include this card (SolidJS
+    // signals are synchronous), so `flipped().length === 1` was always false
+    // and matches were never detected.
+    const previous = currentFlipped[0];
+
+    setCards(cards().map(c => c.id === card.id ? { ...c, flipped: true } : c));
+    setFlipped([...currentFlipped, card]);
     setTotalFlips(t => t + 1);
 
-    if (flipped().length === 1) {
-      const first = flipped()[0];
-      if (first.pairId === card.pairId && first.type !== card.type) {
+    if (previous) {
+      // Two cards flipped — check for a match.
+      if (previous.pairId === card.pairId && previous.type !== card.type) {
         // Match!
         setTimeout(() => {
           setCards(prev => prev.map(c => (c.pairId === card.pairId ? { ...c, matched: true } : c)));

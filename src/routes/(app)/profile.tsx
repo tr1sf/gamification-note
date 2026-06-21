@@ -1,4 +1,5 @@
 import { createSignal, createResource, Show, onMount } from "solid-js";
+import { A } from "@solidjs/router";
 import { authFetch, user as authUser, loading as authLoading } from "~/stores/auth";
 import { syncFromUser, gamification } from "~/stores/user";
 import { addToast } from "~/stores/ui";
@@ -59,6 +60,21 @@ export default function ProfilePage() {
           userPath={userData()!.path}
           inventory={dashboard()?.inventory}
         />
+
+        <div class="flex flex-wrap items-center gap-2">
+          <A href="/settings/security" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border text-sm text-ink-secondary hover:border-accent hover:text-accent transition-colors">
+            <span aria-hidden="true">🔐</span> {t("Account security")}
+          </A>
+          <A href="/settings/gamification" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border text-sm text-ink-secondary hover:border-accent hover:text-accent transition-colors">
+            <span aria-hidden="true">⚔️</span> Gamification Style
+          </A>
+          <A href="/settings/path" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border text-sm text-ink-secondary hover:border-accent hover:text-accent transition-colors">
+            <span aria-hidden="true">🎓</span> Your Path
+          </A>
+          <A href="/settings/notifications" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border text-sm text-ink-secondary hover:border-accent hover:text-accent transition-colors">
+            <span aria-hidden="true">🔔</span> {t("Notifications")}
+          </A>
+        </div>
 
         <div class="flex gap-1 border-b border-surface-border overflow-x-auto">
           {tabs.map((tab) => (

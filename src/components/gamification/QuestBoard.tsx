@@ -3,6 +3,8 @@ import { quests, questsLoading, fetchActiveQuests, claimQuest } from "~/stores/q
 import { showReward } from "~/stores/ui";
 import { applyReward } from "~/stores/user";
 import QuestCard from "./QuestCard";
+import Nelar from "~/components/mascot/Nelar";
+import { playSound } from "~/lib/sound";
 import { createSignal, onMount } from "solid-js";
 
 interface QuestBoardProps {
@@ -37,6 +39,7 @@ export default function QuestBoard(props: QuestBoardProps) {
     if (result.success && result.data?.gamification) {
       applyReward(result.data.gamification);
       if (result.data.gamification.xpGained > 0 || result.data.gamification.coinsGained > 0) {
+        playSound("quest");
         showReward({
           message: result.data.gamification.message,
           xp: result.data.gamification.xpGained,
@@ -93,7 +96,7 @@ export default function QuestBoard(props: QuestBoardProps) {
           when={quests().length > 0}
           fallback={
             <div class="text-center py-12 text-ink-secondary">
-              <p class="text-4xl mb-3">📜</p>
+              <Nelar state="curious" size={56} class="mx-auto mb-2" />
               <p>No quests available today</p>
             </div>
           }

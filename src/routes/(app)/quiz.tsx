@@ -1,12 +1,19 @@
 import { createResource, For, Show, createSignal, createEffect } from "solid-js";
+import { A } from "@solidjs/router";
 import { authFetch, user } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
+import Nelar from "~/components/mascot/Nelar";
+import { playSound } from "~/lib/sound";
 
 export default function QuizPage() {
   const [pending, { refetch }] = createResource(async () => {
     const res = await authFetch("/api/quiz/pending");
     const json = await res.json();
-    return json.success ? json.data : [];
+    // Let .error propagate so the UI distinguishes a fetch failure from a
+    // legitimate "no quizzes pending". Masking errors as `[]` previously
+    // showed "Write longer notes" to users who were simply offline.
+    if (!json.success) throw new Error(json.error?.message ?? "Failed to load quizzes");
+    return json.data ?? [];
   });
 
   const [currentQuiz, setCurrentQuiz] = createSignal<any>(null);
@@ -56,6 +63,7 @@ export default function QuizPage() {
     const json = await res.json();
     if (json.success) {
       setScore(json.data.score);
+      playSound(json.data.score >= 70 ? "quizCorrect" : "quizWrong");
       addToast(
         `Quiz completed! Score: ${json.data.score}%`,
         json.data.score >= 70 ? "success" : "info"
@@ -82,9 +90,27 @@ export default function QuizPage() {
         Quiz Review
       </h1>
       <Show
-        when={!pending.loading && !currentQuiz()}
+        when={!pending.loading && !currentQuiz() && !pending.error}
         fallback={
-          <div class="h-32 bg-surface-border rounded-xl animate-pulse" />
+          <Show
+            when={!pending.error}
+            fallback={
+              <div class="text-center py-12">
+                <p class="text-3xl mb-3 text-error">⚠</p>
+                <p class="text-ink-primary font-medium mb-1">Couldn't load your quizzes</p>
+                <p class="text-sm text-ink-secondary mb-4">Check your connection and try again.</p>
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  class="px-4 py-2 bg-accent text-surface-overlay rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
+                >
+                  Try again
+                </button>
+              </div>
+            }
+          >
+            <div class="h-32 bg-surface-border rounded-xl animate-pulse" />
+          </Show>
         }
       >
         <Show
@@ -92,11 +118,17 @@ export default function QuizPage() {
           fallback={
             currentQuiz() ? null : (
               <div class="text-center py-12 text-ink-secondary">
-                <p class="text-4xl mb-3">🧠</p>
+                <Nelar state="curious" size={56} class="mx-auto mb-2" />
                 <p>No quizzes pending review</p>
-                <p class="text-sm">
+                <p class="text-sm mb-4">
                   Write longer notes (100+ words) to generate quizzes!
                 </p>
+                <A
+                  href="/notes/new"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-surface-overlay rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors"
+                >
+                  ✍️ Write a note
+                </A>
               </div>
             )
           }
@@ -113,9 +145,11 @@ export default function QuizPage() {
                 };
 
                 return (
-                  <div
-                    class="bg-surface-elevated rounded-xl p-4 border border-surface-border hover:border-accent/30 cursor-pointer"
+                  <button
+                    type="button"
+                    class="w-full text-left bg-surface-elevated rounded-xl p-4 border border-surface-border hover:border-accent/30 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                     onClick={() => startQuiz(q)}
+                    aria-label={`Review quiz ${q.reviewCount + 1} of 4${badge() ? `, ${badge()!.label}` : ""}`}
                   >
                     <div class="flex items-center gap-3">
                       <span class="text-2xl">🧠</span>
@@ -135,9 +169,9 @@ export default function QuizPage() {
                           {q.reviewCount + 1} of 4
                         </p>
                       </div>
-                      <span class="text-accent text-sm">Start →</span>
+                      <span class="text-accent text-sm" aria-hidden="true">Start →</span>
                     </div>
-                  </div>
+                  </button>
                 );
               }}
             </For>

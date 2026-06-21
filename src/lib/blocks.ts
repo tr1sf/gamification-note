@@ -9,8 +9,17 @@ export interface Block {
   calloutIcon?: string;
 }
 
+// Fallback for non-secure contexts (HTTP non-localhost) where
+// crypto.randomUUID is unavailable.
+function uuid(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `b-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function createBlock(type: BlockType = 'text'): Block {
-  return { id: crypto.randomUUID(), type, content: '' };
+  return { id: uuid(), type, content: '' };
 }
 
 export function isBlockContent(content: string): boolean {

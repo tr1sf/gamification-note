@@ -82,11 +82,27 @@ Format: [{"question": "...", "options": ["A","B","C","D"], "correctIndex": 0, "e
       },
     ],
     temperature: 0.7,
-    max_tokens: 1500,
+    // kimi-k2.5 emits lengthy internal reasoning; 1500 tokens is consumed by
+    // reasoning alone, leaving no budget for the actual JSON answer. 4000 is
+    // enough for the quiz + a typical reasoning trace.
+    max_tokens: 4000,
   });
 
   const text = response.choices[0]?.message?.content || "";
   const cleaned = cleanJsonResponse(text);
+
+  // Defensive diagnostics: if the model returns empty content, the finish
+  // reason is usually "length" due to reasoning consuming the token budget.
+  if (!text) {
+    const usage = (response as any).usage;
+    const finishReason = response.choices[0]?.finish_reason;
+    console.error("[quiz] Empty AI response", {
+      finishReason,
+      promptTokens: usage?.prompt_tokens,
+      completionTokens: usage?.completion_tokens,
+      totalTokens: usage?.total_tokens,
+    });
+  }
 
   let questions: QuizQuestion[] = [];
   try {

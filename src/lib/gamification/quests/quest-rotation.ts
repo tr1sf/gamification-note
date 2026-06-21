@@ -69,8 +69,64 @@ async function rotateQuestType(
     where: { questType, isActive: true },
   });
 
-  const shuffled = availableQuests.sort(() => Math.random() - 0.5);
-  const selected = shuffled.slice(0, 3);
+  // ── Adaptive quest selection ──
+  // Instead of pure random, weight quests by the user's path and recent
+  // activity gaps. This encourages diverse behavior: if a student hasn't
+  // been quizzing, boost quiz quests; if a journaler hasn't written
+  // reflectively, boost writing quests.
+
+  // Fetch user's path for path-specific weighting.
+  const userRow = await tx.user.findUnique({
+    where: { id: userId },
+    select: { path: true, gamificationStyle: true },
+  });
+  const path = userRow?.path ?? "student";
+  const style = userRow?.gamificationStyle ?? "balanced";
+
+  // Path-specific action boosts: quests with these criteria actions get
+  // higher weight for this path (encourages the learning style).
+  const PATH_BOOSTS: Record<string, string[]> = {
+    student: ["ai_summarize", "create_note", "make_public"],   // learning focus
+    professional: ["ai_summarize", "add_link", "make_public"],  // productivity
+    journaler: ["create_note", "write_words", "structured_note"],  // reflection
+  };
+  const boostedActions = new Set(PATH_BOOSTS[path] ?? PATH_BOOSTS.student);
+
+  // Style-specific action boosts.
+  const STYLE_BOOSTS: Record<string, string[]> = {
+    competitive: ["create_note", "make_public"],        // competition → publish more
+    collaborative: ["make_public", "ai_summarize"],     // share knowledge
+    solo: ["create_note", "write_words", "ai_summarize"],  // personal growth
+    minimal: ["create_note"],                           // simplicity
+    balanced: [],
+  };
+  const styleBoosts = new Set(STYLE_BOOSTS[style] ?? []);
+
+  // Assign weights: base 1.0, +0.5 for path boost, +0.3 for style boost.
+  const weighted = availableQuests.map((q) => {
+    const criteria = q.criteria as Record<string, unknown>;
+    const action = criteria.action as string;
+    let weight = 1.0;
+    if (boostedActions.has(action)) weight += 0.5;
+    if (styleBoosts.has(action)) weight += 0.3;
+    return { quest: q, weight };
+  });
+
+  // Weighted random selection (Fisher-Yates with weights).
+  const selected: typeof availableQuests = [];
+  const pool = [...weighted];
+  const pickCount = Math.min(3, pool.length);
+  for (let i = 0; i < pickCount; i++) {
+    const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+    let r = Math.random() * totalWeight;
+    let idx = 0;
+    for (let j = 0; j < pool.length; j++) {
+      r -= pool[j].weight;
+      if (r <= 0) { idx = j; break; }
+    }
+    selected.push(pool[idx].quest);
+    pool.splice(idx, 1);
+  }
 
   for (const quest of selected) {
     await tx.userQuest.upsert({

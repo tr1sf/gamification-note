@@ -27,6 +27,12 @@ export async function GET({ request, params }: { request: Request; params: { id:
     });
   }
   const isMember = !!membership;
+
+  // Private guilds: non-members only see existence (404), not metadata.
+  if (!guild.isPublic && !isMember) {
+    return error("NOT_FOUND", "Guild not found", 404);
+  }
+
   const canSeeInvite = membership?.role === "owner" || membership?.role === "admin";
 
   // Never expose the inviteCode to non-members (it bypasses the invite-only gate).

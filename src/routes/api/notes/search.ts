@@ -44,8 +44,8 @@ export async function GET({ request }: { request: Request }) {
       SELECT n.id, n.title, n.content, n.category, n.tags, n."isPublic",
              n."wordCount", n."createdAt", n."updatedAt",
              ts_rank(n."searchVector", query) AS rank
-      FROM "Note" n, plainto_tsquery('english', ${q}) query
-      WHERE n."searchVector" @@ query
+       FROM "Note" n, plainto_tsquery('simple', ${q}) query
+       WHERE n."searchVector" @@ query
         AND n."isDeleted" = false
         AND (n."isPublic" = true OR n."userId" = ${user.userId}::uuid)
       ORDER BY rank DESC
@@ -72,7 +72,8 @@ export async function GET({ request }: { request: Request }) {
         rank: n.rank,
       }))
     );
-  } catch (_ftsError) {
+  } catch (ftsError) {
+    console.error("[search] Full-text search failed; falling back to ILIKE.", ftsError);
     const words = q.split(/\s+/).filter(w => w.length > 0);
     if (words.length === 0) return success([]);
 

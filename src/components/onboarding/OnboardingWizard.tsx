@@ -1,8 +1,10 @@
 import { createSignal, For, Show } from "solid-js";
+import { A } from "@solidjs/router";
 import { authFetch, fetchMe } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 import { PATH_DESCRIPTIONS, type UserPath } from "~/lib/path-unlocks";
 import { applyLanguage, getCurrentLang, t } from "~/lib/i18n";
+import Nelar from "~/components/mascot/Nelar";
 
 type Motivation = "adventurer" | "scholar" | "collaborator";
 
@@ -66,13 +68,13 @@ const FIRST_QUEST_TASKS = [
 export default function OnboardingWizard(props: { onComplete: () => void }) {
   const [step, setStep] = createSignal(0);
   const [path, setPath] = createSignal<UserPath>("student");
-  const [motivation, setMotivation] = createSignal<Motivation>("adventurer");
   const [submitting, setSubmitting] = createSignal(false);
   const [giftClaimed, setGiftClaimed] = createSignal(false);
   const [completedTasks, setCompletedTasks] = createSignal<string[]>([]);
-  const [consentAccepted, setConsentAccepted] = createSignal(false);
 
-  const totalSteps = 5; // 0=Lang, 1=Consent, 2=Path, 3=Motivation, 4=Gift
+  // 3 steps: 0=Language, 1=Path, 2=First Quest (Privacy + Motivation removed —
+  // those are now configurable in Settings after onboarding completes).
+  const totalSteps = 2;
 
   function nextStep() {
     if (step() < totalSteps) setStep((s) => s + 1);
@@ -90,24 +92,19 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
     if (giftClaimed()) return;
     setSubmitting(true);
     try {
-      const style =
-        motivation() === "adventurer"
-          ? "competitive"
-          : motivation() === "scholar"
-            ? "balanced"
-            : "collaborative";
-
+      // Default to "balanced" gamification style — user can change later
+      // in Settings > Gamification Style. Previously this derived from a
+      // motivation choice that is now removed.
       const res = await authFetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gamificationStyle: style, path: path() }),
+        body: JSON.stringify({ gamificationStyle: "balanced", path: path() }),
       });
       const json = await res.json();
       if (json.success) {
         setGiftClaimed(true);
         markTask("gift");
         addToast(`Welcome gift claimed! +${json.data.coinsGained} coins`, "success");
-        // Refresh user state so onboardingCompleted is true on the auth signal
         await fetchMe();
         setTimeout(() => props.onComplete(), 1500);
       } else {
@@ -121,17 +118,16 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
   }
 
   const canProceed = () => {
-    if (step() === 1) return consentAccepted();
-    if (step() === 4) return giftClaimed();
+    if (step() === 2) return giftClaimed();
     return true;
   };
 
   return (
     <div class="min-h-screen flex items-center justify-center bg-surface p-4">
       <div class="w-full max-w-xl">
-        {/* Step indicators */}
+        {/* Step indicators — 3 steps */}
         <div class="flex items-center justify-center gap-2 mb-8">
-          <For each={[0, 1, 2, 3, 4]}>
+          <For each={[0, 1, 2]}>
             {(i) => (
               <div class="flex items-center gap-2">
                 <div
@@ -143,7 +139,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
                 >
                   {i < step() ? "\u2713" : i + 1}
                 </div>
-                {i < 4 && (
+                {i < 2 && (
                   <div
                     class={`w-10 h-0.5 transition-colors duration-300 ${
                       i < step() ? "bg-accent" : "bg-surface-border"
@@ -164,15 +160,9 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
             <StepLanguage />
           </Show>
           <Show when={step() === 1}>
-            <StepConsent accepted={consentAccepted} setAccepted={setConsentAccepted} />
-          </Show>
-          <Show when={step() === 2}>
             <StepChoosePath path={path} setPath={setPath} />
           </Show>
-          <Show when={step() === 3}>
-            <StepMotivation motivation={motivation} setMotivation={setMotivation} />
-          </Show>
-          <Show when={step() === 4}>
+          <Show when={step() === 2}>
             <StepFirstQuest
               completedTasks={completedTasks}
               markTask={markTask}
@@ -260,7 +250,7 @@ function StepConsent(props: { accepted: () => boolean; setAccepted: (v: boolean)
         <p>• AI features process your notes <span class="font-medium text-ink-primary">anonymously</span> to generate quizzes and summaries</p>
         <p>• Analytics data (XP, quests) is collected only to improve your experience</p>
         <p>\u2022 You can request data deletion anytime by contacting the developer.</p>
-        <p>\u2022 <span class="text-accent underline cursor-pointer" onClick={() => window.open("/privacy", "_blank")}>Full Privacy Policy</span></p>
+        <p>• <a href="/privacy" target="_blank" rel="noopener noreferrer" class="text-accent underline hover:text-accent-hover">Full Privacy Policy</a></p>
       </div>
       <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-surface-border hover:border-accent/30 transition-colors">
         <input type="checkbox" checked={props.accepted()} onChange={(e) => props.setAccepted(e.currentTarget.checked)}
@@ -385,17 +375,17 @@ function StepFirstQuest(props: {
                 <Show
                   when={task.id === "gift"}
                   fallback={
-                    <a
+                    <A
                       href={task.href!}
                       onClick={() => props.markTask(task.id)}
                       class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                         isDone()
-                          ? "bg-surface-border text-ink-secondary cursor-default pointer-events-none"
-                          : "bg-accent/10 text-accent hover:bg-accent/20"
+                          ? "bg-surface-border text-ink-tertiary cursor-default pointer-events-none"
+                          : "bg-accent/10 text-accent hover:bg-accent/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                       }`}
                     >
                       {t(task.button)}
-                    </a>
+                    </A>
                   }
                 >
                   <button
@@ -422,6 +412,7 @@ function StepFirstQuest(props: {
           class="mt-4 p-3 rounded-lg bg-success/10 border border-success/20 text-sm text-success text-center"
           style="animation: fade-up 0.3s ease-out"
         >
+          <Nelar state="wave" size={40} class="mx-auto mb-2" />
           +50 Coins &amp; Beginner Badge unlocked! Welcome to the tavern!
         </div>
       </Show>

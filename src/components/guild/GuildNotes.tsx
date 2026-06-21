@@ -3,6 +3,8 @@ import { A } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
 import { timeAgo } from "~/lib/time-ago";
 import type { GuildNote } from "~/stores/guild";
+import Nelar from "~/components/mascot/Nelar";
+import { t } from "~/lib/i18n";
 
 interface OwnNote {
   id: string;
@@ -44,13 +46,13 @@ export default function GuildNotes(props: GuildNotesProps) {
     <div class="space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-medium text-ink-secondary">
-          {props.notes.length} {props.notes.length === 1 ? "scroll" : "scrolls"} shared
+          {props.notes.length} {props.notes.length === 1 ? t("scroll") : t("scrolls")} {t("shared")}
         </h2>
         <button
           onClick={() => setShowShare(true)}
           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover transition-colors"
         >
-          📜 Share a scroll
+          📜 {t("Share a scroll")}
         </button>
       </div>
 
@@ -58,8 +60,8 @@ export default function GuildNotes(props: GuildNotesProps) {
         when={props.notes.length > 0}
         fallback={
           <div class="text-center py-12 text-ink-secondary">
-            <p class="text-4xl mb-3">📜</p>
-            <p class="text-sm">No scrolls shared yet. Share knowledge with your guild!</p>
+            <Nelar state="idle" size={56} class="mx-auto mb-2" />
+            <p class="text-sm">{t("No scrolls shared yet. Share knowledge with your guild!")}</p>
           </div>
         }
       >
@@ -69,15 +71,15 @@ export default function GuildNotes(props: GuildNotesProps) {
               const body = (
                 <>
                   <div class="flex items-start justify-between gap-2">
-                    <h3 class="font-semibold text-ink-primary">{note.title || "Untitled"}</h3>
+                    <h3 class="font-semibold text-ink-primary">{note.title || t("Untitled")}</h3>
                     <Show when={!note.isPublic}>
                       <span class="text-xs text-ink-secondary shrink-0" title="Private scroll">🔒</span>
                     </Show>
                   </div>
                   <p class="text-sm text-ink-secondary mt-1 line-clamp-2">{note.excerpt}</p>
                   <div class="flex items-center gap-3 mt-2 text-xs text-ink-secondary">
-                    <span>by {note.author.username}</span>
-                    <span>{note.wordCount} words</span>
+                    <span>{t("by")} {note.author.username}</span>
+                    <span>{note.wordCount} {t("words")}</span>
                     <span>{timeAgo(note.updatedAt)}</span>
                     {note.category && (
                       <span class="px-1.5 py-0.5 rounded border border-surface-border">{note.category}</span>
@@ -99,7 +101,7 @@ export default function GuildNotes(props: GuildNotesProps) {
                         onClick={() => props.onUnshare(note.id)}
                         class="text-xs text-ink-secondary/70 hover:text-error transition-colors"
                       >
-                        Remove from guild
+                        {t("Remove from guild")}
                       </button>
                     </div>
                   </Show>
@@ -121,7 +123,7 @@ export default function GuildNotes(props: GuildNotesProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <div class="p-4 border-b border-surface-border flex items-center justify-between">
-              <h3 class="font-display font-bold text-ink-primary">Share a scroll</h3>
+              <h3 class="font-display font-bold text-ink-primary">{t("Share a scroll")}</h3>
               <button
                 onClick={() => setShowShare(false)}
                 class="text-ink-secondary hover:text-ink-primary"
@@ -133,11 +135,11 @@ export default function GuildNotes(props: GuildNotesProps) {
             <div class="flex-1 overflow-y-auto p-3 space-y-1.5">
               <Show
                 when={!ownNotes.loading}
-                fallback={<p class="text-sm text-ink-secondary text-center py-8">Loading your scrolls...</p>}
+                fallback={<p class="text-sm text-ink-secondary text-center py-8">{t("Loading your scrolls...")}</p>}
               >
                 <Show
                   when={(ownNotes() ?? []).length > 0}
-                  fallback={<p class="text-sm text-ink-secondary text-center py-8">You have no scrolls to share yet.</p>}
+                  fallback={<p class="text-sm text-ink-secondary text-center py-8">{t("You have no scrolls to share yet.")}</p>}
                 >
                   <For each={ownNotes()}>
                     {(note) => {
@@ -153,10 +155,10 @@ export default function GuildNotes(props: GuildNotesProps) {
                         >
                           <div class="flex items-center justify-between gap-2">
                             <span class="text-sm font-medium text-ink-primary truncate">
-                              {note.title || "Untitled"}
+                              {note.title || t("Untitled")}
                             </span>
                             <Show when={already()}>
-                              <span class="text-xs text-ink-secondary shrink-0">Shared</span>
+                              <span class="text-xs text-ink-secondary shrink-0">{t("Shared")}</span>
                             </Show>
                           </div>
                           <p class="text-xs text-ink-secondary mt-0.5 line-clamp-1">{note.excerpt}</p>

@@ -1,7 +1,7 @@
 import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
-import { createHabitSchema } from "~/validators/habit";
+import { createHabitSchema, HABIT_XP_REWARD, HABIT_COIN_REWARD, MAX_HABITS } from "~/validators/habit";
 
 function dayKey(d: Date | null): string | null {
   return d ? d.toISOString().slice(0, 10) : null;
@@ -64,14 +64,20 @@ export async function POST({ request }: { request: Request }) {
     return error("VALIDATION_ERROR", "Invalid input", 400, parsed.error.flatten());
   }
 
+  // Cap total habits per user to prevent reward farming via habit spam.
+  const habitCount = await prisma.habit.count({ where: { userId: user.userId, isArchived: false } });
+  if (habitCount >= MAX_HABITS) {
+    return error("LIMIT_REACHED", `Maximum ${MAX_HABITS} active rituals allowed`, 400);
+  }
+
   const habit = await prisma.habit.create({
     data: {
       userId: user.userId,
       title: parsed.data.title,
       description: parsed.data.description,
       icon: parsed.data.icon || "✅",
-      xpReward: parsed.data.xpReward ?? 10,
-      coinReward: parsed.data.coinReward ?? 2,
+      xpReward: HABIT_XP_REWARD,
+      coinReward: HABIT_COIN_REWARD,
     },
   });
 

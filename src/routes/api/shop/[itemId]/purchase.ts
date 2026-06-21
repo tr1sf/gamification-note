@@ -28,19 +28,16 @@ export async function POST({ request, params }: { request: Request; params: { it
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const currentUser = await tx.user.findUniqueOrThrow({
-        where: { id: user.userId },
-        select: { coins: true },
-      });
-
-      if (currentUser.coins < item.coinCost) {
-        throw new Error("INSUFFICIENT_COINS");
-      }
-
-      await tx.user.update({
-        where: { id: user.userId },
+      // Atomic coin check: conditional updateMany only succeeds if the user
+      // has enough coins — prevents TOCTOU double-spend on concurrent
+      // purchases (previously: read coins → check → decrement was racy).
+      const coinResult = await tx.user.updateMany({
+        where: { id: user.userId, coins: { gte: item.coinCost } },
         data: { coins: { decrement: item.coinCost } },
       });
+      if (coinResult.count === 0) {
+        throw new Error("INSUFFICIENT_COINS");
+      }
 
       let inventoryItem;
       const category = item.category as Record<string, unknown> | null;
@@ -49,21 +46,35 @@ export async function POST({ request, params }: { request: Request; params: { it
         expiresAt = new Date(Date.now() + category.durationMin * 60 * 1000);
       }
 
-      if (item.type === "consumable" && existing) {
-        // Stack consumables by incrementing quantity.
-        inventoryItem = await tx.userInventory.update({
-          where: { id: existing.id },
-          data: { quantity: { increment: 1 }, ...(expiresAt ? { expiresAt } : {}) },
-        });
-      } else {
-        inventoryItem = await tx.userInventory.create({
-          data: {
-            userId: user.userId,
-            cosmeticItemId: params.itemId,
-            quantity: 1,
-            ...(expiresAt ? { expiresAt } : {}),
-          },
-        });
+      try {
+        if (item.type === "consumable" && existing) {
+          // Stack consumables by incrementing quantity.
+          inventoryItem = await tx.userInventory.update({
+            where: { id: existing.id },
+            data: { quantity: { increment: 1 }, ...(expiresAt ? { expiresAt } : {}) },
+          });
+        } else {
+          inventoryItem = await tx.userInventory.create({
+            data: {
+              userId: user.userId,
+              cosmeticItemId: params.itemId,
+              quantity: 1,
+              ...(expiresAt ? { expiresAt } : {}),
+            },
+          });
+        }
+      } catch (e: any) {
+        // P2002 = unique constraint violation on (userId, cosmeticItemId) —
+        // a concurrent purchase of the same non-consumable raced ahead.
+        if (e?.code === "P2002") {
+          // Refund the coins we just deducted.
+          await tx.user.update({
+            where: { id: user.userId },
+            data: { coins: { increment: item.coinCost } },
+          });
+          throw new Error("ALREADY_OWNED");
+        }
+        throw e;
       }
 
       const updatedUser = await tx.user.findUniqueOrThrow({
@@ -87,6 +98,9 @@ export async function POST({ request, params }: { request: Request; params: { it
   } catch (e: any) {
     if (e?.message === "INSUFFICIENT_COINS") {
       return error("INSUFFICIENT_COINS", "Not enough coins", 400);
+    }
+    if (e?.message === "ALREADY_OWNED") {
+      return error("ALREADY_OWNED", "You already own this item", 409);
     }
     throw e;
   }

@@ -1,4 +1,4 @@
-import { Show } from "solid-js";
+import Modal from "./Modal";
 
 interface ConfirmModalProps {
   open: boolean;
@@ -13,32 +13,44 @@ interface ConfirmModalProps {
 
 export default function ConfirmModal(props: ConfirmModalProps) {
   return (
-    <Show when={props.open}>
-      <div class="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={props.title}>
-        <div class="fixed inset-0 bg-surface-overlay/60" onClick={props.onCancel} />
-        <div class="relative bg-surface-elevated rounded-lg border border-surface-border shadow-xl max-w-sm w-full mx-4 p-6">
-          <h3 class="text-lg font-display font-semibold text-ink-primary mb-2">{props.title}</h3>
-          <p class="text-sm text-ink-secondary mb-6">{props.message}</p>
-          <div class="flex items-center justify-end gap-3">
-            <button
-              onClick={props.onCancel}
-              class="px-4 py-2 text-sm text-ink-secondary hover:text-ink-primary rounded-md hover:bg-surface-hover transition-colors"
-            >
-              {props.cancelLabel || "Cancel"}
-            </button>
-            <button
-              onClick={props.onConfirm}
-              class={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
-                props.variant === "danger"
-                  ? "bg-error hover:bg-error/90"
-                  : "bg-accent hover:bg-accent-hover"
-              }`}
-            >
-              {props.confirmLabel || "Confirm"}
-            </button>
-          </div>
-        </div>
+    <Modal
+      open={props.open}
+      title={props.title}
+      onDismiss={props.onCancel}
+      class="max-w-sm"
+    >
+      <h3
+        id="confirm-modal-title"
+        class="text-lg font-display font-semibold text-ink-primary mb-2"
+      >
+        {props.title}
+      </h3>
+      <p
+        id="confirm-modal-message"
+        class="text-sm text-ink-secondary mb-6"
+      >
+        {props.message}
+      </p>
+      <div class="flex items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={props.onCancel}
+          class="px-4 py-2 text-sm text-ink-secondary hover:text-ink-primary rounded-md hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-elevated"
+        >
+          {props.cancelLabel || "Cancel"}
+        </button>
+        <button
+          type="button"
+          onClick={props.onConfirm}
+          class={`px-4 py-2 text-sm font-medium text-surface-overlay rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-elevated ${
+            props.variant === "danger"
+              ? "bg-error hover:bg-error/90"
+              : "bg-accent hover:bg-accent-hover"
+          }`}
+        >
+          {props.confirmLabel || "Confirm"}
+        </button>
       </div>
-    </Show>
+    </Modal>
   );
 }

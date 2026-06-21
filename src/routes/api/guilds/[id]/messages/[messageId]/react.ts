@@ -4,22 +4,22 @@ import { success, error } from "~/lib/api-response";
 import { rateLimit } from "~/lib/rate-limit";
 import { getIO } from "~/lib/socket";
 
-interface Reaction {
-  emoji: string;
-  userId: string;
-  createdAt: string;
+async function fetchReactions(messageId: string) {
+  return prisma.guildMessageReaction.findMany({
+    where: { messageId },
+    select: { emoji: true, userId: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
 }
 
 export async function POST({ request, params }: { request: Request; params: { id: string; messageId: string } }) {
   const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
-  // Rate limit
   if (!rateLimit(`guild_react:${user.userId}`, 20, 10000)) {
     return error("RATE_LIMITED", "Too many reactions", 429);
   }
 
-  // Check guild membership
   const membership = await prisma.guildMember.findUnique({
     where: { guildId_userId: { guildId: params.id, userId: user.userId } },
   });
@@ -31,43 +31,41 @@ export async function POST({ request, params }: { request: Request; params: { id
     return error("VALIDATION_ERROR", "Valid emoji required", 400);
   }
 
-  // Atomic read-modify-write in transaction
-  let result: Reaction[];
-  try {
-    result = await prisma.$transaction(async (tx) => {
-      const message = await tx.guildMessage.findUnique({ where: { id: params.messageId } });
-      if (!message || message.guildId !== params.id) throw new Error("NOT_FOUND");
-
-      const reactions: Reaction[] = (message.reactions as unknown as Reaction[]) || [];
-      const filtered = reactions.filter((r) => r.userId !== user.userId);
-      const existing = reactions.find((r) => r.userId === user.userId);
-      if (!existing || existing.emoji !== emoji) {
-        filtered.push({ emoji, userId: user.userId, createdAt: new Date().toISOString() });
-      }
-
-      await tx.guildMessage.update({
-        where: { id: params.messageId },
-        data: { reactions: filtered as any },
-      });
-
-      return filtered;
-    });
-  } catch (e: any) {
-    if (e?.message === "NOT_FOUND") {
-      return error("NOT_FOUND", "Message not found", 404);
-    }
-    throw e;
+  // Verify message exists in this guild
+  const message = await prisma.guildMessage.findUnique({
+    where: { id: params.messageId },
+    select: { id: true, guildId: true },
+  });
+  if (!message || message.guildId !== params.id) {
+    return error("NOT_FOUND", "Message not found", 404);
   }
 
-  // Socket broadcast
+  // Toggle: remove any existing reaction by this user, then add the new one.
+  await prisma.$transaction([
+    prisma.guildMessageReaction.deleteMany({
+      where: { messageId: params.messageId, userId: user.userId },
+    }),
+    prisma.guildMessageReaction.create({
+      data: { messageId: params.messageId, userId: user.userId, emoji },
+    }),
+  ]);
+
+  const reactions = await fetchReactions(params.messageId);
+
+  const formatted = reactions.map((r) => ({
+    emoji: r.emoji,
+    userId: r.userId,
+    createdAt: r.createdAt.toISOString(),
+  }));
+
   try {
     getIO().to(`guild:${params.id}`).emit("guild:message-reaction", {
       messageId: params.messageId,
-      reactions: result,
+      reactions: formatted,
     });
   } catch {}
 
-  return success({ reactions: result });
+  return success({ reactions: formatted });
 }
 
 export async function DELETE({ request, params }: { request: Request; params: { id: string; messageId: string } }) {
@@ -79,35 +77,31 @@ export async function DELETE({ request, params }: { request: Request; params: { 
   });
   if (!membership) return error("FORBIDDEN", "Not a member of this guild", 403);
 
-  let result: Reaction[];
-  try {
-    result = await prisma.$transaction(async (tx) => {
-      const message = await tx.guildMessage.findUnique({ where: { id: params.messageId } });
-      if (!message || message.guildId !== params.id) throw new Error("NOT_FOUND");
-
-      const reactions: Reaction[] = (message.reactions as unknown as Reaction[]) || [];
-      const filtered = reactions.filter((r) => r.userId !== user.userId);
-
-      await tx.guildMessage.update({
-        where: { id: params.messageId },
-        data: { reactions: filtered as any },
-      });
-
-      return filtered;
-    });
-  } catch (e: any) {
-    if (e?.message === "NOT_FOUND") {
-      return error("NOT_FOUND", "Message not found", 404);
-    }
-    throw e;
+  const message = await prisma.guildMessage.findUnique({
+    where: { id: params.messageId },
+    select: { id: true, guildId: true },
+  });
+  if (!message || message.guildId !== params.id) {
+    return error("NOT_FOUND", "Message not found", 404);
   }
+
+  await prisma.guildMessageReaction.deleteMany({
+    where: { messageId: params.messageId, userId: user.userId },
+  });
+
+  const reactions = await fetchReactions(params.messageId);
+  const formatted = reactions.map((r) => ({
+    emoji: r.emoji,
+    userId: r.userId,
+    createdAt: r.createdAt.toISOString(),
+  }));
 
   try {
     getIO().to(`guild:${params.id}`).emit("guild:message-reaction", {
       messageId: params.messageId,
-      reactions: result,
+      reactions: formatted,
     });
   } catch {}
 
-  return success({ reactions: result });
+  return success({ reactions: formatted });
 }

@@ -1,6 +1,7 @@
 import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
+import { getEquippedCosmetics } from "~/lib/cosmetics/equipped";
 
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -9,9 +10,17 @@ export async function GET({ request, params }: { request: Request; params: { id:
   const guild = await prisma.guild.findUnique({ where: { id: params.id } });
   if (!guild) return error("NOT_FOUND", "Guild not found", 404);
 
+  const membership = await prisma.guildMember.findUnique({
+    where: { guildId_userId: { guildId: params.id, userId: user.userId } },
+  });
+  if (!membership && !guild.isPublic) {
+    return error("FORBIDDEN", "Not a member of this guild", 403);
+  }
+
   const url = new URL(request.url);
   const cursor = url.searchParams.get("cursor");
-  const take = Math.min(parseInt(url.searchParams.get("take") || "50"), 100);
+  const rawTake = parseInt(url.searchParams.get("take") || "50", 10);
+  const take = Math.min(Math.max(Number.isNaN(rawTake) ? 50 : rawTake, 1), 100);
 
   const members = await prisma.guildMember.findMany({
     where: { guildId: params.id },
@@ -29,6 +38,15 @@ export async function GET({ request, params }: { request: Request; params: { id:
           avatarUrl: true,
           level: true,
           title: true,
+          inventory: {
+            where: { isEquipped: true },
+            select: {
+              isEquipped: true,
+              item: {
+                select: { id: true, name: true, type: true, rarity: true, imageUrl: true, category: true },
+              },
+            },
+          },
         },
       },
     },
@@ -51,6 +69,7 @@ export async function GET({ request, params }: { request: Request; params: { id:
         avatarUrl: m.user.avatarUrl,
         level: m.user.level,
         title: m.user.title,
+        equipped: getEquippedCosmetics(m.user.inventory),
       },
     })),
     nextCursor: hasMore ? members[members.length - 1]?.id : null,

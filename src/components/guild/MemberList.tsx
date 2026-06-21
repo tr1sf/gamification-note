@@ -1,5 +1,7 @@
 import { For, Show } from "solid-js";
 import type { GuildMember } from "~/stores/guild";
+import CosmeticAvatar, { CosmeticName } from "~/components/cosmetics/CosmeticAvatar";
+import { t } from "~/lib/i18n";
 
 type Role = "owner" | "admin" | "member";
 
@@ -21,7 +23,7 @@ export default function MemberList(props: MemberListProps) {
         fallback={
           <div class="text-center py-8 text-ink-secondary">
             <p class="text-3xl mb-2">👥</p>
-            <p class="text-sm">No members yet</p>
+            <p class="text-sm">{t("No members yet")}</p>
           </div>
         }
       >
@@ -43,14 +45,14 @@ export default function MemberList(props: MemberListProps) {
               if (member.role === "owner") {
                 return (
                   <span class="text-xs px-1.5 py-0.5 rounded bg-coin/20 text-coin font-medium">
-                    Owner
+                    {t("Owner")}
                   </span>
                 );
               }
               if (member.role === "admin") {
                 return (
                   <span class="text-xs px-1.5 py-0.5 rounded bg-surface-border text-ink-secondary font-medium">
-                    Admin
+                    {t("Admin")}
                   </span>
                 );
               }
@@ -58,29 +60,31 @@ export default function MemberList(props: MemberListProps) {
             };
 
             return (
-              <div
-                class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-surface-hover transition-colors"
-                classList={{ "bg-accent/5": isSelf() }}
-              >
                 <div
-                  class="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center text-sm font-bold shrink-0"
-                  aria-label={member.user.username}
+                  class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-surface-hover transition-colors"
+                  classList={{ "bg-accent/5": isSelf() }}
                 >
-                  {member.user.username.charAt(0).toUpperCase()}
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-ink-primary truncate">
-                      {member.user.username}
-                    </span>
-                    {isSelf() && (
-                      <span class="text-xs text-ink-secondary">(you)</span>
-                    )}
-                    {roleBadge()}
-                  </div>
+                  <CosmeticAvatar
+                    username={member.user.username}
+                    avatarUrl={member.user.avatarUrl}
+                    equipped={member.user.equipped}
+                    size="md"
+                  />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <CosmeticName
+                        username={member.user.username}
+                        equipped={member.user.equipped}
+                        class="text-sm font-medium truncate"
+                      />
+                      {isSelf() && (
+                        <span class="text-xs text-ink-secondary">{t("(you)")}</span>
+                      )}
+                      {roleBadge()}
+                    </div>
                   <div class="flex items-center gap-2 mt-0.5">
                     <span class="text-xs font-mono text-xp font-semibold">
-                      Lv.{member.user.level}
+                      {t("Lv.")}{member.user.level}
                     </span>
                     <span class="text-xs text-ink-secondary truncate">
                       {member.user.title}
@@ -96,7 +100,7 @@ export default function MemberList(props: MemberListProps) {
                         class="text-xs px-2 py-1 rounded border border-surface-border text-ink-secondary hover:border-accent hover:text-accent transition-colors"
                         title="Promote to admin"
                       >
-                        Promote
+                        {t("Promote")}
                       </button>
                     </Show>
                     <Show when={canDemote()}>
@@ -105,7 +109,7 @@ export default function MemberList(props: MemberListProps) {
                         class="text-xs px-2 py-1 rounded border border-surface-border text-ink-secondary hover:border-accent hover:text-accent transition-colors"
                         title="Demote to member"
                       >
-                        Demote
+                        {t("Demote")}
                       </button>
                     </Show>
                     <Show when={canTransfer()}>
@@ -114,7 +118,7 @@ export default function MemberList(props: MemberListProps) {
                         class="text-xs px-2 py-1 rounded border border-surface-border text-coin hover:border-coin transition-colors"
                         title="Transfer ownership"
                       >
-                        Make owner
+                        {t("Make owner")}
                       </button>
                     </Show>
                     <Show when={canKick()}>
@@ -123,7 +127,7 @@ export default function MemberList(props: MemberListProps) {
                         class="text-xs px-2 py-1 rounded border border-surface-border text-ink-secondary hover:border-error hover:text-error transition-colors"
                         title="Remove from guild"
                       >
-                        Kick
+                        {t("Kick")}
                       </button>
                     </Show>
                   </div>

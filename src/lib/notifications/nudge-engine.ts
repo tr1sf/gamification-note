@@ -1,28 +1,41 @@
 import { prisma } from "~/lib/db";
 import { createNotification } from "~/lib/socket/notifications";
 
+/**
+ * Check if a notification type is enabled in the user's preferences.
+ * Defaults to `true` (enabled) if the pref is not set.
+ */
+function prefEnabled(prefs: Record<string, unknown> | null, key: string): boolean {
+  if (!prefs) return true;
+  const val = prefs[key];
+  return val !== false; // Only false explicitly disables
+}
+
 export async function runNudgeEngine(userId: string): Promise<void> {
   const now = new Date();
   const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
 
   const [user, todayNotes, lastNote, guildMember] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { streak: true, xp: true, level: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { streak: true, xp: true, level: true, notificationPrefs: true } }),
     prisma.note.count({ where: { userId, isDeleted: false, createdAt: { gte: todayStart } } }),
     prisma.note.findFirst({ where: { userId, isDeleted: false }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
     prisma.guildMember.findFirst({ where: { userId }, include: { guild: { include: { tasks: { where: { status: "assigned" }, take: 1 } } } } }),
   ]);
   if (!user) return;
 
+  // Parse notification preferences so each nudge can check before firing.
+  const prefs = user.notificationPrefs as Record<string, unknown> | null;
+
   const daysSinceLastNote = lastNote ? Math.ceil((now.getTime() - lastNote.createdAt.getTime()) / 86400000) : 999;
 
   // 1. Streak at risk (after 21:00, no note today, streak >= 3)
-  if (user.streak >= 3 && todayNotes === 0 && now.getHours() >= 21) {
+  if (prefEnabled(prefs, "streak_warning") && user.streak >= 3 && todayNotes === 0 && now.getHours() >= 21) {
     await createNotification(userId, "streak_warning", `⚡ Còn 3h để giữ streak ${user.streak} ngày!`, "Viết 1 note ngay!", { urgency: "urgent" }).catch(() => {});
   }
 
-  // 2. Comeback (gone 3 days)
-  if (daysSinceLastNote >= 3 && daysSinceLastNote < 7) {
-    await createNotification(userId, "comeback", "👋 Đã 3 ngày không ghé tavern!", "Quay lại nhận quest mới!", { urgency: "normal" }).catch(() => {});
+  // 2. Comeback (gone 2 days — Nelar voice)
+  if (prefEnabled(prefs, "comeback") && daysSinceLastNote >= 2 && daysSinceLastNote < 7) {
+    await createNotification(userId, "comeback", "Nelar misses you...", "It's been 2 days since your last scroll. The tavern feels empty.", { urgency: "urgent", mascot: "nelar", mascotState: "worried" }).catch(() => {});
   }
 
   // 3. Near milestone (100, 200, 300...)
@@ -33,7 +46,7 @@ export async function runNudgeEngine(userId: string): Promise<void> {
   }
 
   // 4. Weekly recap (Sunday between 20-21)
-  if (now.getDay() === 0 && now.getHours() === 20) {
+  if (prefEnabled(prefs, "weekly_recap") && now.getDay() === 0 && now.getHours() === 20) {
     const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7);
     const weekNotes = await prisma.note.count({ where: { userId, isDeleted: false, createdAt: { gte: weekStart } } });
     const wordsAgg = await prisma.note.aggregate({ where: { userId, isDeleted: false, createdAt: { gte: weekStart } }, _sum: { wordCount: true } });
@@ -41,7 +54,7 @@ export async function runNudgeEngine(userId: string): Promise<void> {
   }
 
   // 5. Guild backlog
-  if (guildMember?.guild?.tasks?.length) {
+  if (prefEnabled(prefs, "guild_activity") && guildMember?.guild?.tasks?.length) {
     await createNotification(userId, "guild_activity", "🏛️ Guild task waiting!", "Your guild has pending tasks.", { urgency: "normal" }).catch(() => {});
   }
 

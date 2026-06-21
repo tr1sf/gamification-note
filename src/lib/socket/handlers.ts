@@ -2,6 +2,7 @@ import type { Server, Socket } from "socket.io";
 import { prisma } from "~/lib/db";
 import { getIO } from "./index";
 import { track } from "~/lib/analytics/tracker";
+import { getEquippedCosmetics } from "~/lib/cosmetics/equipped";
 
 const guildMessageRateLimit = new Map<string, number[]>();
 const noteEditingLocks = new Map<string, { userId: string; expiresAt: number }>();
@@ -117,13 +118,33 @@ export function registerHandlers(socket: Socket): void {
       const message = await prisma.guildMessage.create({
         data: { guildId, userId, content },
       });
+
+      const [sender, inventory] = await Promise.all([
+        prisma.user.findUnique({ where: { id: userId }, select: { avatarUrl: true } }),
+        prisma.userInventory.findMany({
+          where: { userId, isEquipped: true },
+          select: {
+            isEquipped: true,
+            item: {
+              select: { id: true, name: true, type: true, rarity: true, imageUrl: true, category: true },
+            },
+          },
+        }),
+      ]);
+
       const io = getIO();
       io.to(`guild:${guildId}`).emit("guild:message", {
         id: message.id,
         guildId,
         userId,
-        user: { id: userId, username },
+        user: {
+          id: userId,
+          username,
+          avatarUrl: sender?.avatarUrl ?? null,
+          equipped: getEquippedCosmetics(inventory),
+        },
         content: message.content,
+        reactions: [],
         createdAt: message.createdAt.toISOString(),
       });
 

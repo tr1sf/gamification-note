@@ -12,9 +12,6 @@ export default function LoginPage() {
         <div class="absolute -top-1.5 -left-1.5 -right-1.5 -bottom-1.5 rounded-xl border border-accent/15 -z-10" aria-hidden="true" style="box-shadow: inset 0 0 40px color-mix(in oklab, var(--color-accent) 4%, transparent);" />
 
         <div class="p-4 sm:p-8 rounded-xl border border-surface-border bg-surface-elevated" style="box-shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 4px 20px rgb(0 0 0 / 0.04), inset 0 0 0 1px color-mix(in oklab, var(--color-accent) 5%, transparent);">
-          <div class="text-center mb-6" aria-hidden="true">
-            <span class="text-3xl">🏰</span>
-          </div>
           <LoginForm />
         </div>
       </div>

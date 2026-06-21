@@ -8,6 +8,8 @@ import {
   type GuildTask,
 } from "~/stores/tasks";
 import { addToast } from "~/stores/ui";
+import Nelar from "~/components/mascot/Nelar";
+import { t } from "~/lib/i18n";
 
 interface GuildTasksProps {
   guildId: string;
@@ -24,9 +26,9 @@ const STATUS_BADGE: Record<string, string> = {
   approved: "bg-success-bg text-success",
 };
 const STATUS_LABEL: Record<string, string> = {
-  assigned: "Assigned",
-  submitted: "In review",
-  approved: "Approved",
+  assigned: t("Assigned"),
+  submitted: t("In review"),
+  approved: t("Approved"),
 };
 
 export default function GuildTasks(props: GuildTasksProps) {
@@ -49,7 +51,7 @@ export default function GuildTasks(props: GuildTasksProps) {
   const handleCreate = async (e: Event) => {
     e.preventDefault();
     if (!assigneeId() || !title().trim()) {
-      addToast("Pick an assignee and a title", "error");
+      addToast(t("Pick an assignee and a title"), "error");
       return;
     }
     setSaving(true);
@@ -63,12 +65,12 @@ export default function GuildTasks(props: GuildTasksProps) {
     });
     setSaving(false);
     if (created) {
-      addToast("Task assigned", "success");
+      addToast(t("Task assigned"), "success");
       setShowCreate(false);
       resetForm();
       await props.onChanged();
     } else {
-      addToast("Failed to create task", "error");
+      addToast(t("Failed to create task"), "error");
     }
   };
 
@@ -76,33 +78,33 @@ export default function GuildTasks(props: GuildTasksProps) {
     setBusy(task.id);
     const ok = await submitTask(props.guildId, task.id);
     setBusy(null);
-    addToast(ok ? "Submitted for review" : "Failed to submit", ok ? "success" : "error");
+    addToast(ok ? t("Submitted for review") : t("Failed to submit"), ok ? "success" : "error");
     if (ok) await props.onChanged();
   };
 
   const handleReview = async (task: GuildTask, decision: "approve" | "reject") => {
     let note: string | undefined;
     if (decision === "reject") {
-      const input = prompt("Reason for sending back (optional):") ?? "";
+      const input = prompt(t("Reason for sending back (optional):")) ?? "";
       note = input.trim() || undefined;
     }
     setBusy(task.id);
     const ok = await reviewTask(props.guildId, task.id, decision, note);
     setBusy(null);
     addToast(
-      ok ? (decision === "approve" ? "Task approved 🎉" : "Sent back to assignee") : "Action failed",
+      ok ? (decision === "approve" ? `${t("Task approved")} 🎉` : t("Sent back to assignee")) : t("Action failed"),
       ok ? (decision === "approve" ? "success" : "info") : "error"
     );
     if (ok) await props.onChanged();
   };
 
   const handleDelete = async (task: GuildTask) => {
-    if (!confirm(`Delete task "${task.title}"?`)) return;
+    if (!confirm(`${t("Delete task")} "${task.title}"?`)) return;
     setBusy(task.id);
     const ok = await deleteTask(props.guildId, task.id);
     setBusy(null);
     if (ok) await props.onChanged();
-    else addToast("Failed to delete task", "error");
+    else addToast(t("Failed to delete task"), "error");
   };
 
   const isAssignee = (t: GuildTask) => t.assignee.id === props.currentUserId;
@@ -118,14 +120,14 @@ export default function GuildTasks(props: GuildTasksProps) {
     <div class="space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-medium text-ink-secondary">
-          {props.tasks.length} {props.tasks.length === 1 ? "task" : "tasks"}
+          {props.tasks.length} {props.tasks.length === 1 ? t("task") : t("tasks")}
         </h2>
         <Show when={props.canManage}>
           <button
             onClick={() => setShowCreate(true)}
             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover transition-colors"
           >
-            + Assign task
+            + {t("Assign task")}
           </button>
         </Show>
       </div>
@@ -134,9 +136,9 @@ export default function GuildTasks(props: GuildTasksProps) {
         when={props.tasks.length > 0}
         fallback={
           <div class="text-center py-12 text-ink-secondary">
-            <p class="text-4xl mb-3">📋</p>
+            <Nelar state="idle" size={56} class="mx-auto mb-2" />
             <p class="text-sm">
-              {props.canManage ? "No tasks yet. Assign one to a guild member." : "No tasks assigned yet."}
+              {props.canManage ? t("No tasks yet. Assign one to a guild member.") : t("No tasks assigned yet.")}
             </p>
           </div>
         }
@@ -158,14 +160,14 @@ export default function GuildTasks(props: GuildTasksProps) {
                     </Show>
                     <div class="flex items-center gap-3 mt-2 text-xs text-ink-secondary flex-wrap">
                       <span>👤 {task.assignee.username}</span>
-                      <Show when={task.xpReward > 0}><span class="text-xp font-semibold">+{task.xpReward} XP</span></Show>
+                      <Show when={task.xpReward > 0}><span class="text-xp font-semibold">+{task.xpReward} {t("XP")}</span></Show>
                       <Show when={task.coinReward > 0}><span class="text-coin font-semibold">+{task.coinReward} 🪙</span></Show>
-                      <Show when={task.dueAt}><span>📅 due {dueLabel(task.dueAt)}</span></Show>
-                      <span>by {task.creator.username}</span>
+                      <Show when={task.dueAt}><span>📅 {t("due")} {dueLabel(task.dueAt)}</span></Show>
+                      <span>{t("by")} {task.creator.username}</span>
                     </div>
                     <Show when={task.status === "assigned" && task.reviewNote}>
                       <p class="text-xs text-error mt-2 bg-error-bg/40 rounded px-2 py-1">
-                        ↩ Sent back: {task.reviewNote}
+                        ↩ {t("Sent back:")} {task.reviewNote}
                       </p>
                     </Show>
                   </div>
@@ -190,11 +192,11 @@ export default function GuildTasks(props: GuildTasksProps) {
                       disabled={busy() === task.id}
                       class="px-3 py-1.5 bg-accent text-surface-overlay rounded-md text-xs font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
                     >
-                      Mark done
+                      {t("Mark done")}
                     </button>
                   </Show>
                   <Show when={isAssignee(task) && task.status === "submitted"}>
-                    <span class="text-xs text-ink-secondary">Waiting for review…</span>
+                    <span class="text-xs text-ink-secondary">{t("Waiting for review…")}</span>
                   </Show>
                   <Show when={props.canManage && task.status === "submitted"}>
                     <button
@@ -202,18 +204,18 @@ export default function GuildTasks(props: GuildTasksProps) {
                       disabled={busy() === task.id}
                       class="px-3 py-1.5 bg-success text-surface-overlay rounded-md text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
-                      Approve
+                      {t("Approve")}
                     </button>
                     <button
                       onClick={() => handleReview(task, "reject")}
                       disabled={busy() === task.id}
                       class="px-3 py-1.5 border border-surface-border text-ink-secondary rounded-md text-xs font-medium hover:border-error hover:text-error transition-colors disabled:opacity-50"
                     >
-                      Send back
+                      {t("Send back")}
                     </button>
                   </Show>
                   <Show when={task.status === "approved"}>
-                    <span class="text-xs text-success">✓ Completed</span>
+                    <span class="text-xs text-success">✓ {t("Completed")}</span>
                   </Show>
                 </div>
               </div>
@@ -230,38 +232,38 @@ export default function GuildTasks(props: GuildTasksProps) {
             onClick={(e) => e.stopPropagation()}
             class="w-full max-w-md rounded-xl border border-surface-border bg-surface-elevated shadow-xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"
           >
-            <h2 class="font-display font-bold text-ink-primary text-lg">Assign a task</h2>
+            <h2 class="font-display font-bold text-ink-primary text-lg">{t("Assign a task")}</h2>
 
             <div>
-              <label for="task-assignee" class="block text-xs text-ink-secondary mb-1.5">Assign to</label>
+              <label for="task-assignee" class="block text-xs text-ink-secondary mb-1.5">{t("Assign to")}</label>
               <select
                 id="task-assignee"
                 value={assigneeId()}
                 onChange={(e) => setAssigneeId(e.currentTarget.value)}
                 class="w-full rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
               >
-                <option value="">— Select a member —</option>
+                <option value="">{t("— Select a member —")}</option>
                 <For each={props.members}>
-                  {(m) => <option value={m.userId}>{m.user.username}{m.userId === props.currentUserId ? " (you)" : ""}</option>}
+                  {(m) => <option value={m.userId}>{m.user.username}{m.userId === props.currentUserId ? ` ${t("(you)")}` : ""}</option>}
                 </For>
               </select>
             </div>
 
             <div>
-              <label for="task-title" class="block text-xs text-ink-secondary mb-1.5">Title</label>
+              <label for="task-title" class="block text-xs text-ink-secondary mb-1.5">{t("Title")}</label>
               <input
                 id="task-title"
                 type="text"
                 value={title()}
                 onInput={(e) => setTitle(e.currentTarget.value)}
                 maxLength={120}
-                placeholder="e.g. Write the onboarding guide"
+                placeholder={t("e.g. Write the onboarding guide")}
                 class="w-full rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
 
             <div>
-              <label for="task-desc" class="block text-xs text-ink-secondary mb-1.5">Details (optional)</label>
+              <label for="task-desc" class="block text-xs text-ink-secondary mb-1.5">{t("Details (optional)")}</label>
               <textarea
                 id="task-desc"
                 value={description()}
@@ -274,13 +276,13 @@ export default function GuildTasks(props: GuildTasksProps) {
 
             <div class="flex gap-3">
               <div class="flex-1">
-                <label for="task-xp" class="block text-xs text-ink-secondary mb-1.5">XP reward</label>
+                <label for="task-xp" class="block text-xs text-ink-secondary mb-1.5">{t("XP reward")}</label>
                 <input id="task-xp" type="number" min={0} max={500} value={xpReward()}
                   onInput={(e) => setXpReward(parseInt(e.currentTarget.value) || 0)}
                   class="w-full rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent" />
               </div>
               <div class="flex-1">
-                <label for="task-coins" class="block text-xs text-ink-secondary mb-1.5">Coin reward</label>
+                <label for="task-coins" class="block text-xs text-ink-secondary mb-1.5">{t("Coin reward")}</label>
                 <input id="task-coins" type="number" min={0} max={200} value={coinReward()}
                   onInput={(e) => setCoinReward(parseInt(e.currentTarget.value) || 0)}
                   class="w-full rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent" />
@@ -288,7 +290,7 @@ export default function GuildTasks(props: GuildTasksProps) {
             </div>
 
             <div>
-              <label for="task-due" class="block text-xs text-ink-secondary mb-1.5">Due date (optional)</label>
+              <label for="task-due" class="block text-xs text-ink-secondary mb-1.5">{t("Due date (optional)")}</label>
               <input id="task-due" type="date" value={dueAt()}
                 onInput={(e) => setDueAt(e.currentTarget.value)}
                 class="w-full rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent" />
@@ -296,11 +298,11 @@ export default function GuildTasks(props: GuildTasksProps) {
 
             <div class="flex justify-end gap-2 pt-1">
               <button type="button" onClick={() => setShowCreate(false)} class="px-4 py-2 text-sm text-ink-secondary hover:text-ink-primary">
-                Cancel
+                {t("Cancel")}
               </button>
               <button type="submit" disabled={saving()}
                 class="px-4 py-2 bg-accent text-surface-overlay rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50">
-                {saving() ? "Assigning..." : "Assign task"}
+                {saving() ? t("Assigning...") : t("Assign task")}
               </button>
             </div>
           </form>

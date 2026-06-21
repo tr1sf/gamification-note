@@ -2,6 +2,7 @@ import { createSignal, Show } from "solid-js";
 import { createGuild } from "~/stores/guild";
 import { addToast } from "~/stores/ui";
 import { useNavigate } from "@solidjs/router";
+import { t } from "~/lib/i18n";
 
 interface CreateGuildProps {
   onClose: () => void;
@@ -27,14 +28,14 @@ export default function CreateGuild(props: CreateGuildProps) {
         isPublic: isPublic(),
       });
       if (guild) {
-        addToast("Guild created!", "success");
+        addToast(t("Guild created!"), "success");
         props.onClose();
         navigate(`/guilds/${guild.id}`);
       } else {
-        addToast("Failed to create guild", "error");
+        addToast(t("Failed to create guild"), "error");
       }
     } catch {
-      addToast("Network error", "error");
+      addToast(t("Network error"), "error");
     } finally {
       setSubmitting(false);
     }
@@ -57,7 +58,7 @@ export default function CreateGuild(props: CreateGuildProps) {
       >
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-display font-semibold text-ink-primary">
-            Create Guild
+            {t("Create Guild")}
           </h2>
           <button
             onClick={props.onClose}
@@ -71,14 +72,14 @@ export default function CreateGuild(props: CreateGuildProps) {
         <form onSubmit={handleSubmit} class="space-y-4">
           <div>
             <label for="guild-name" class="block text-sm font-medium text-ink-primary mb-1">
-              Guild Name
+              {t("Guild Name")}
             </label>
             <input
               id="guild-name"
               type="text"
               value={name()}
               onInput={(e) => setName(e.currentTarget.value)}
-              placeholder="Enter guild name..."
+              placeholder={t("Enter guild name...")}
               maxLength={50}
               required
               class="w-full rounded-md border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent"
@@ -87,13 +88,13 @@ export default function CreateGuild(props: CreateGuildProps) {
 
           <div>
             <label for="guild-description" class="block text-sm font-medium text-ink-primary mb-1">
-              Description
+              {t("Description")}
             </label>
             <textarea
               id="guild-description"
               value={description()}
               onInput={(e) => setDescription(e.currentTarget.value)}
-              placeholder="Describe your guild..."
+              placeholder={t("Describe your guild...")}
               maxLength={200}
               rows={3}
               class="w-full rounded-md border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent resize-none"
@@ -101,7 +102,7 @@ export default function CreateGuild(props: CreateGuildProps) {
           </div>
 
           <div class="flex items-center justify-between">
-            <span class="text-sm text-ink-primary">Public guild</span>
+            <span class="text-sm text-ink-primary">{t("Public guild")}</span>
             <button
               type="button"
               role="switch"
@@ -125,14 +126,14 @@ export default function CreateGuild(props: CreateGuildProps) {
               onClick={props.onClose}
               class="px-4 py-2 text-sm text-ink-secondary hover:text-ink-primary transition-colors"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={submitting() || !name().trim()}
               class="px-4 py-2 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting() ? "Creating..." : "Create Guild"}
+              {submitting() ? t("Creating...") : t("Create Guild")}
             </button>
           </div>
         </form>

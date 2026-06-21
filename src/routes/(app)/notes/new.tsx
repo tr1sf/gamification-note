@@ -3,6 +3,7 @@ import { useNavigate } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
 import { addToast, showReward } from "~/stores/ui";
 import { applyReward } from "~/stores/user";
+import { t } from "~/lib/i18n";
 import Breadcrumb from "~/components/ui/Breadcrumb";
 import BlockEditor from "~/components/editor/BlockEditor";
 import BlockRenderer from "~/components/editor/BlockRenderer";
@@ -47,7 +48,7 @@ export default function NewNotePage() {
   const handleCreate = async (e: Event) => {
     e.preventDefault();
     if (!title().trim() || blocks().length === 0) {
-      addToast("Title and content are required", "error");
+      addToast(t("Title and content are required"), "error");
       return;
     }
     setSaving(true);
@@ -66,7 +67,7 @@ export default function NewNotePage() {
       });
       const json = await res.json();
       if (json.success) {
-        addToast("Note created!", "success");
+        addToast(t("Note created!"), "success");
         const note = json.data.note;
         const g = json.data.gamification;
         if (g) {
@@ -87,14 +88,14 @@ export default function NewNotePage() {
         }
         navigate(`/notes/${note.id}`);
       } else {
-        addToast(json.error?.message || "Failed to create note", "error");
+        addToast(json.error?.message || t("Failed to create note"), "error");
       }
     } catch (err: any) {
       if (err.message === "SESSION_EXPIRED") {
-        addToast("Session expired. Please sign in again.", "error");
+        addToast(t("Session expired. Please sign in again."), "error");
         navigate("/login");
       } else {
-        addToast("Network error. Your note was not saved.", "error");
+        addToast(t("Network error. Your note was not saved."), "error");
       }
     } finally {
       setSaving(false);
@@ -110,7 +111,7 @@ export default function NewNotePage() {
     a.download = `${title().replace(/[^a-zA-Z0-9]/g, "_") || "note"}.md`;
     a.click();
     URL.revokeObjectURL(url);
-    addToast("Downloaded as Markdown", "success");
+    addToast(t("Downloaded as Markdown"), "success");
   };
 
   const modeLabels: Record<ViewMode, string> = { edit: "Edit", split: "Split", preview: "Preview" };
@@ -118,18 +119,18 @@ export default function NewNotePage() {
   return (
     <div class="max-w-5xl mx-auto p-4 sm:p-6">
       <Breadcrumb items={[
-        { label: "Notes", href: "/notes", icon: "📜" },
-        { label: "New Note" },
+        { label: t("Notes"), href: "/notes", icon: "📜" },
+        { label: t("New Note") },
       ]} />
-      <h1 class="text-xl sm:text-2xl font-display font-bold text-ink-primary mb-6">New Note</h1>
+      <h1 class="text-xl sm:text-2xl font-display font-bold text-ink-primary mb-6">{t("New Note")}</h1>
 
       <form onSubmit={handleCreate} class="space-y-4" novalidate>
         <div>
-          <label for="note-title" class="sr-only">Title</label>
+          <label for="note-title" class="sr-only">{t("Title")}</label>
           <input
             id="note-title"
             type="text"
-            placeholder="Note title..."
+            placeholder={t("Note title...")}
             value={title()}
             onInput={(e) => setTitle(e.currentTarget.value)}
             class="w-full text-2xl font-display font-bold border-0 border-b-2 border-surface-border px-0 py-2 text-ink-primary bg-transparent focus:outline-none focus:border-accent placeholder:text-ink-secondary/30"
@@ -138,36 +139,38 @@ export default function NewNotePage() {
         </div>
 
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <label for="note-category" class="sr-only">Category</label>
+          <label for="note-category" class="sr-only">{t("Category")}</label>
           <input
             id="note-category"
             type="text"
-            placeholder="Category (optional)"
+            placeholder={t("Category (optional)")}
             value={category()}
             onInput={(e) => setCategory(e.currentTarget.value)}
             class="flex-1 w-full text-sm border border-surface-border rounded px-2 py-1 bg-surface text-ink-primary focus:outline-none focus:ring-1 focus:ring-accent"
           />
           <label class="flex items-center gap-1.5 text-sm text-ink-secondary cursor-pointer whitespace-nowrap">
             <input type="checkbox" checked={isPublic()} onChange={(e) => setIsPublic(e.currentTarget.checked)} class="rounded" />
-            Public
+            {t("Public")}
           </label>
         </div>
 
         <div>
-          <label class="sr-only" for="note-tags">Tags</label>
+          <label class="sr-only" for="note-tags">{t("Tags")}</label>
           <div class="flex flex-wrap items-center gap-1.5 border border-surface-border rounded px-2 py-1.5 bg-surface min-h-[36px] focus-within:ring-1 focus-within:ring-accent transition-all">
+            <ul role="list" class="contents">
             <For each={tags()}>
               {(tag) => (
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-accent/10 text-accent border border-accent/20">
+                <li class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-accent/10 text-accent border border-accent/20">
                   {tag}
-                  <button type="button" onClick={() => removeTag(tag)} class="hover:text-error transition-colors leading-none">&times;</button>
-                </span>
+                  <button type="button" onClick={() => removeTag(tag)} class="hover:text-error transition-colors leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 rounded" aria-label={`Remove tag ${tag}`}><span aria-hidden="true">&times;</span></button>
+                </li>
               )}
             </For>
+            </ul>
             <input
               id="note-tags"
               type="text"
-              placeholder={tags().length === 0 ? "Add tags (press Enter)..." : ""}
+              placeholder={tags().length === 0 ? t("Add tags (press Enter)...") : ""}
               value={tagInput()}
               onInput={(e) => setTagInput(e.currentTarget.value)}
               onKeyDown={handleTagKeydown}
@@ -189,12 +192,12 @@ export default function NewNotePage() {
                     : "text-ink-secondary hover:text-ink-primary"
                 }`}
               >
-                {modeLabels[mode]}
+                {t(modeLabels[mode])}
               </button>
             ))}
           </div>
           <button type="button" onClick={handleExport} class="px-3 py-1.5 text-xs border border-surface-border text-ink-secondary rounded-md hover:bg-surface-hover transition-colors">
-            Export .md
+            {t("Export")} .md
           </button>
         </div>
 
@@ -213,7 +216,7 @@ export default function NewNotePage() {
             >
               <Show
                 when={blocks().some(b => b.content.trim())}
-                fallback={<p class="text-ink-secondary/40 italic text-sm">Preview will appear here...</p>}
+                fallback={<p class="text-ink-secondary/40 italic text-sm">{t("Preview will appear here...")}</p>}
               >
                 <BlockRenderer blocks={blocks()} />
               </Show>
@@ -222,11 +225,11 @@ export default function NewNotePage() {
         </div>
 
         <div class="flex items-center gap-4 text-xs text-ink-secondary">
-          <span>{wordCount()} words</span>
+          <span>{wordCount()} {t("words")}</span>
           <span class="text-ink-secondary/30 select-none">|</span>
-          <span>{charCount()} characters</span>
+          <span>{charCount()} {t("characters")}</span>
           <span class="text-ink-secondary/30 select-none">|</span>
-          <span>~{readingTime()} min read</span>
+          <span>~{readingTime()} {t("min read")}</span>
         </div>
 
         <div class="flex items-center gap-3 pt-2">
@@ -235,14 +238,14 @@ export default function NewNotePage() {
             disabled={saving() || !title().trim() || blocks().length === 0 || !blocks().some(b => b.content.trim())}
             class="px-5 py-2 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors"
           >
-            {saving() ? "Saving..." : "Create Note"}
+            {saving() ? t("Saving...") : t("Create Note")}
           </button>
           <button
             type="button"
             onClick={() => navigate("/notes")}
             class="px-4 py-2 text-sm text-ink-secondary hover:text-ink-primary transition-colors"
           >
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </form>

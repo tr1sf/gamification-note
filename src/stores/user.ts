@@ -23,8 +23,9 @@ export { gamification };
 // Must mirror the server: src/lib/gamification/constants.ts (LEVEL_BASE_XP)
 // and src/lib/gamification/calculators/level-calculator.ts:
 //   calculateLevel(xp) = max(1, floor(sqrt(xp / LEVEL_BASE_XP)))
-// => total XP required to *reach* level L is L² * LEVEL_BASE_XP (level 1 starts at 0).
-const LEVEL_BASE_XP = 100;
+// => total XP required to *reach* level L is L² * (LEVEL_BASE_XP / 2).
+// Using half the base for faster early leveling (read level-calculator.ts for rationale).
+const LEVEL_BASE_XP = 50;
 
 export function xpForLevel(level: number): number {
   if (level <= 1) return 0;

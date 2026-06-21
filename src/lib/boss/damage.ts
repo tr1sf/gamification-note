@@ -13,16 +13,18 @@ export function calculateBossDamage(params: {
       damage = 5 * Math.max(1, (params.structureScore || 5) / 5);
       break;
     case "quiz":
+      // Clamp accuracy to [0, 1] and streak to [0, 20] to prevent inflated damage.
       damage = Math.round(
-        10 * (1 + (params.quizAccuracy || 0)) * (1 + (params.quizStreak || 0) * 0.2)
+        10 * (1 + Math.min(params.quizAccuracy || 0, 1)) * (1 + Math.min(params.quizStreak || 0, 20) * 0.2)
       );
       break;
     case "habit":
-      damage = 3 + (params.habitStreak || 0);
+      damage = 3 + Math.min(params.habitStreak || 0, 50);
       break;
     case "focus":
       damage = 5;
       break;
   }
-  return damage;
+  // Global damage cap prevents one-shot kills from any path.
+  return Math.min(damage, 200);
 }

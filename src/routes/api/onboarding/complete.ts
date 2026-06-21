@@ -11,6 +11,17 @@ export async function POST({ request }: { request: Request }) {
   const gamificationStyle = body.gamificationStyle as string | undefined;
   const path = body.path as string | undefined;
 
+  // Idempotency: if the user already completed onboarding, don't grant the
+  // 50-coin reward again. Previously a loop of POST /onboarding/complete
+  // granted +50 coins per call indefinitely.
+  const existing = await prisma.user.findUnique({
+    where: { id: user.userId },
+    select: { onboardingCompleted: true },
+  });
+  if (existing?.onboardingCompleted) {
+    return success({ alreadyCompleted: true, coinsGained: 0, badgeAwarded: null });
+  }
+
   await prisma.user.update({
     where: { id: user.userId },
     data: {

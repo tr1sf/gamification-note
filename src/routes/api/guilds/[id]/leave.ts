@@ -8,6 +8,8 @@ export async function POST({ request, params }: { request: Request; params: { id
   const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
+  let newOwnerUserId: string | null = null;
+
   try {
     await prisma.$transaction(async (tx) => {
       const membership = await tx.guildMember.findUnique({
@@ -27,6 +29,7 @@ export async function POST({ request, params }: { request: Request; params: { id
           await tx.guild.delete({ where: { id: params.id } });
         } else {
           const newOwner = otherMembers[0];
+          newOwnerUserId = newOwner.userId;
           await tx.guild.update({
             where: { id: params.id },
             data: {
@@ -55,6 +58,13 @@ export async function POST({ request, params }: { request: Request; params: { id
       userId: user.userId,
       username: user.username,
     });
+
+    if (newOwnerUserId) {
+      io.to(`guild:${params.id}`).emit("guild:role-changed", {
+        userId: newOwnerUserId,
+        role: "owner",
+      });
+    }
   } catch {}
 
   track({

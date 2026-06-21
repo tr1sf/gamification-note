@@ -2,7 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 
-export async function GET({
+export async function POST({
   request,
   params,
 }: {
@@ -19,6 +19,7 @@ export async function GET({
   if (boss.status !== "completed")
     return error("INVALID_STATE", "Boss not defeated yet", 400);
 
+  // Atomic claim guard — prevents double-loot via concurrent requests.
   const claim = await prisma.challenge.updateMany({
     where: { id: params.id, lootClaimed: false },
     data: { lootClaimed: true },
@@ -28,22 +29,26 @@ export async function GET({
 
   const roll = Math.random();
   const lootTable = (boss.lootTable as any[]) || [
-    { itemType: "coins", dropChance: 0.7, amount: 20 },
-    { itemType: "consumable", dropChance: 0.2, name: "XP Booster (1h)" },
+    { type: "coins", dropChance: 0.7, amount: 20 },
+    { type: "consumable", dropChance: 0.2, name: "XP Booster (1h)" },
   ];
 
+  // Normalize entries: lootTable may use `itemType` or `type`.
+  // Standardize to `type` so the dispatch below matches correctly.
   let loot: any = { type: "coins", amount: 5 };
   let cumulative = 0;
   for (const entry of lootTable) {
     cumulative += entry.dropChance;
     if (roll <= cumulative) {
-      loot = entry;
+      loot = { ...entry, type: entry.type ?? entry.itemType };
       break;
     }
   }
 
+  // Always grant the base boss reward (XP + coins), regardless of loot type.
+  const { grantReward } = await import("~/lib/gamification/engine");
+
   if (loot.type === "coins") {
-    const { grantReward } = await import("~/lib/gamification/engine");
     await grantReward({
       userId: user.userId,
       xp: boss.rewardXp ?? 0,
@@ -51,9 +56,12 @@ export async function GET({
       actionType: "boss_kill",
       metadata: { bossId: boss.id, bossName: boss.bossName },
     });
-  } else if (loot.type === "consumable" || loot.type === "badge" || loot.type === "frame") {
+  } else if (loot.type === "consumable" || loot.type === "badge" || loot.type === "frame" || loot.type === "avatar_frame") {
     const item = await prisma.cosmeticItem.findFirst({
-      where: { type: loot.type, isActive: true },
+      where: {
+        type: loot.type === "avatar_frame" ? "avatar_frame" : loot.type,
+        isActive: true,
+      },
       orderBy: { coinCost: "asc" },
     });
     if (item) {
@@ -63,7 +71,6 @@ export async function GET({
         update: {},
       });
 
-      const { grantReward } = await import("~/lib/gamification/engine");
       await grantReward({
         userId: user.userId,
         xp: boss.rewardXp ?? 0,
@@ -71,7 +78,25 @@ export async function GET({
         actionType: "boss_kill",
         metadata: { bossId: boss.id, bossName: boss.bossName, lootType: loot.type, itemName: item.name },
       });
+    } else {
+      // Fallback: if no item found, grant coins instead.
+      await grantReward({
+        userId: user.userId,
+        xp: boss.rewardXp ?? 0,
+        coins: (boss.rewardCoins ?? 0) + 30,
+        actionType: "boss_kill",
+        metadata: { bossId: boss.id, bossName: boss.bossName, lootFallback: true },
+      });
     }
+  } else {
+    // Unknown loot type — grant base reward only.
+    await grantReward({
+      userId: user.userId,
+      xp: boss.rewardXp ?? 0,
+      coins: boss.rewardCoins ?? 0,
+      actionType: "boss_kill",
+      metadata: { bossId: boss.id, bossName: boss.bossName },
+    });
   }
 
   const lootMessage = loot.type === "coins"
@@ -79,7 +104,7 @@ export async function GET({
     : loot.type === "consumable"
     ? loot.name || "Consumable"
     : loot.type === "badge" ? "New badge!"
-    : loot.type === "frame" ? "New frame!"
+    : loot.type === "frame" || loot.type === "avatar_frame" ? "New frame!"
     : loot.name ?? loot.type;
 
   return success({

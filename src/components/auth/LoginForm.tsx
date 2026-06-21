@@ -118,6 +118,9 @@ export function LoginForm() {
       <button type="submit" disabled={submitting()} class="w-full rounded-lg bg-accent px-4 py-2.5 text-surface-overlay font-semibold hover:bg-accent-hover hover:shadow-md hover:shadow-accent/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150">
         {submitting() ? t("Entering...") : t("Enter Tavern")}
       </button>
+      <p class="text-center text-sm">
+        <a href="/forgot-password" class="text-ink-secondary hover:text-accent hover:underline">{t("Forgot password?")}</a>
+      </p>
       <p class="text-center text-sm text-ink-secondary">
         {t("No account?")} <a href="/register" class="text-accent hover:underline">{t("Register")}</a>
       </p>

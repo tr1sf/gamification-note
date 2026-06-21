@@ -2,6 +2,11 @@ import { createSignal, For, Show, createEffect } from "solid-js";
 import type { ChatMessage } from "~/stores/guild";
 import { user } from "~/stores/auth";
 import { timeAgo } from "~/lib/time-ago";
+import CosmeticAvatar, { CosmeticName } from "~/components/cosmetics/CosmeticAvatar";
+import Nelar from "~/components/mascot/Nelar";
+import { t } from "~/lib/i18n";
+
+const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "🔥", "👏"];
 
 function renderMentions(content: string) {
   const parts = content.split(/(@\w+)/g);
@@ -24,6 +29,10 @@ export default function GuildChat(props: GuildChatProps) {
   const [newMessage, setNewMessage] = createSignal("");
   const [sending, setSending] = createSignal(false);
   let scrollContainer: HTMLDivElement | undefined;
+  // Track whether the user is near the bottom so we don't yank them back
+  // down when older messages are prepended (pagination) or when they've
+  // scrolled up to read history.
+  let wasNearBottom = true;
 
   const scrollToBottom = () => {
     if (scrollContainer) {
@@ -31,9 +40,18 @@ export default function GuildChat(props: GuildChatProps) {
     }
   };
 
+  const onScroll = () => {
+    if (!scrollContainer) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+    wasNearBottom = scrollHeight - scrollTop - clientHeight < 60;
+  };
+
   createEffect(() => {
-    props.messages;
-    scrollToBottom();
+    // Reading .length tracks the messages array; only scroll if the user
+    // was already pinned to the bottom (otherwise preserve their reading
+    // position when history is prepended).
+    void props.messages.length;
+    if (wasNearBottom) scrollToBottom();
   });
 
   const handleSubmit = async (e: Event) => {
@@ -67,23 +85,25 @@ export default function GuildChat(props: GuildChatProps) {
     return msg.reactions?.find((r) => r.userId === myId)?.emoji;
   };
 
-  const toggleReaction = async (msg: ChatMessage) => {
-    const existing = userReactedEmoji(msg);
-    await props.onReact(msg.id, existing || "👍");
+  const toggleReaction = async (msg: ChatMessage, emoji: string) => {
+    await props.onReact(msg.id, emoji);
   };
 
   return (
     <div class="flex flex-col h-[40vh] sm:h-[60vh] rounded-lg border border-surface-border bg-surface">
       <div
         ref={scrollContainer}
+        onScroll={onScroll}
         class="flex-1 overflow-y-auto p-4 space-y-3"
+        aria-live="polite"
+        aria-relevant="additions"
       >
         <Show
           when={props.messages.length > 0}
           fallback={
             <div class="text-center py-12 text-ink-secondary">
-              <p class="text-4xl mb-3">💬</p>
-              <p>No messages yet. Be the first to say something!</p>
+              <Nelar state="curious" size={56} class="mx-auto mb-2" />
+              <p>{t("No messages yet. Be the first to say something!")}</p>
             </div>
           }
         >
@@ -104,21 +124,23 @@ export default function GuildChat(props: GuildChatProps) {
                     msg.userId === currentUser()?.id ? "flex-row-reverse" : ""
                   }`}
                 >
-                  <div
-                    class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold shrink-0"
-                    aria-label={msg.user.username}
-                  >
-                    {msg.user.username.charAt(0).toUpperCase()}
-                  </div>
+                  <CosmeticAvatar
+                    username={msg.user.username}
+                    avatarUrl={msg.user.avatarUrl ?? null}
+                    equipped={msg.user.equipped}
+                    size="sm"
+                  />
                   <div
                     class={`max-w-[75%] ${
                       msg.userId === currentUser()?.id ? "items-end" : "items-start"
                     }`}
                   >
                     <div class="flex items-center gap-2 mb-1">
-                      <span class="text-xs font-medium text-ink-primary">
-                        {msg.user.username}
-                      </span>
+                      <CosmeticName
+                        username={msg.user.username}
+                        equipped={msg.user.equipped}
+                        class="text-xs font-medium"
+                      />
                       <span class="text-xs text-ink-secondary">
                         {timeAgoText(msg.createdAt)}
                       </span>
@@ -132,34 +154,61 @@ export default function GuildChat(props: GuildChatProps) {
                     >
                       {renderMentions(msg.content)}
                     </div>
-                    <div class="flex items-center gap-1 mt-1">
-                      <Show when={reactionSummary(msg).length > 0}>
-                        <For each={reactionSummary(msg)}>
-                          {(r) => (
-                            <span
-                              class={`text-xs rounded px-1.5 py-0.5 border ${
-                                userReactedEmoji(msg) === r.emoji
+                    <div class="flex items-center gap-1 mt-1 flex-wrap">
+                      {/* Show every quick emoji as a direct toggle so the user
+                          can see and pick reactions without an extra picker
+                          popup. Active emoji (one's the user has reacted with)
+                          is highlighted. */}
+                      <For each={QUICK_EMOJIS}>
+                        {(emoji) => {
+                          const summary = () => reactionSummary(msg).find((r) => r.emoji === emoji);
+                          const isMine = () => userReactedEmoji(msg) === emoji;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => toggleReaction(msg, emoji)}
+                              class={`text-xs rounded px-1.5 py-0.5 border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 ${
+                                isMine()
                                   ? "bg-accent/15 border-accent text-accent"
-                                  : "bg-surface-border border-transparent text-ink-secondary"
+                                  : summary()
+                                  ? "bg-surface-border border-transparent text-ink-secondary hover:text-accent hover:border-accent/30"
+                                  : "bg-transparent border-transparent text-ink-secondary/60 hover:text-accent hover:border-accent/30"
                               }`}
+                              aria-pressed={isMine()}
+                              aria-label={`React with ${emoji}${summary() ? `, ${summary()!.count} total` : ""}${isMine() ? ", click to remove" : ""}`}
+                              title={`${emoji}${summary() ? ` (${summary()!.count})` : ""}`}
                             >
-                              {r.emoji} {r.count}
-                            </span>
-                          )}
+                              <span aria-hidden="true">{emoji}</span>
+                              <Show when={summary() && summary()!.count > 0}>
+                                <span class="ml-0.5">{summary()!.count}</span>
+                              </Show>
+                            </button>
+                          );
+                        }}
+                      </For>
+                      {/* Existing reactions from OTHER users using emoji not in QUICK_EMOJIS */}
+                      <Show when={reactionSummary(msg).some((r) => !QUICK_EMOJIS.includes(r.emoji))}>
+                        <For each={reactionSummary(msg).filter((r) => !QUICK_EMOJIS.includes(r.emoji))}>
+                          {(r) => {
+                            const isMine = () => userReactedEmoji(msg) === r.emoji;
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => toggleReaction(msg, r.emoji)}
+                                class={`text-xs rounded px-1.5 py-0.5 border transition-colors ${
+                                  isMine()
+                                    ? "bg-accent/15 border-accent text-accent"
+                                    : "bg-surface-border border-transparent text-ink-secondary"
+                                } focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1`}
+                                aria-pressed={isMine()}
+                                aria-label={`${r.emoji} reaction, ${r.count} total`}
+                              >
+                                {r.emoji} {r.count}
+                              </button>
+                            );
+                          }}
                         </For>
                       </Show>
-                      <button
-                        type="button"
-                        onClick={() => toggleReaction(msg)}
-                        class={`text-xs rounded px-1.5 py-0.5 border transition-colors ${
-                          userReactedEmoji(msg)
-                            ? "bg-accent/15 border-accent text-accent hover:bg-accent/25"
-                            : "bg-surface-border border-transparent text-ink-secondary hover:text-accent hover:border-accent/30"
-                        }`}
-                        title={userReactedEmoji(msg) ? "Remove reaction" : "React with 👍"}
-                      >
-                        {userReactedEmoji(msg) ? userReactedEmoji(msg) : "👍"}
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -173,14 +222,14 @@ export default function GuildChat(props: GuildChatProps) {
         onSubmit={handleSubmit}
         class="border-t border-surface-border p-2 sm:p-3 flex gap-1.5 sm:gap-2 sticky bottom-0 bg-surface"
       >
-        <label for="chat-input" class="sr-only">Message</label>
+        <label for="chat-input" class="sr-only">{t("Message")}</label>
         <input
           id="chat-input"
           type="text"
           value={newMessage()}
           disabled={sending()}
           onInput={(e) => setNewMessage(e.currentTarget.value)}
-          placeholder="Type a message..."
+          placeholder={t("Type a message...")}
           class="flex-1 rounded-md border border-surface-border px-3 py-2 text-sm text-ink-primary bg-surface focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
           maxLength={2000}
         />
@@ -198,7 +247,7 @@ export default function GuildChat(props: GuildChatProps) {
           disabled={!newMessage().trim() || sending()}
           class="px-4 py-2 bg-accent text-surface-overlay rounded-md text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
-          {sending() ? "Sending..." : "Send"}
+          {sending() ? t("Sending...") : t("Send")}
         </button>
       </form>
     </div>

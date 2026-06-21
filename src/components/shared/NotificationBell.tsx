@@ -3,6 +3,7 @@ import { useNavigate } from "@solidjs/router";
 import { Notification, notifications, unreadCount, fetchNotifications, markRead, markAllRead, addSocketNotification, showDesktopNotification, requestDesktopPermission } from "~/stores/notifications";
 import { useSocket } from "~/lib/socket/client";
 import { timeAgo } from "~/lib/time-ago";
+import Nelar, { type NelarState } from "~/components/mascot/Nelar";
 
 export default function NotificationBell() {
   const [dropdownOpen, setDropdownOpen] = createSignal(false);
@@ -67,6 +68,8 @@ export default function NotificationBell() {
         return "✅";
       case "reward":
         return "🎁";
+      case "comeback":
+        return "🐱";
       default:
         return "🔔";
     }
@@ -128,9 +131,20 @@ export default function NotificationBell() {
                       !notification.isRead ? "bg-accent/5" : ""
                     }`}
                   >
-                    <span aria-hidden="true" class="text-lg shrink-0 mt-0.5">
-                      {iconByType(notification.type)}
-                    </span>
+                    <Show
+                      when={!(notification.metadata as any)?.mascot}
+                      fallback={
+                        <Nelar
+                          state={((notification.metadata as any)?.mascotState as NelarState) ?? "worried"}
+                          size={20}
+                          class="shrink-0 mt-0.5"
+                        />
+                      }
+                    >
+                      <span aria-hidden="true" class="text-lg shrink-0 mt-0.5">
+                        {iconByType(notification.type)}
+                      </span>
+                    </Show>
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2">
                         <span class="text-sm font-medium text-ink-primary truncate">

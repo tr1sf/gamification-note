@@ -10,11 +10,12 @@ export function applyThemeVariables(variables: Record<string, string>): void {
   localStorage.setItem("equippedThemeActive", "true");
 }
 
-// Remove all custom theme inline styles (for light mode)
+// Remove all custom theme inline styles (used by tests / future callers).
+// Cosmetic themes now apply in both light and dark mode, so the layout toggle
+// no longer calls this — kept available in case a clean revert is needed.
 export function clearThemeVariables(): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  // Theme variables that could be set
   const themeVars = [
     "--color-surface", "--color-surface-elevated", "--color-surface-border", "--color-surface-hover",
     "--color-ink-primary", "--color-ink-secondary", "--color-accent", "--color-accent-hover",
@@ -25,15 +26,15 @@ export function clearThemeVariables(): void {
   }
 }
 
-// Restore previously equipped theme from localStorage
+// Restore previously equipped theme from localStorage — applies in BOTH
+// light and dark mode. Each ThemeDefinition ships a full surface/ink/accent
+// set so a user who bought a theme keeps it when toggling modes.
 export function restoreThemeVariables(): void {
   if (typeof document === "undefined") return;
   try {
     const saved = localStorage.getItem("equippedTheme");
     const active = localStorage.getItem("equippedThemeActive");
-    const mode = localStorage.getItem("theme"); // "dark" or "light"
-    // Only apply custom theme in dark mode
-    if (saved && active === "true" && mode !== "light") {
+    if (saved && active === "true") {
       applyThemeVariables(JSON.parse(saved));
     }
   } catch {}

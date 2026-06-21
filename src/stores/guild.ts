@@ -1,5 +1,6 @@
 import { createSignal } from "solid-js";
 import { authFetch } from "~/stores/auth";
+import type { EquippedCosmetics } from "~/lib/cosmetics/equipped";
 
 export interface Guild {
   id: string;
@@ -39,6 +40,7 @@ export interface GuildMember {
     avatarUrl: string | null;
     level: number;
     title: string;
+    equipped?: EquippedCosmetics;
   };
 }
 
@@ -67,6 +69,7 @@ export interface ChatMessage {
     id: string;
     username: string;
     avatarUrl: string | null;
+    equipped?: EquippedCosmetics;
   };
   type?: "message" | "system";
   reactions?: { emoji: string; userId: string; createdAt: string }[];

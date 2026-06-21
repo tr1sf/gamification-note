@@ -1,6 +1,7 @@
 import { createResource, For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
+import Nelar from "~/components/mascot/Nelar";
 
 export default function BossActivePage() {
   const [bosses] = createResource(async () => {
@@ -26,7 +27,7 @@ export default function BossActivePage() {
           when={(bosses()?.length ?? 0) > 0}
           fallback={
             <div class="text-center py-12 text-ink-secondary">
-              <p class="text-5xl mb-4">⚔️</p>
+              <Nelar state="idle" size={56} class="mx-auto mb-2" />
               <p>No active bosses. Login tomorrow for a new daily boss!</p>
             </div>
           }

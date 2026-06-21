@@ -2,6 +2,7 @@ import { createResource, createSignal, Show, Switch, Match, For } from "solid-js
 import { A, useParams, useNavigate } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
+import { t } from "~/lib/i18n";
 import { timeAgo } from "~/lib/time-ago";
 import { renderMarkdown } from "~/lib/markdown";
 import { isBlockContent, parseBlocks, markdownToBlocks, blocksToMarkdown, blocksToHtml, computeBlockWordCount, normalizeBlocks, type Block } from "~/lib/blocks";
@@ -102,22 +103,22 @@ export default function NoteDetailPage() {
       });
       const json = await res.json();
       if (json.success) {
-        addToast("Note updated!", "success");
+        addToast(t("Note updated!"), "success");
         setIsEditing(false);
         refetch();
       } else if (json.error?.code === "CONFLICT") {
-        addToast("This note was modified elsewhere. Please refresh and try again.", "error");
+        addToast(t("This note was modified elsewhere. Please refresh and try again."), "error");
         setIsEditing(false);
         refetch();
       } else {
-        addToast(json.error?.message || "Save failed", "error");
+        addToast(json.error?.message || t("Save failed"), "error");
       }
     } catch (err: any) {
       if (err.message === "SESSION_EXPIRED") {
-        addToast("Session expired. Please sign in again.", "error");
+        addToast(t("Session expired. Please sign in again."), "error");
         navigate("/login");
       } else {
-        addToast("Network error. Changes not saved.", "error");
+        addToast(t("Network error. Changes not saved."), "error");
       }
     } finally {
       setSaving(false);
@@ -164,17 +165,17 @@ export default function NoteDetailPage() {
       const res = await authFetch(`/api/notes/${params.id}`, { method: "DELETE" });
       const json = await res.json();
       if (json.success) {
-        addToast("Note moved to trash", "info");
+        addToast(t("Note moved to trash"), "info");
         navigate("/notes");
       } else {
-        addToast(json.error?.message || "Delete failed", "error");
+        addToast(json.error?.message || t("Delete failed"), "error");
       }
     } catch (err: any) {
       if (err.message === "SESSION_EXPIRED") {
-        addToast("Session expired", "error");
+        addToast(t("Session expired"), "error");
         navigate("/login");
       } else {
-        addToast("Network error", "error");
+        addToast(t("Network error"), "error");
       }
     } finally {
       setDeleting(false);
@@ -187,13 +188,13 @@ export default function NoteDetailPage() {
       const res = await authFetch(`/api/notes/${params.id}/duplicate`, { method: "POST" });
       const json = await res.json();
       if (json.success) {
-        addToast("Note duplicated!", "success");
+        addToast(t("Note duplicated!"), "success");
         navigate(`/notes/${json.data.id}`);
       } else {
-        addToast(json.error?.message || "Duplicate failed", "error");
+        addToast(json.error?.message || t("Duplicate failed"), "error");
       }
     } catch {
-      addToast("Network error", "error");
+      addToast(t("Network error"), "error");
     } finally {
       setDuplicating(false);
     }
@@ -229,7 +230,7 @@ export default function NoteDetailPage() {
     a.download = `${n.title.replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
-    addToast(`Exported as ${ext.toUpperCase()}`, "success");
+    addToast(`${t("Exported as")} ${ext.toUpperCase()}`, "success");
   };
 
   const handleSummarize = async () => {
@@ -240,17 +241,17 @@ export default function NoteDetailPage() {
       const res = await authFetch(`/api/notes/${n.id}/summarize`, { method: "POST" });
       const json = await res.json();
       if (json.success) {
-        addToast("AI summary generated!", "success");
+        addToast(t("AI summary generated!"), "success");
         refetch();
       } else {
-        addToast(json.error?.message || "Summary failed", "error");
+        addToast(json.error?.message || t("Summary failed"), "error");
       }
     } catch (err: any) {
       if (err.message === "SESSION_EXPIRED") {
-        addToast("Session expired", "error");
+        addToast(t("Session expired"), "error");
         navigate("/login");
       } else {
-        addToast("Network error", "error");
+        addToast(t("Network error"), "error");
       }
     } finally {
       setSummarizing(false);
@@ -259,11 +260,11 @@ export default function NoteDetailPage() {
 
   return (
     <div class="max-w-3xl mx-auto p-6">
-      <Show when={!note.loading} fallback={<div class="animate-pulse text-ink-secondary">Loading note...</div>}>
+      <Show when={!note.loading} fallback={<div class="animate-pulse text-ink-secondary">{t("Loading note...")}</div>}>
         <Show when={!note.error} fallback={
           <div class="text-center py-12">
             <p class="text-error mb-3">{note.error?.message}</p>
-            <button onClick={() => refetch()} class="text-accent hover:underline text-sm">Try again</button>
+            <button onClick={() => refetch()} class="text-accent hover:underline text-sm">{t("Try again")}</button>
           </div>
         }>
           <Show when={note()}>
@@ -272,7 +273,7 @@ export default function NoteDetailPage() {
                 <Match when={!isEditing()}>
                   <article>
                     <Breadcrumb items={[
-                      { label: "Notes", href: "/notes", icon: "📜" },
+                      { label: t("Notes"), href: "/notes", icon: "📜" },
                       { label: n().title },
                     ]} />
 
@@ -284,7 +285,7 @@ export default function NoteDetailPage() {
                       <div>
                         <h1 class="text-3xl font-display font-bold text-ink-primary">{n().title}</h1>
                         <div class="flex flex-wrap items-center gap-2 mt-2">
-                          <span class="text-sm text-ink-secondary">{n().wordCount} words</span>
+                          <span class="text-sm text-ink-secondary">{n().wordCount} {t("words")}</span>
                           {n().category && (
                             <span class="text-xs px-2 py-0.5 rounded border border-surface-border text-ink-secondary">{n().category}</span>
                           )}
@@ -292,41 +293,41 @@ export default function NoteDetailPage() {
                             <span class="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">{tag}</span>
                           ))}
                           {n().isPublic && (
-                            <span class="text-xs px-2 py-0.5 rounded bg-success-bg text-success">Public</span>
+                            <span class="text-xs px-2 py-0.5 rounded bg-success-bg text-success">{t("Public")}</span>
                           )}
                           <span class="text-xs text-ink-secondary/50">v{n().version}</span>
                         </div>
                         <div class="flex items-center gap-2 mt-1.5 text-xs text-ink-secondary/60">
-                          <span>Created {timeAgo(n().createdAt)}</span>
+                          <span>{t("Created")} {timeAgo(n().createdAt)}</span>
                           <span aria-hidden="true">&middot;</span>
-                          <span>Updated {timeAgo(n().updatedAt)}</span>
+                          <span>{t("Updated")} {timeAgo(n().updatedAt)}</span>
                         </div>
                       </div>
                       <Show when={n().isOwner}>
                         <div class="flex items-center gap-2 flex-wrap">
-                          <button onClick={handleDuplicate} disabled={duplicating()} class="px-3 py-1.5 text-sm border border-surface-border text-ink-secondary rounded-md hover:bg-surface-hover transition-colors disabled:opacity-50">{duplicating() ? "Duplicating..." : "Duplicate"}</button>
+                          <button onClick={handleDuplicate} disabled={duplicating()} class="px-3 py-1.5 text-sm border border-surface-border text-ink-secondary rounded-md hover:bg-surface-hover transition-colors disabled:opacity-50">{duplicating() ? t("Duplicating...") : t("Duplicate")}</button>
                           <div class="relative">
-                            <button onClick={() => setShowExportMenu(!showExportMenu())} class="px-3 py-1.5 text-sm border border-surface-border text-ink-secondary rounded-md hover:bg-surface-hover transition-colors">Export ▾</button>
+                            <button onClick={() => setShowExportMenu(!showExportMenu())} class="px-3 py-1.5 text-sm border border-surface-border text-ink-secondary rounded-md hover:bg-surface-hover transition-colors">{t("Export")} ▾</button>
                             <Show when={showExportMenu()}>
                               <div class="absolute right-0 mt-1 bg-surface-elevated border border-surface-border rounded-lg shadow-lg py-1 z-20 min-w-[120px]" onClick={() => setShowExportMenu(false)}>
-                                <button onClick={() => handleExport("md")} class="block w-full text-left px-3 py-1.5 text-sm text-ink-primary hover:bg-surface-hover transition-colors">Markdown (.md)</button>
-                                <button onClick={() => handleExport("txt")} class="block w-full text-left px-3 py-1.5 text-sm text-ink-primary hover:bg-surface-hover transition-colors">Plain text (.txt)</button>
-                                <button onClick={() => handleExport("html")} class="block w-full text-left px-3 py-1.5 text-sm text-ink-primary hover:bg-surface-hover transition-colors">HTML (.html)</button>
+                                <button onClick={() => handleExport("md")} class="block w-full text-left px-3 py-1.5 text-sm text-ink-primary hover:bg-surface-hover transition-colors">{t("Markdown (.md)")}</button>
+                                <button onClick={() => handleExport("txt")} class="block w-full text-left px-3 py-1.5 text-sm text-ink-primary hover:bg-surface-hover transition-colors">{t("Plain text (.txt)")}</button>
+                                <button onClick={() => handleExport("html")} class="block w-full text-left px-3 py-1.5 text-sm text-ink-primary hover:bg-surface-hover transition-colors">{t("HTML (.html)")}</button>
                               </div>
                             </Show>
                           </div>
-                          <button onClick={() => startEditing(n())} class="px-3 py-1.5 text-sm bg-accent/10 text-accent rounded-md hover:bg-accent/20 transition-colors">Edit</button>
+                          <button onClick={() => startEditing(n())} class="px-3 py-1.5 text-sm bg-accent/10 text-accent rounded-md hover:bg-accent/20 transition-colors">{t("Edit")}</button>
                           <Show when={!n().aiSummary}>
-                            <button onClick={handleSummarize} disabled={summarizing()} class="px-3 py-1.5 text-sm bg-accent text-surface-overlay rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50">{summarizing() ? "Summarizing..." : "✨ Summarize"}</button>
+                            <button onClick={handleSummarize} disabled={summarizing()} class="px-3 py-1.5 text-sm bg-accent text-surface-overlay rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50">{summarizing() ? t("Summarizing...") : `✨ ${t("Summarize")}`}</button>
                           </Show>
-                          <button onClick={() => setShowDeleteConfirm(true)} disabled={deleting()} class="px-3 py-1.5 text-sm text-error hover:bg-error-bg rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{deleting() ? "Trashing..." : "Trash"}</button>
+                          <button onClick={() => setShowDeleteConfirm(true)} disabled={deleting()} class="px-3 py-1.5 text-sm text-error hover:bg-error-bg rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{deleting() ? t("Trashing...") : t("Trash")}</button>
                         </div>
                       </Show>
                     </div>
 
                     <Show when={n().isPublic}>
                       <div class="mt-4 flex items-center gap-2 p-3 bg-accent/5 border border-accent/15 rounded-lg">
-                        <span class="text-sm text-ink-secondary">Share link:</span>
+                        <span class="text-sm text-ink-secondary">{t("Share link:")}</span>
                         <code class="flex-1 text-xs bg-surface border border-surface-border rounded px-2 py-1 text-ink-primary truncate select-all">{typeof window !== "undefined" ? `${window.location.origin}/share/${n().id}` : ""}</code>
                         <button
                           onClick={() => {
@@ -337,7 +338,7 @@ export default function NoteDetailPage() {
                           }}
                           class="shrink-0 px-3 py-1 text-xs bg-accent text-surface-overlay rounded-md hover:bg-accent-hover transition-colors"
                         >
-                          {copied() ? "Copied!" : "Copy link"}
+                          {copied() ? t("Copied!") : t("Copy link")}
                         </button>
                       </div>
                     </Show>
@@ -355,12 +356,18 @@ export default function NoteDetailPage() {
 
                     <Show when={n().aiSummary}>
                       <div class="mt-8 p-4 bg-surface-elevated rounded-lg border border-surface-border">
-                        <h3 class="text-sm font-medium text-ink-secondary mb-2">AI Summary</h3>
+                        <h3 class="text-sm font-medium text-ink-secondary mb-2">{t("AI Summary")}</h3>
                         <p class="text-sm text-ink-primary">{n().aiSummary}</p>
                       </div>
                     </Show>
+
+                    {/* Quality Score Insights — generated by the gamification quality scorer */}
+                    <Show when={n().isOwner}>
+                      <QualityPanel noteId={n().id} />
+                    </Show>
+
                     <div class="mt-6">
-                      <A href="/notes" class="text-sm text-accent hover:underline">&larr; Back to notes</A>
+                      <A href="/notes" class="text-sm text-accent hover:underline">&larr; {t("Back to notes")}</A>
                     </div>
                   </article>
                 </Match>
@@ -455,22 +462,118 @@ export default function NoteDetailPage() {
       </Show>
       <ConfirmModal
         open={showDeleteConfirm()}
-        title="Move to trash"
-        message="Are you sure you want to move this note to the trash?"
-        confirmLabel="Move to Trash"
+        title={t("Move to trash")}
+        message={t("Are you sure you want to move this note to the trash?")}
+        confirmLabel={t("Move to Trash")}
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteConfirm(false)}
       />
       <ConfirmModal
         open={showDiscardConfirm()}
-        title="Discard changes"
-        message="You have unsaved changes. Are you sure you want to discard them?"
-        confirmLabel="Discard"
+        title={t("Discard changes")}
+        message={t("You have unsaved changes. Are you sure you want to discard them?")}
+        confirmLabel={t("Discard")}
         variant="danger"
         onConfirm={() => { setShowDiscardConfirm(false); setIsEditing(false); }}
         onCancel={() => setShowDiscardConfirm(false)}
       />
     </div>
+  );
+}
+
+// ── Quality Score Panel ──────────────────────────────────────────────────────
+function QualityPanel(props: { noteId: string }) {
+  const [quality] = createResource(async () => {
+    const res = await authFetch(`/api/notes/${props.noteId}/quality`);
+    const json = await res.json();
+    return json.success ? json.data : null;
+  });
+
+  const tierColor = () => {
+    const s = quality()?.score ?? 0;
+    if (s >= 8) return "text-success";
+    if (s >= 6) return "text-accent";
+    if (s >= 4) return "text-coin";
+    return "text-error";
+  };
+
+  const tierIcon = () => {
+    const s = quality()?.score ?? 0;
+    if (s >= 8) return "⭐";
+    if (s >= 6) return "✨";
+    if (s >= 4) return "📝";
+    return "🔧";
+  };
+
+  return (
+    <Show when={quality()}>
+      {(q) => (
+        <div class="mt-8 p-4 bg-surface-elevated rounded-lg border border-surface-border">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-medium text-ink-secondary flex items-center gap-1.5">
+              <span aria-hidden="true">{tierIcon()}</span> Quality Score
+            </h3>
+            <span class={`text-lg font-bold ${tierColor()}`}>
+              {q().score}<span class="text-sm text-ink-secondary">/{q().maxScore}</span>
+            </span>
+          </div>
+
+          {/* Progress bar */}
+          <div class="h-2 bg-surface-border rounded-full overflow-hidden mb-3">
+            <div
+              class="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${(q().score / q().maxScore) * 100}%`,
+                background: q().score >= 8 ? "var(--color-success)" : q().score >= 6 ? "var(--color-accent)" : q().score >= 4 ? "var(--color-coin)" : "var(--color-error)",
+              }}
+            />
+          </div>
+          <p class={`text-xs font-medium ${tierColor()} mb-3`}>{q().tier}</p>
+
+          {/* Breakdown chips */}
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            <span class={`text-xs px-2 py-0.5 rounded ${q().breakdown.hasH1 ? "bg-success-bg text-success" : "bg-surface-border text-ink-tertiary"}`}>
+              {q().breakdown.hasH1 ? "✓" : "✗"} Heading
+            </span>
+            <span class={`text-xs px-2 py-0.5 rounded ${q().breakdown.hasH2 ? "bg-success-bg text-success" : "bg-surface-border text-ink-tertiary"}`}>
+              {q().breakdown.hasH2 ? "✓" : "✗"} Subheading
+            </span>
+            <span class={`text-xs px-2 py-0.5 rounded ${q().breakdown.hasList ? "bg-success-bg text-success" : "bg-surface-border text-ink-tertiary"}`}>
+              {q().breakdown.hasList ? "✓" : "✗"} List
+            </span>
+            <span class={`text-xs px-2 py-0.5 rounded ${q().breakdown.hasCode ? "bg-success-bg text-success" : "bg-surface-border text-ink-tertiary"}`}>
+              {q().breakdown.hasCode ? "✓" : "✗"} Code
+            </span>
+            <span class={`text-xs px-2 py-0.5 rounded ${q().breakdown.linkCount > 0 ? "bg-success-bg text-success" : "bg-surface-border text-ink-tertiary"}`}>
+              {q().breakdown.linkCount > 0 ? "✓" : "✗"} Links ({q().breakdown.linkCount})
+            </span>
+            <span class={`text-xs px-2 py-0.5 rounded ${q().breakdown.tagCount > 0 ? "bg-success-bg text-success" : "bg-surface-border text-ink-tertiary"}`}>
+              {q().breakdown.tagCount > 0 ? "✓" : "✗"} Tags ({q().breakdown.tagCount})
+            </span>
+            <span class={`text-xs px-2 py-0.5 rounded ${q().breakdown.hasCategory ? "bg-success-bg text-success" : "bg-surface-border text-ink-tertiary"}`}>
+              {q().breakdown.hasCategory ? "✓" : "✗"} Category
+            </span>
+          </div>
+
+          {/* Suggestions */}
+          <Show when={q().suggestions.length > 0}>
+            <div class="border-t border-surface-border pt-3">
+              <p class="text-xs text-ink-tertiary mb-2">💡 Improve your score:</p>
+              <ul class="space-y-1">
+                <For each={q().suggestions}>
+                  {(sug: any) => (
+                    <li class="text-xs text-ink-secondary flex items-center gap-2">
+                      <span class="text-accent font-mono">+{sug.points}</span>
+                      <span>{sug.text}</span>
+                    </li>
+                  )}
+                </For>
+              </ul>
+            </div>
+          </Show>
+        </div>
+      )}
+    </Show>
   );
 }

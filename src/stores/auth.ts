@@ -132,15 +132,32 @@ export async function logout() {
   try {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
   } finally {
+    // Reset all client-side stores to prevent cross-user data leaks on
+    // shared machines. Previously only the auth user signal was cleared —
+    // gamification, notifications, quests, and guild data from the previous
+    // user lingered briefly until refetched.
     setUser(null);
     if (typeof localStorage !== "undefined") {
-      // Reset public/session state to defaults; language is account-specific.
       localStorage.setItem("lang", "en");
       localStorage.removeItem("equippedTheme");
       localStorage.removeItem("equippedThemeId");
       localStorage.removeItem("equippedThemeActive");
+    }
+    if (typeof document !== "undefined") {
       document.documentElement.setAttribute("lang", "en");
     }
+    // Reset the i18n reactive signal to "en" so login/register pages render
+    // in English immediately (not the previous user's preferred language).
+    try {
+      const { applyLanguage } = await import("~/lib/i18n");
+      applyLanguage("en");
+    } catch {}
+    // Disconnect the socket so the next login rebuilds with fresh auth.
+    // Without this the singleton stays connected under the old user's JWT.
+    try {
+      const { disconnectSocket } = await import("~/lib/socket/client");
+      disconnectSocket();
+    } catch {}
   }
 }
 
@@ -153,13 +170,28 @@ export async function refreshToken(): Promise<boolean> {
   }
 }
 
+// Module-level refresh mutex: concurrent 401s (e.g. multiple createResource
+// fetchers firing on a page) all share ONE refresh attempt so the first
+// success invalidates the refresh cookie and the subsequent attempts don't
+// race-call /api/auth/refresh, fail, and force a logout storm.
+let refreshPromise: Promise<boolean> | null = null;
+
+function refreshOnce(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = refreshToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const requestUrl = (typeof window === "undefined" && !url.startsWith("http"))
     ? `http://localhost:${process.env.PORT || "3000"}${url}`
     : url;
   let res = await fetch(requestUrl, { ...options, credentials: "include" });
   if (res.status === 401) {
-    const refreshed = await refreshToken();
+    const refreshed = await refreshOnce();
     if (refreshed) {
       res = await fetch(requestUrl, { ...options, credentials: "include" });
     } else {

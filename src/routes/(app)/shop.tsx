@@ -5,6 +5,7 @@ import { addToast } from "~/stores/ui";
 import ShopGrid, { type ShopItem } from "~/components/shop/ShopGrid";
 import ThemePicker from "~/components/shop/ThemePicker";
 import { t } from "~/lib/i18n";
+import Nelar from "~/components/mascot/Nelar";
 
 async function fetchShop(): Promise<ShopItem[]> {
   try {
@@ -180,7 +181,7 @@ export default function ShopPage() {
             when={!shopItems.error && visibleItems().length > 0}
             fallback={
               <div class="text-center py-12 text-ink-secondary">
-                <p class="text-4xl mb-3">🏪</p>
+                <Nelar state="idle" size={56} class="mx-auto mb-2" />
                 <p>{t("No items available in this category.")}</p>
               </div>
             }

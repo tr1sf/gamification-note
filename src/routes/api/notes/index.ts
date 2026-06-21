@@ -106,6 +106,17 @@ export async function POST({ request }: { request: Request }) {
     metadata: { noteId: note.id, wordCount: note.wordCount, structureScore, dailyNoteCount, isSpam: isDuplicate },
   });
 
+  // If the note is created as public, also fire the make_public action so
+  // "Open Book" / "Knowledge Sharer" quests can progress. Previously this
+  // only fired on PUT (editing a private note to public), not on creation.
+  if (parsed.data.isPublic) {
+    processAction({
+      userId: user.userId,
+      actionType: "make_public",
+      metadata: { noteId: note.id },
+    }).catch(() => {});
+  }
+
   // Reflection depth bonus (journaler path)
   if (note.wordCount >= 200) {
     const u = await prisma.user.findUnique({ where: { id: user.userId }, select: { path: true } });

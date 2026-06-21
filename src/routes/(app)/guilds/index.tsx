@@ -2,6 +2,7 @@ import { createSignal, createResource, For, Show } from "solid-js";
 import { fetchGuilds, type Guild } from "~/stores/guild";
 import GuildCard from "~/components/guild/GuildCard";
 import CreateGuild from "~/components/guild/CreateGuild";
+import Nelar from "~/components/mascot/Nelar";
 
 async function loadGuilds(): Promise<Guild[]> {
   if (typeof document === "undefined") return []; // SSR — don't fetch
@@ -80,9 +81,7 @@ export default function GuildsPage() {
                   when={search()}
                   fallback={
                     <>
-                      <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-surface-elevated border border-surface-border mb-4" aria-hidden="true">
-                        <span class="text-3xl">🏛️</span>
-                      </div>
+                      <Nelar state="idle" size={48} class="mx-auto mb-3" />
                       <p class="text-ink-primary font-medium mb-1">No guilds found</p>
                       <p class="text-ink-secondary/60 text-sm mb-4">Create the first guild and start your fellowship</p>
                       <button

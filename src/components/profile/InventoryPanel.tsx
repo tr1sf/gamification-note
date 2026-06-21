@@ -10,7 +10,7 @@ export interface InventoryItem {
   description: string;
   icon: string;
   itemType: string;
-  itemCategory?: { usageType?: string };
+  itemCategory?: { usageType?: string; color?: string };
   rarity: string;
   quantity: number;
   equipped: boolean;
@@ -92,6 +92,24 @@ export default function InventoryPanel(props: InventoryPanelProps) {
     }
   };
 
+  const handleActivate = async (inventoryId: string) => {
+    setActionId(inventoryId);
+    try {
+      const res = await authFetch(`/api/inventory/${inventoryId}/activate`, { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        addToast(`${json.data.item} activated! (${json.data.durationMin} min)`, "success");
+        props.onRefresh?.();
+      } else {
+        addToast(json.error?.message || t("Failed to activate"), "error");
+      }
+    } catch {
+      addToast(t("Failed to activate"), "error");
+    } finally {
+      setActionId(null);
+    }
+  };
+
   return (
     <div class="p-6 rounded-xl border border-surface-border bg-surface-elevated">
       <h2 class="text-lg font-display font-bold text-ink-primary mb-4">{t("Inventory")}</h2>
@@ -137,7 +155,19 @@ export default function InventoryPanel(props: InventoryPanelProps) {
                 <div class="mt-2">
                   <Show when={item.itemType === CONSUMABLE_TYPE}>
                     <Show when={item.itemCategory?.usageType === "loot_box"} fallback={
-                      <span class="text-xs text-success font-medium">{t("Active")}</span>
+                      <Show when={item.expiresAt && new Date(item.expiresAt) > new Date()}
+                        fallback={
+                          <button
+                            onClick={() => handleActivate(item.inventoryId)}
+                            disabled={actionId() === item.inventoryId}
+                            class="px-2 py-1 rounded text-[10px] font-medium bg-success-bg text-success hover:bg-success/20 transition-colors disabled:opacity-50"
+                          >
+                            {actionId() === item.inventoryId ? "..." : t("Activate")}
+                          </button>
+                        }
+                      >
+                        <span class="text-xs text-success font-medium">{t("Active")}</span>
+                      </Show>
                     }>
                       <button
                         onClick={() => handleOpen(item.inventoryId)}

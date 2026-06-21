@@ -12,7 +12,12 @@
 -- ============================================================================
 
 -- Step 1: Alter Note.searchVector column type from TEXT (Prisma default) to tsvector
-ALTER TABLE "Note" ALTER COLUMN "searchVector" TYPE tsvector USING to_tsvector('simple', '');
+-- Populate existing rows immediately so they become searchable.
+ALTER TABLE "Note" ALTER COLUMN "searchVector" TYPE tsvector USING (
+  setweight(to_tsvector('simple', COALESCE(title, '')), 'A') ||
+  setweight(to_tsvector('simple', COALESCE(content, '')), 'B') ||
+  setweight(to_tsvector('simple', COALESCE(category, '')), 'C')
+);
 
 -- FTS trigger function
 CREATE OR REPLACE FUNCTION note_search_vector_update() RETURNS trigger AS $$
@@ -26,12 +31,20 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- FTS trigger
+DROP TRIGGER IF EXISTS trg_note_search_vector ON "Note";
 CREATE TRIGGER trg_note_search_vector
   BEFORE INSERT OR UPDATE ON "Note"
   FOR EACH ROW EXECUTE FUNCTION note_search_vector_update();
 
 -- GIN index for FTS
 CREATE INDEX IF NOT EXISTS idx_note_search_vector ON "Note" USING GIN("searchVector");
+
+-- Backfill any rows that might have been created while the trigger was missing.
+UPDATE "Note" SET "searchVector" = (
+  setweight(to_tsvector('simple', COALESCE(title, '')), 'A') ||
+  setweight(to_tsvector('simple', COALESCE(content, '')), 'B') ||
+  setweight(to_tsvector('simple', COALESCE(category, '')), 'C')
+) WHERE "searchVector" IS NULL OR "searchVector" = ''::tsvector;
 
 -- Additional performance indexes
 CREATE INDEX IF NOT EXISTS idx_note_user_created ON "Note"("userId", "createdAt" DESC) WHERE "isDeleted" = false;

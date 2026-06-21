@@ -1,5 +1,6 @@
 import { A } from "@solidjs/router";
 import { t } from "~/lib/i18n";
+import Nelar from "~/components/mascot/Nelar";
 
 export default function Home() {
   return (
@@ -15,7 +16,7 @@ export default function Home() {
         </h1>
         <div class="flex items-center justify-center gap-4 mb-8" aria-hidden="true">
           <span class="block h-px flex-1 max-w-16 bg-gradient-to-r from-transparent to-surface-border" />
-          <span class="text-2xl">🏰</span>
+          <Nelar state="wave" size={40} animated />
           <span class="block h-px flex-1 max-w-16 bg-gradient-to-l from-transparent to-surface-border" />
         </div>
         <p class="text-xl sm:text-2xl text-ink-secondary mb-10 max-w-lg mx-auto leading-relaxed">

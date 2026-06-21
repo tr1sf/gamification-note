@@ -1,5 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import type { Guild } from "~/stores/guild";
+import { t } from "~/lib/i18n";
 
 interface GuildCardProps {
   guild: Guild;
@@ -35,18 +36,18 @@ export default function GuildCard(props: GuildCardProps) {
               : "bg-surface-border text-ink-secondary"
           }`}
         >
-          {props.guild.isPublic ? "Public" : "Private"}
+          {props.guild.isPublic ? t("Public") : t("Private")}
         </span>
       </div>
 
       <p class="text-sm text-ink-secondary line-clamp-2 mb-3">
-        {props.guild.description || "No description"}
+        {props.guild.description || t("No description")}
       </p>
 
       <div class="flex items-center gap-3 text-xs text-ink-secondary">
         <span class="inline-flex items-center gap-1">
           <span aria-hidden="true">👥</span>
-          {props.guild.memberCount} members
+          {props.guild.memberCount} {t("members")}
         </span>
         <span>
           {new Date(props.guild.createdAt).toLocaleDateString()}

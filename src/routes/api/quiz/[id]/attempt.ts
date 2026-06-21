@@ -16,6 +16,8 @@ export async function POST({ request, params }: { request: Request; params: { id
   if (!answers || !Array.isArray(answers)) return error("VALIDATION_ERROR", "answers array required", 400);
 
   const questions = quiz.questions as Array<{ correctIndex: number; difficulty: string }>;
+  if (questions.length === 0) return error("VALIDATION_ERROR", "Quiz has no questions", 400);
+
   let correctCount = 0;
   const gradedAnswers = answers.map((a: any) => {
     const q = questions[a.questionIndex];
@@ -26,11 +28,17 @@ export async function POST({ request, params }: { request: Request; params: { id
 
   const score = Math.round((correctCount / questions.length) * 100);
 
-  const { processAction } = await import("~/lib/gamification/engine");
-  processAction({
+  // Use grantReward (not processAction with create_note) so quiz attempts
+  // don't inflate the daily note count, trigger note-creation quests, or
+  // bypass the quality gate. A small fixed XP per attempt keeps the loop
+  // meaningful without making it farmable.
+  const { grantReward } = await import("~/lib/gamification/engine");
+  grantReward({
     userId: user.userId,
-    actionType: "create_note",
-    metadata: { source: "quiz", score, quizId: quiz.id },
+    xp: score >= 70 ? 5 : 0,
+    coins: 0,
+    actionType: "quiz_attempt",
+    metadata: { score, quizId: quiz.id },
   }).catch(() => {});
 
   const experimentGroup = getExperimentGroup(user.userId);
@@ -62,8 +70,10 @@ export async function POST({ request, params }: { request: Request; params: { id
   });
 
   const accuracy = correctCount / questions.length;
-  if (true) { // Always check for active bosses in transaction
-    const damage = calculateBossDamage({ actionType: "quiz", quizAccuracy: accuracy, quizStreak: quiz.reviewCount });
+  {
+    // Cap quizStreak at the current reviewCount to prevent unbounded boss
+    // damage growth from replaying quizzes thousands of times.
+    const damage = calculateBossDamage({ actionType: "quiz", quizAccuracy: accuracy, quizStreak: Math.min(quiz.reviewCount, 20) });
     try {
       await prisma.$transaction(async (tx) => {
         const bosses = await tx.challenge.findMany({
