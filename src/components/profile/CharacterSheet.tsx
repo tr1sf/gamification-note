@@ -4,6 +4,7 @@ import { authFetch } from "~/stores/auth";
 import { addToast } from "~/stores/ui";
 import { t } from "~/lib/i18n";
 import XPBar from "~/components/gamification/XPBar";
+import DailyRewardBar from "~/components/gamification/DailyRewardBar";
 import CoinDisplay from "~/components/gamification/CoinDisplay";
 import StreakTracker from "~/components/gamification/StreakTracker";
 import type { InventoryItem } from "./InventoryPanel";
@@ -159,6 +160,10 @@ export default function CharacterSheet(props: CharacterSheetProps) {
 
           <div class="mt-3">
             <XPBar xp={g().xp} level={g().level} />
+          </div>
+
+          <div class="mt-2">
+            <DailyRewardBar />
           </div>
 
           <p class="text-xs text-ink-secondary mt-2">
