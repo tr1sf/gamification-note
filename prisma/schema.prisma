@@ -57,6 +57,8 @@ model User {
   quizAttempts    QuizAttempt[]
   surveyResponses SurveyResponse[]
   projects        Project[]
+  sentDMs           DirectMessage[]
+  dmGroups          DirectMessageGroupMember[]
 
   @@index([level])
 }
@@ -164,17 +166,20 @@ model Guild {
   messages GuildMessage[]
   tasks    GuildTask[]
   goals    GuildGoal[]
+  roles    GuildRole[]
 }
 
 model GuildMember {
   id       String   @id @default(uuid()) @db.Uuid
   guildId  String   @db.Uuid
   userId   String   @db.Uuid
-  role     String   @default("member")
+  roleId   String   @db.Uuid
+  role     String   @default("member") // kept for backwards compatibility during migration
   joinedAt DateTime @default(now())
 
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guild    Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guildRole GuildRole @relation(fields: [roleId], references: [id])
 
   @@unique([guildId, userId])
   @@index([guildId])
@@ -483,6 +488,57 @@ model GuildGoal {
 
   @@index([guildId, endDate])
   @@index([isCompleted])
+}
+
+model GuildRole {
+  id          String @id @default(uuid()) @db.Uuid
+  guildId     String @db.Uuid
+  name        String
+  color       String @default("#6B7280")
+  permissions String @default("")
+  position    Int    @default(0)
+
+  guild   Guild         @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  members GuildMember[]
+
+  @@unique([guildId, name])
+  @@index([guildId])
+}
+
+model DirectMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  senderId  String   @db.Uuid
+  groupId   String?  @db.Uuid
+  content   String   @db.Text
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  sender User                 @relation(fields: [senderId], references: [id])
+  group  DirectMessageGroup?  @relation(fields: [groupId], references: [id])
+
+  @@index([senderId, createdAt])
+  @@index([groupId, createdAt])
+}
+
+model DirectMessageGroup {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String?
+  createdAt DateTime @default(now())
+
+  members DirectMessageGroupMember[]
+  messages DirectMessage[]
+}
+
+model DirectMessageGroupMember {
+  id       String   @id @default(uuid()) @db.Uuid
+  groupId  String   @db.Uuid
+  userId   String   @db.Uuid
+  joinedAt DateTime @default(now())
+
+  group DirectMessageGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
 }
 
 // ── AI-generated quests ──────────────────────────────────────────────────────
