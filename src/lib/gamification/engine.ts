@@ -9,7 +9,16 @@ import { checkAchievements } from "./achievements/achievement-checker";
 import { createNotification } from "~/lib/socket/notifications";
 import type { AuditMetadata } from "~/lib/analytics/types";
 import { getActionMessage } from "./messages";
-import { XP_WRITE_WORDS_PER_100, XP_WRITE_WORDS_MAX } from "./constants";
+import {
+  XP_WRITE_WORDS_PER_100,
+  XP_WRITE_WORDS_MAX,
+  DAILY_XP_BASE_CAP,
+  DAILY_XP_PER_LEVEL,
+  DAILY_COIN_BASE_CAP,
+  DAILY_COIN_PER_LEVEL,
+  STREAK_BONUS_PER_DAY,
+  STREAK_BONUS_MAX,
+} from "./constants";
 
 async function checkActiveBooster(
   tx: Prisma.TransactionClient,
@@ -26,6 +35,30 @@ async function checkActiveBooster(
     LIMIT 1
   `;
   return boosters.length > 0;
+}
+
+export function getDailyCaps(level: number, streak: number) {
+  const baseXp = DAILY_XP_BASE_CAP + (level - 1) * DAILY_XP_PER_LEVEL;
+  const baseCoin = DAILY_COIN_BASE_CAP + (level - 1) * DAILY_COIN_PER_LEVEL;
+  const streakMultiplier = Math.min(streak * STREAK_BONUS_PER_DAY, STREAK_BONUS_MAX);
+  return {
+    baseXp,
+    baseCoin,
+    streakMultiplier,
+    effectiveXp: Math.round(baseXp * (1 + streakMultiplier)),
+    effectiveCoin: Math.round(baseCoin * (1 + streakMultiplier)),
+  };
+}
+
+function isNewDay(lastReset: Date | null): boolean {
+  if (!lastReset) return true;
+  const today = new Date();
+  const last = new Date(lastReset);
+  return (
+    today.getUTCFullYear() !== last.getUTCFullYear() ||
+    today.getUTCMonth() !== last.getUTCMonth() ||
+    today.getUTCDate() !== last.getUTCDate()
+  );
 }
 
 export interface ActionContext {
@@ -53,6 +86,23 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
     `;
     const user = rows[0];
 
+    // Fetch daily reward data
+    const dailyRows = await tx.$queryRaw<Array<{ streak: number; dailyXpEarned: number; dailyCoinsEarned: number; lastRewardResetDate: Date | null }>>`
+      SELECT streak, "dailyXpEarned", "dailyCoinsEarned", "lastRewardResetDate" FROM "User" WHERE id = ${ctx.userId}::uuid
+    `;
+    const dailyData = dailyRows[0];
+    const caps = getDailyCaps(user.level, dailyData.streak);
+
+    // Reset if new day
+    if (isNewDay(dailyData.lastRewardResetDate)) {
+      await tx.$executeRaw`
+        UPDATE "User" SET "dailyXpEarned" = 0, "dailyCoinsEarned" = 0, "lastRewardResetDate" = NOW()
+        WHERE id = ${ctx.userId}::uuid
+      `;
+      dailyData.dailyXpEarned = 0;
+      dailyData.dailyCoinsEarned = 0;
+    }
+
     let xpGained = calculateXP(ctx.actionType, ctx.metadata, ctx.metadata?.dailyNoteCount as number | undefined);
 
     // Focus Potion: double word-count bonus portion of XP
@@ -71,15 +121,27 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
 
     const coinsGained = calculateCoins(ctx.actionType, ctx.metadata);
 
-    const newXp = user.xp + xpGained;
+    // Enforce daily reward caps
+    const xpAfterCap = Math.max(0, Math.min(xpGained, caps.effectiveXp - dailyData.dailyXpEarned));
+    const coinsAfterCap = Math.max(0, Math.min(coinsGained, caps.effectiveCoin - dailyData.dailyCoinsEarned));
+
+    // Update daily counters
+    await tx.$executeRaw`
+      UPDATE "User" SET
+        "dailyXpEarned" = "dailyXpEarned" + ${xpAfterCap},
+        "dailyCoinsEarned" = "dailyCoinsEarned" + ${coinsAfterCap}
+      WHERE id = ${ctx.userId}::uuid
+    `;
+
+    const newXp = user.xp + xpAfterCap;
     const newLevel = calculateLevel(newXp);
     const leveledUp = newLevel > user.level;
 
     await tx.user.update({
       where: { id: ctx.userId },
       data: {
-        xp: { increment: xpGained },
-        coins: { increment: coinsGained },
+        xp: { increment: xpAfterCap },
+        coins: { increment: coinsAfterCap },
         ...(leveledUp ? { level: newLevel, title: getLevelTitle(newLevel) } : {}),
       },
     });
@@ -95,8 +157,8 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
       data: {
         userId: ctx.userId,
         actionType: ctx.actionType,
-        xpChange: xpGained,
-        coinChange: coinsGained,
+        xpChange: xpAfterCap,
+        coinChange: coinsAfterCap,
         metadata: enrichedMeta as Prisma.InputJsonValue,
       },
     });
@@ -108,9 +170,9 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
     const unlockedAchievements = await checkAchievements(tx, ctx.userId, ctx.actionType, ctx.metadata);
 
     return {
-      message: getActionMessage(ctx.actionType, { xp: xpGained, coins: coinsGained, ...ctx.metadata }),
-      xpGained,
-      coinsGained,
+      message: getActionMessage(ctx.actionType, { xp: xpAfterCap, coins: coinsAfterCap, ...ctx.metadata }),
+      xpGained: xpAfterCap,
+      coinsGained: coinsAfterCap,
       leveledUp,
       newLevel: leveledUp ? newLevel : undefined,
       newTitle: leveledUp ? getLevelTitle(newLevel) : undefined,
@@ -141,15 +203,45 @@ export async function grantReward(opts: {
       SELECT xp, level FROM "User" WHERE id = ${opts.userId}::uuid FOR UPDATE
     `;
     const user = rows[0];
-    const newXp = user.xp + xpGained;
+
+    // Fetch daily reward data
+    const dailyRows = await tx.$queryRaw<Array<{ streak: number; dailyXpEarned: number; dailyCoinsEarned: number; lastRewardResetDate: Date | null }>>`
+      SELECT streak, "dailyXpEarned", "dailyCoinsEarned", "lastRewardResetDate" FROM "User" WHERE id = ${opts.userId}::uuid
+    `;
+    const dailyData = dailyRows[0];
+    const caps = getDailyCaps(user.level, dailyData.streak);
+
+    // Reset if new day
+    if (isNewDay(dailyData.lastRewardResetDate)) {
+      await tx.$executeRaw`
+        UPDATE "User" SET "dailyXpEarned" = 0, "dailyCoinsEarned" = 0, "lastRewardResetDate" = NOW()
+        WHERE id = ${opts.userId}::uuid
+      `;
+      dailyData.dailyXpEarned = 0;
+      dailyData.dailyCoinsEarned = 0;
+    }
+
+    // Enforce daily reward caps
+    const xpAfterCap = Math.max(0, Math.min(xpGained, caps.effectiveXp - dailyData.dailyXpEarned));
+    const coinsAfterCap = Math.max(0, Math.min(coinsGained, caps.effectiveCoin - dailyData.dailyCoinsEarned));
+
+    // Update daily counters
+    await tx.$executeRaw`
+      UPDATE "User" SET
+        "dailyXpEarned" = "dailyXpEarned" + ${xpAfterCap},
+        "dailyCoinsEarned" = "dailyCoinsEarned" + ${coinsAfterCap}
+      WHERE id = ${opts.userId}::uuid
+    `;
+
+    const newXp = user.xp + xpAfterCap;
     const newLevel = calculateLevel(newXp);
     const leveledUp = newLevel > user.level;
 
     await tx.user.update({
       where: { id: opts.userId },
       data: {
-        xp: { increment: xpGained },
-        coins: { increment: coinsGained },
+        xp: { increment: xpAfterCap },
+        coins: { increment: coinsAfterCap },
         ...(leveledUp ? { level: newLevel, title: getLevelTitle(newLevel) } : {}),
       },
     });
@@ -158,8 +250,8 @@ export async function grantReward(opts: {
       data: {
         userId: opts.userId,
         actionType: opts.actionType,
-        xpChange: xpGained,
-        coinChange: coinsGained,
+        xpChange: xpAfterCap,
+        coinChange: coinsAfterCap,
         metadata: {
           ...(opts.metadata ?? {}),
           levelBefore: user.level,
@@ -169,9 +261,9 @@ export async function grantReward(opts: {
     });
 
     return {
-      message: getActionMessage(opts.actionType, { xp: xpGained, coins: coinsGained, ...opts.metadata }),
-      xpGained,
-      coinsGained,
+      message: getActionMessage(opts.actionType, { xp: xpAfterCap, coins: coinsAfterCap, ...opts.metadata }),
+      xpGained: xpAfterCap,
+      coinsGained: coinsAfterCap,
       leveledUp,
       newLevel: leveledUp ? newLevel : undefined,
       newTitle: leveledUp ? getLevelTitle(newLevel) : undefined,
