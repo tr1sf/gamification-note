@@ -29,6 +29,9 @@ model User {
   isBanned         Boolean   @default(false)
   notificationPrefs   Json?
   preferredLanguage   String    @default("en")
+  dailyXpEarned      Int       @default(0)
+  dailyCoinsEarned   Int       @default(0)
+  lastRewardResetDate DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
