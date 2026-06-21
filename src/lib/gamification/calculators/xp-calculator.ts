@@ -1,5 +1,5 @@
 import {
-  XP_CREATE_NOTE_TIERS,
+  XP_CREATE_NOTE,
   XP_WRITE_WORDS_PER_100,
   XP_WRITE_WORDS_MAX,
   XP_MAKE_PUBLIC,
@@ -22,9 +22,7 @@ export function calculateXP(actionType: string, metadata?: Record<string, unknow
       if (metadata?.isSpam === true) return 0;
       if (typeof metadata?.structureScore === "number" && metadata.structureScore < QUALITY_SCORE_THRESHOLD) return 0;
 
-      const count = dailyNoteCount ?? 0;
-      const tier = XP_CREATE_NOTE_TIERS.find((t) => count < t.max) ?? XP_CREATE_NOTE_TIERS[XP_CREATE_NOTE_TIERS.length - 1];
-      const baseXp = tier.xp;
+      const baseXp = XP_CREATE_NOTE;
 
       const wordCount = typeof metadata?.wordCount === "number" ? metadata.wordCount : 0;
       const wordBonus = Math.min(Math.floor(wordCount / 100) * XP_WRITE_WORDS_PER_100, XP_WRITE_WORDS_MAX);
