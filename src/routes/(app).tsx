@@ -173,6 +173,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             <Show when={!isSolo() && !isMinimal()}>
               <NavItem href="/guilds" icon={isUnlocked("Guilds") ? "🏛️" : "🔒"} label={isUnlocked("Guilds") ? t("Guilds") : `${t("Guilds")} (Lv.${PATH_UNLOCKS[userPath() ?? "student"]?.find(f => f.feature === "Guilds")?.level ?? 10}+)`} locked={!isUnlocked("Guilds")} />
             </Show>
+            <NavItem href="/messages" icon="💬" label={t("Messages")} />
             <NavItem href="/progress" icon="📊" label={t("Progress")} />
             {/* Insights + Analytics: hidden in minimal */}
             <Show when={!isMinimal()}>
