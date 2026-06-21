@@ -1,7 +1,9 @@
-import { For, Show } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import type { GuildMember } from "~/stores/guild";
 import CosmeticAvatar, { CosmeticName } from "~/components/cosmetics/CosmeticAvatar";
 import { t } from "~/lib/i18n";
+import { useSocket } from "~/lib/socket/client";
+import GuildRoleBadge from "./GuildRoleBadge";
 
 type Role = "owner" | "admin" | "member";
 
@@ -16,6 +18,24 @@ interface MemberListProps {
 }
 
 export default function MemberList(props: MemberListProps) {
+  const [onlineUsers, setOnlineUsers] = createSignal(new Set<string>());
+  const { socket } = useSocket();
+
+  onMount(() => {
+    const s = socket();
+    if (!s) return;
+    const handler = ({ userId, status }: { userId: string; status: string }) => {
+      setOnlineUsers((prev) => {
+        const next = new Set(prev);
+        if (status === "online") next.add(userId);
+        else next.delete(userId);
+        return next;
+      });
+    };
+    s.on("presence:update", handler);
+    onCleanup(() => s.off("presence:update", handler));
+  });
+
   return (
     <div class="space-y-1">
       <Show
@@ -41,22 +61,15 @@ export default function MemberList(props: MemberListProps) {
               (myRole() === "owner" || (myRole() === "admin" && member.role === "member"));
             const hasActions = () => canPromote() || canDemote() || canTransfer() || canKick();
 
-            const roleBadge = () => {
-              if (member.role === "owner") {
-                return (
-                  <span class="text-xs px-1.5 py-0.5 rounded bg-coin/20 text-coin font-medium">
-                    {t("Owner")}
-                  </span>
-                );
+            const roleInfo = () => {
+              switch (member.role) {
+                case "owner":
+                  return { name: "Owner", color: "#F59E0B" }; // amber-500
+                case "admin":
+                  return { name: "Admin", color: "#6B7280" }; // gray-500
+                default:
+                  return null;
               }
-              if (member.role === "admin") {
-                return (
-                  <span class="text-xs px-1.5 py-0.5 rounded bg-surface-border text-ink-secondary font-medium">
-                    {t("Admin")}
-                  </span>
-                );
-              }
-              return null;
             };
 
             return (
@@ -72,6 +85,7 @@ export default function MemberList(props: MemberListProps) {
                   />
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
+                      <span class={`w-2 h-2 rounded-full ${onlineUsers().has(member.userId) ? "bg-green-500" : "bg-gray-300"}`} />
                       <CosmeticName
                         username={member.user.username}
                         equipped={member.user.equipped}
@@ -80,7 +94,7 @@ export default function MemberList(props: MemberListProps) {
                       {isSelf() && (
                         <span class="text-xs text-ink-secondary">{t("(you)")}</span>
                       )}
-                      {roleBadge()}
+                      {roleInfo() && <GuildRoleBadge name={roleInfo()!.name} color={roleInfo()!.color} compact />}
                     </div>
                   <div class="flex items-center gap-2 mt-0.5">
                     <span class="text-xs font-mono text-xp font-semibold">
