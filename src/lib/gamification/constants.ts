@@ -26,14 +26,13 @@ export const COIN_COMPLETE_CHALLENGE_ACTION = 1;
 
 export const LEVEL_BASE_XP = 100;
 
-// Anti-spam: diminishing returns per daily note count
-export const XP_CREATE_NOTE_TIERS: Array<{ max: number; xp: number }> = [
-  { max: 3, xp: 10 },
-  { max: 6, xp: 7 },
-  { max: 10, xp: 5 },
-  { max: 15, xp: 3 },
-  { max: 50, xp: 1 },
-];
+// Daily reward budget (replaces diminishing returns tiers)
+export const DAILY_XP_BASE_CAP = 150;
+export const DAILY_XP_PER_LEVEL = 25;
+export const DAILY_COIN_BASE_CAP = 30;
+export const DAILY_COIN_PER_LEVEL = 5;
+export const STREAK_BONUS_PER_DAY = 0.1;
+export const STREAK_BONUS_MAX = 0.5;
 export const XP_QUALITY_BONUS = 5;
 export const QUALITY_SCORE_THRESHOLD = 3;
 export const QUALITY_BONUS_THRESHOLD = 7;
