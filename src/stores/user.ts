@@ -9,6 +9,23 @@ export interface GamificationState {
   gamificationStyle: string;
 }
 
+export interface DailyLimits {
+  dailyXpCap: number;
+  dailyCoinCap: number;
+  streakBonus: number;
+  effectiveXpCap: number;
+  effectiveCoinCap: number;
+  xpEarned: number;
+  coinsEarned: number;
+  xpRemaining: number;
+  coinsRemaining: number;
+  resetAt: string;
+}
+
+const [dailyLimits, setDailyLimits] = createSignal<DailyLimits | null>(null);
+
+export { dailyLimits, setDailyLimits };
+
 const [gamification, setGamification] = createSignal<GamificationState>({
   xp: 0,
   coins: 0,
@@ -69,4 +86,16 @@ export function applyReward(result: {
     coins: Math.max(0, prev.coins + result.coinsGained),
     ...(result.leveledUp ? { level: result.newLevel!, title: result.newTitle! } : {}),
   }));
+}
+
+export async function fetchDailyLimits() {
+  try {
+    const res = await fetch("/api/users/daily-limits");
+    if (res.ok) {
+      const data = await res.json();
+      setDailyLimits(data);
+    }
+  } catch {
+    // Silently fail — limits are server-enforced anyway
+  }
 }
