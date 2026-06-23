@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   server: {
-    preset: "node",
+    preset: "node-server",
   },
   vite: {
     plugins: [tailwindcss()],
