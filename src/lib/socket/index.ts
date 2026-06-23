@@ -15,6 +15,10 @@ export function initSocket(server: HttpServer): Server {
   io = new Server(server, {
     cors: {
       origin: (origin, callback) => {
+        if (process.env.NODE_ENV === "development" && origin?.startsWith("http://localhost:")) {
+          callback(null, true);
+          return;
+        }
         if (!origin || ALLOWED_ORIGINS.includes(origin)) {
           callback(null, true);
         } else {

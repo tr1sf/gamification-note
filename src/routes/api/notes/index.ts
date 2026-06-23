@@ -8,6 +8,7 @@ import { track } from "~/lib/analytics/tracker";
 import { calculateStructureScore, scorePlainText } from "~/lib/analytics/quality-scorer";
 import { DUPLICATE_SIMILARITY_THRESHOLD } from "~/lib/gamification/constants";
 import { generateQuiz } from "~/lib/quiz/generator";
+import { applyBossAbility } from "~/lib/boss/abilities";
 
 export async function GET({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
@@ -174,7 +175,15 @@ export async function POST({ request }: { request: Request }) {
     where: { userId: user.userId, bossType: { in: ["daily", "weekly"] }, status: "active" },
   });
   for (const boss of activeBosses) {
-    const dmg = 5 * Math.max(1, (structureScore || 5) / 5);
+    const ability = boss.bossAbility as any;
+    const baseDmg = 5 * Math.max(1, (structureScore || 5) / 5);
+    const result = applyBossAbility(ability, {
+      actionType: "note",
+      damage: baseDmg,
+      bossCurrentHp: boss.bossCurrentHp ?? 0,
+      bossMaxHp: boss.bossMaxHp ?? 100,
+    });
+    const dmg = result.damage;
     try {
       await prisma.$transaction(async (tx) => {
         await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${dmg}) WHERE id = ${boss.id}::uuid`;
@@ -188,7 +197,7 @@ export async function POST({ request }: { request: Request }) {
             actionType: "boss_damage",
             xpChange: 0,
             coinChange: 0,
-            metadata: { bossId: boss.id, damage: dmg, source: "note", bossName: boss.bossName },
+            metadata: { bossId: boss.id, damage: dmg, source: "note", bossName: boss.bossName, abilityMsg: result.message },
           },
         });
       });

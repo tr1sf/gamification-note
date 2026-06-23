@@ -22,8 +22,8 @@ describe("XP Calculator", () => {
     expect(xp).toBe(0);
   });
 
-  it("awards bonus XP for high quality notes (structureScore >= 7)", () => {
-    const xp = calculateXP("create_note", { wordCount: 50, structureScore: 7 }, 1);
+  it("awards bonus XP for high quality notes (structureScore >= 11)", () => {
+    const xp = calculateXP("create_note", { wordCount: 50, structureScore: 11 }, 1);
     expect(xp).toBe(15);
   });
 

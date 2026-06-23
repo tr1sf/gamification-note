@@ -34,8 +34,8 @@ export const DAILY_COIN_PER_LEVEL = 5;
 export const STREAK_BONUS_PER_DAY = 0.1;
 export const STREAK_BONUS_MAX = 0.5;
 export const XP_QUALITY_BONUS = 5;
-export const QUALITY_SCORE_THRESHOLD = 3;
-export const QUALITY_BONUS_THRESHOLD = 7;
+export const QUALITY_SCORE_THRESHOLD = 5;
+export const QUALITY_BONUS_THRESHOLD = 11;
 export const DUPLICATE_SIMILARITY_THRESHOLD = 0.8;
 // Reflection depth bonus (journaler path)
 export const REFLECTION_XP_BONUS = 5;

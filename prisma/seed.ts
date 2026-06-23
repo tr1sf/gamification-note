@@ -42,6 +42,12 @@ async function main() {
     { title: 'Tag Explorer',     description: 'Use 5 different tags this week', questType: 'weekly', icon: 'tag', mechanic: 'tag_variety', mechanicConfig: {}, criteria: { action: 'any', count: 5 }, xpReward: 60, coinReward: 20 },
     { title: 'Quality Craftsman',description: 'Create 3 notes with structure score ≥ 7', questType: 'weekly', icon: 'star', mechanic: 'structure_score', mechanicConfig: { minScore: 7 }, criteria: { action: 'create_note', count: 3 }, xpReward: 80, coinReward: 25 },
     { title: 'Guild Chatter',    description: 'Send 5 messages in guild chat', questType: 'weekly', icon: 'chat', mechanic: 'social', mechanicConfig: {}, criteria: { action: 'guild_message', count: 5 }, xpReward: 40, coinReward: 15 },
+    // ── Quest Chain: The Lost Tome of Archmage Elara ──
+    { title: 'ACT I: The Faded Scroll',  description: 'The tavern keeper hands you a faded scroll. "A lost tome lies in the ruins of the old library. Write 3 scrolls to decipher the ancient runes."', questType: 'chain', icon: 'scroll', criteria: { action: 'create_note', count: 3 }, xpReward: 30, coinReward: 10, mechanic: 'chain', mechanicConfig: { chainId: 'lost_tome', chainOrder: 1, chainTotal: 5 } },
+    { title: 'ACT II: The Alchemist\'s Key', description: 'The runes reveal an alchemical formula. "Create 2 notes with a structure score of 7+."', questType: 'chain', icon: 'key', criteria: { action: 'create_note', count: 2 }, xpReward: 40, coinReward: 15, mechanic: 'chain', mechanicConfig: { chainId: 'lost_tome', chainOrder: 2, chainTotal: 5, minScore: 7 } },
+    { title: 'ACT III: The Guardian\'s Trial', description: 'A spectral guardian blocks the door. "Prove your worth — deal 200 damage to any boss."', questType: 'chain', icon: 'shield', criteria: { action: 'boss_damage', count: 200 }, xpReward: 50, coinReward: 20, mechanic: 'chain', mechanicConfig: { chainId: 'lost_tome', chainOrder: 3, chainTotal: 5 } },
+    { title: 'ACT IV: The Forgotten Archive', description: 'Deep in the library, you find shelves of knowledge. "Review 5 old notes to reconstruct the tome\'s index."', questType: 'chain', icon: 'book', criteria: { action: 'review_note', count: 5 }, xpReward: 60, coinReward: 25, mechanic: 'chain', mechanicConfig: { chainId: 'lost_tome', chainOrder: 4, chainTotal: 5 } },
+    { title: 'ACT V: The Tome Restored', description: 'All the pages come together. The Archmage\'s wisdom is yours — legendary reward awaits!', questType: 'chain', icon: 'trophy', criteria: { action: 'complete_quest', count: 1 }, xpReward: 100, coinReward: 50, mechanic: 'chain', mechanicConfig: { chainId: 'lost_tome', chainOrder: 5, chainTotal: 5 } },
   ];
 
   let newQuests = 0;
@@ -136,6 +142,80 @@ async function main() {
       coinCost: 15,
       rarity: 'common',
       category: { usageType: 'potion_ticket' },
+    },
+    // New cosmetic items — Phase H
+    {
+      name: 'Dragon Frame',
+      description: 'A fiery dragon wraps around your avatar',
+      type: 'avatar_frame',
+      coinCost: 200,
+      rarity: 'legendary',
+    },
+    {
+      name: 'Starry Frame',
+      description: 'A constellation of stars adorns your profile',
+      type: 'avatar_frame',
+      coinCost: 180,
+      rarity: 'epic',
+    },
+    {
+      name: 'Thorn Crown',
+      description: 'A crown of dark thorns — for the shadowy scribe',
+      type: 'avatar_frame',
+      coinCost: 150,
+      rarity: 'rare',
+    },
+    {
+      name: 'Frost Frame',
+      description: 'An icy border that chills the air around your avatar',
+      type: 'avatar_frame',
+      coinCost: 120,
+      rarity: 'rare',
+    },
+    {
+      name: 'Phoenix Quill',
+      description: 'A badge bearing the feather of a risen phoenix',
+      type: 'badge',
+      coinCost: 100,
+      rarity: 'rare',
+    },
+    {
+      name: 'Moonlit Tome',
+      description: 'A tome that glows under the full moon — scholar endgame',
+      type: 'badge',
+      coinCost: 80,
+      rarity: 'uncommon',
+    },
+    {
+      name: 'Ruby Ink',
+      description: 'Your name glows in deep ruby red',
+      type: 'name_color',
+      coinCost: 100,
+      rarity: 'rare',
+      category: { color: '#E0245E' },
+    },
+    {
+      name: 'Sapphire Ink',
+      description: 'Your name shines in royal sapphire blue',
+      type: 'name_color',
+      coinCost: 100,
+      rarity: 'rare',
+      category: { color: '#3B82F6' },
+    },
+    {
+      name: 'Golden Ink',
+      description: 'Your name gleams in liquid gold',
+      type: 'name_color',
+      coinCost: 200,
+      rarity: 'epic',
+      category: { color: '#F59E0B' },
+    },
+    {
+      name: 'Obsidian Frame',
+      description: 'A frame carved from the void itself — whispers included',
+      type: 'avatar_frame',
+      coinCost: 250,
+      rarity: 'legendary',
     },
   ];
 

@@ -1,11 +1,8 @@
-import { verifyAccessToken } from "./jwt";
+import { verifyAccessToken, readAccessToken } from "./jwt";
 
 export function getUserFromRequest(request: Request) {
   const cookieHeader = request.headers.get("cookie") || "";
-  const token = cookieHeader
-    .split("; ")
-    .find((c) => c.startsWith("access_token="))
-    ?.split("=")[1];
+  const token = readAccessToken(cookieHeader);
   if (!token) return null;
   try {
     return verifyAccessToken(token);

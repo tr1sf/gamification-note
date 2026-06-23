@@ -38,11 +38,16 @@ export async function POST({ request, params }: { request: Request; params: { id
     return error("FORBIDDEN", "Guild is full", 403);
   }
 
+  const memberRole = await prisma.guildRole.findUnique({
+    where: { guildId_name: { guildId: params.id, name: "Member" } },
+  });
+  if (!memberRole) return error("INTERNAL_ERROR", "Guild roles not configured", 500);
+
   const member = await prisma.guildMember.create({
     data: {
       guildId: params.id,
       userId: user.userId,
-      role: "member",
+      roleId: memberRole.id,
     },
   });
 

@@ -65,15 +65,37 @@ export async function POST({ request }: { request: Request }) {
       isPublic: parsed.data.isPublic,
       inviteCode: code,
       ownerId: user.userId,
-      members: {
-        create: {
-          userId: user.userId,
-          role: "owner",
-        },
-      },
     },
     include: {
       _count: { select: { members: true } },
+    },
+  });
+
+  const PRESET_ROLES = [
+    { name: "Owner", color: "#FFD700", permissions: "all", position: 100 },
+    { name: "Admin", color: "#EF4444", permissions: "manage_messages,kick_members,manage_tasks", position: 80 },
+    { name: "Moderator", color: "#3B82F6", permissions: "manage_messages,kick_members", position: 40 },
+    { name: "Officer", color: "#10B981", permissions: "manage_tasks", position: 20 },
+    { name: "Member", color: "#6B7280", permissions: "", position: 0 },
+  ];
+
+  for (const preset of PRESET_ROLES) {
+    await prisma.guildRole.create({
+      data: { guildId: guild.id, ...preset },
+    });
+  }
+
+  const ownerRole = await prisma.guildRole.findUnique({
+    where: { guildId_name: { guildId: guild.id, name: "Owner" } },
+  });
+
+  if (!ownerRole) return error("INTERNAL_ERROR", "Failed to create guild roles", 500);
+
+  await prisma.guildMember.create({
+    data: {
+      guildId: guild.id,
+      userId: user.userId,
+      roleId: ownerRole.id,
     },
   });
 

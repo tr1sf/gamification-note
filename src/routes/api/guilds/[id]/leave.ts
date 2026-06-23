@@ -27,6 +27,7 @@ export async function POST({ request, params }: { request: Request; params: { id
 
         if (otherMembers.length === 0) {
           await tx.guild.delete({ where: { id: params.id } });
+          return;
         } else {
           const newOwner = otherMembers[0];
           newOwnerUserId = newOwner.userId;

@@ -1,13 +1,10 @@
 import { prisma } from "~/lib/db";
-import { verifyRefreshToken, signAccessToken, signRefreshToken, hashPassword, setAuthCookies } from "~/lib/auth/jwt";
+import { verifyRefreshToken, signAccessToken, signRefreshToken, hashPassword, setAuthCookies, readRefreshToken } from "~/lib/auth/jwt";
 import { success, error } from "~/lib/api-response";
 
 export async function POST({ request }: { request: Request }) {
   const cookieHeader = request.headers.get("cookie") || "";
-  const refreshToken = cookieHeader
-    .split("; ")
-    .find((c) => c.startsWith("refresh_token="))
-    ?.split("=")[1];
+  const refreshToken = readRefreshToken(cookieHeader);
 
   if (!refreshToken) {
     return error("UNAUTHORIZED", "No refresh token", 401);

@@ -11,10 +11,26 @@ const tokenPayloadSchema = z.object({
 
 export type TokenPayload = z.infer<typeof tokenPayloadSchema>;
 
-const ACCESS_EXPIRY_SEC = 900; // 15 minutes
-const REFRESH_EXPIRY_SEC = 604800; // 7 days
+const ACCESS_EXPIRY_SEC = 900;
+const REFRESH_EXPIRY_SEC = 604800;
 
 const JWT_ALG = "HS256" as const;
+
+const PORT = process.env.PORT || "3000";
+const COOKIE_SUFFIX = env.NODE_ENV === "development" ? `_${PORT}` : "";
+
+function accessCookieName() { return `access_token${COOKIE_SUFFIX}`; }
+function refreshCookieName() { return `refresh_token${COOKIE_SUFFIX}`; }
+
+export function readAccessToken(cookieHeader: string): string | null {
+  const name = accessCookieName();
+  return cookieHeader.split("; ").find((c) => c.startsWith(`${name}=`))?.split("=")[1] || null;
+}
+
+export function readRefreshToken(cookieHeader: string): string | null {
+  const name = refreshCookieName();
+  return cookieHeader.split("; ").find((c) => c.startsWith(`${name}=`))?.split("=")[1] || null;
+}
 
 export function signAccessToken(payload: TokenPayload): string {
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, { expiresIn: ACCESS_EXPIRY_SEC, algorithm: JWT_ALG });
@@ -44,16 +60,20 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export function setAuthCookies(accessToken: string, refreshToken: string): string[] {
   const secureFlag = env.NODE_ENV === 'production' ? '; Secure' : '';
+  const an = accessCookieName();
+  const rn = refreshCookieName();
   return [
-    `access_token=${accessToken}; HttpOnly${secureFlag}; SameSite=Lax; Path=/; Max-Age=${ACCESS_EXPIRY_SEC}`,
-    `refresh_token=${refreshToken}; HttpOnly${secureFlag}; SameSite=Lax; Path=/api/auth; Max-Age=${REFRESH_EXPIRY_SEC}`,
+    `${an}=${accessToken}; HttpOnly${secureFlag}; SameSite=Lax; Path=/; Max-Age=${ACCESS_EXPIRY_SEC}`,
+    `${rn}=${refreshToken}; HttpOnly${secureFlag}; SameSite=Lax; Path=/api/auth; Max-Age=${REFRESH_EXPIRY_SEC}`,
   ];
 }
 
 export function clearAuthCookies(): string[] {
   const secureFlag = env.NODE_ENV === 'production' ? '; Secure' : '';
+  const an = accessCookieName();
+  const rn = refreshCookieName();
   return [
-    `access_token=; HttpOnly${secureFlag}; SameSite=Lax; Path=/; Max-Age=0`,
-    `refresh_token=; HttpOnly${secureFlag}; SameSite=Lax; Path=/api/auth; Max-Age=0`,
+    `${an}=; HttpOnly${secureFlag}; SameSite=Lax; Path=/; Max-Age=0`,
+    `${rn}=; HttpOnly${secureFlag}; SameSite=Lax; Path=/api/auth; Max-Age=0`,
   ];
 }

@@ -389,6 +389,7 @@ model Challenge {
   raidGuildId     String?  @db.Uuid
   lootTable       Json?
   lootClaimed     Boolean  @default(false)
+  bossAbility     Json?              // { type: "shield"|"regen"|"resistance"|"curse"|"weakness"|"thick_hide"|etc, data: {...} }
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

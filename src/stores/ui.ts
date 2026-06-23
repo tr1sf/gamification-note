@@ -4,7 +4,7 @@ import { createSignal } from "solid-js";
 interface UIState {
   sidebarOpen: boolean;
   theme: "light" | "dark";
-  toasts: Array<{ id: string; message: string; type: "success" | "error" | "info" }>;
+  toasts: Array<{ id: string; message: string; type: "success" | "error" | "info"; action?: { label: string; onClick: () => void } }>;
 }
 
 function getInitialTheme(): "light" | "dark" {
@@ -41,18 +41,18 @@ export function setTheme(theme: "light" | "dark") {
 let toastId = 0;
 const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-export function addToast(message: string, type: "success" | "error" | "info" = "info") {
+export function addToast(message: string, type: "success" | "error" | "info" = "info", opts?: { action?: { label: string; onClick: () => void }; duration?: number }) {
   const id = String(++toastId);
-  setUIStore("toasts", (t) => [...t, { id, message, type }]);
+  setUIStore("toasts", (t) => [...t, { id, message, type, action: opts?.action }]);
 
-  // Clear any existing timer for this id
   const existing = toastTimers.get(id);
   if (existing) clearTimeout(existing);
 
+  const duration = opts?.duration ?? 3500;
   const timer = setTimeout(() => {
     setUIStore("toasts", (t) => t.filter((x) => x.id !== id));
     toastTimers.delete(id);
-  }, 3500);
+  }, duration);
   toastTimers.set(id, timer);
 }
 

@@ -1,121 +1,134 @@
-import { onMount, Show } from "solid-js";
+import { onMount, Show, createSignal } from "solid-js";
 import { dailyLimits, fetchDailyLimits } from "~/stores/user";
 
-const BAR_COLORS = {
-  normal: "from-accent to-accent/70",
-  warning: "from-amber-500 to-orange-500",
-  full: "from-error to-red-600",
-};
-
-function getBarColor(pct: number): string {
-  if (pct >= 100) return BAR_COLORS.full;
-  if (pct >= 70) return BAR_COLORS.warning;
-  return BAR_COLORS.normal;
-}
-
-export default function DailyRewardBar() {
-  let tooltipRef: HTMLDivElement | undefined;
+export default function DailyRewardBar(props: { compact?: boolean }) {
+  const [open, setOpen] = createSignal(false);
 
   onMount(() => {
     fetchDailyLimits();
   });
 
+  const limits = () => dailyLimits();
+
   const xpPct = () => {
-    const limits = dailyLimits();
-    if (!limits) return 0;
-    return Math.min(100, Math.round((limits.xpEarned / limits.effectiveXpCap) * 100));
+    const l = limits();
+    if (!l) return 0;
+    return Math.min(100, Math.round((l.xpEarned / l.effectiveXpCap) * 100));
   };
 
   const coinPct = () => {
-    const limits = dailyLimits();
-    if (!limits) return 0;
-    return Math.min(100, Math.round((limits.coinsEarned / limits.effectiveCoinCap) * 100));
+    const l = limits();
+    if (!l) return 0;
+    return Math.min(100, Math.round((l.coinsEarned / l.effectiveCoinCap) * 100));
   };
 
-  const xpColor = () => getBarColor(xpPct());
-  const coinColor = () => getBarColor(coinPct());
+  const xpFull = () => xpPct() >= 100;
+  const coinFull = () => coinPct() >= 100;
+  const anyFull = () => xpFull() || coinFull();
+  const streakPct = () => Math.round((limits()?.streakBonus ?? 0) * 100);
+
+  const resetLabel = () => {
+    const r = limits()?.resetAt;
+    if (!r) return "";
+    const ms = new Date(r).getTime() - Date.now();
+    if (ms <= 0) return "Now";
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+
+  const fullContent = () => (
+    <div class="space-y-2 min-w-[180px]">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-semibold text-ink-secondary tracking-wide uppercase">
+          Daily Rewards
+        </span>
+        <span class="text-[10px] text-ink-muted">
+          Resets in {resetLabel()}
+        </span>
+      </div>
+
+      {/* XP row */}
+      <div class="flex items-center gap-2">
+        <span class="text-sm shrink-0">⚡</span>
+        <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+          <div
+            class={`h-full rounded-full transition-all duration-700 ease-out ${
+              xpFull() ? "bg-red-500/60" : "bg-amber-500/40"
+            }`}
+            style={{ width: `${xpPct()}%` }}
+          />
+        </div>
+        <span
+          class={`text-[10px] tabular-nums shrink-0 w-14 text-right ${
+            xpFull() ? "text-red-400" : "text-ink-muted"
+          }`}
+        >
+          {limits()!.xpEarned}/{limits()!.effectiveXpCap}
+        </span>
+      </div>
+
+      {/* Coins row */}
+      <div class="flex items-center gap-2">
+        <span class="text-sm shrink-0">🪙</span>
+        <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+          <div
+            class={`h-full rounded-full transition-all duration-700 ease-out ${
+              coinFull() ? "bg-red-500/60" : "bg-amber-400/40"
+            }`}
+            style={{ width: `${coinPct()}%` }}
+          />
+        </div>
+        <span
+          class={`text-[10px] tabular-nums shrink-0 w-14 text-right ${
+            coinFull() ? "text-red-400" : "text-ink-muted"
+          }`}
+        >
+          {limits()!.coinsEarned}/{limits()!.effectiveCoinCap}
+        </span>
+      </div>
+
+      {/* Footer */}
+      <div class="flex items-center justify-between min-h-[14px]">
+        <Show when={streakPct() > 0}>
+          <span class="text-[10px] text-amber-400/80">🔥 +{streakPct()}% streak</span>
+        </Show>
+        <Show when={anyFull()}>
+          <span class="text-[10px] text-red-400/80 animate-pulse ml-auto">Daily cap reached</span>
+        </Show>
+      </div>
+    </div>
+  );
 
   return (
-    <Show when={dailyLimits()}>
-      <div
-        class="relative group"
-        onMouseEnter={() => tooltipRef?.classList.remove("hidden")}
-        onMouseLeave={() => tooltipRef?.classList.add("hidden")}
+    <Show when={limits()}>
+      <Show
+        when={props.compact}
+        fallback={<div class="p-3">{fullContent()}</div>}
       >
-        {/* XP Bar */}
-        <div class="mb-1.5">
-          <div class="flex items-center justify-between mb-0.5">
-            <span class="text-[10px] text-ink-secondary font-medium">
-              ⚡ Daily XP
-            </span>
-            <span class="text-[10px] text-ink-secondary">
-              {dailyLimits()!.xpEarned} / {dailyLimits()!.effectiveXpCap}
-            </span>
-          </div>
-          <div class="h-1.5 bg-surface-border rounded-full overflow-hidden">
-            <div
-              class={`h-full bg-gradient-to-r ${xpColor()} rounded-full transition-all duration-500 ease-out`}
-              style={{ width: `${xpPct()}%` }}
-            />
-          </div>
-        </div>
+        {/* Compact: button + dropdown */}
+        <div class="relative">
+          <button
+            onClick={() => setOpen((o) => !o)}
+            class="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+            classList={{
+              "border-surface-border text-ink-secondary hover:border-amber-500/30 hover:text-amber-400": !anyFull(),
+              "border-red-500/30 text-red-400 hover:border-red-500/50": anyFull(),
+            }}
+            title="Daily reward progress"
+          >
+            <span class="text-sm">{anyFull() ? "🏆" : "🎁"}</span>
+            <span class="tabular-nums">{xpPct()}%</span>
+          </button>
 
-        {/* Coin Bar */}
-        <div class="mb-1">
-          <div class="flex items-center justify-between mb-0.5">
-            <span class="text-[10px] text-ink-secondary font-medium">
-              🪙 Coins
-            </span>
-            <span class="text-[10px] text-ink-secondary">
-              {dailyLimits()!.coinsEarned} / {dailyLimits()!.effectiveCoinCap}
-            </span>
-          </div>
-          <div class="h-1.5 bg-surface-border rounded-full overflow-hidden">
-            <div
-              class={`h-full bg-gradient-to-r ${coinColor()} rounded-full transition-all duration-500 ease-out`}
-              style={{ width: `${coinPct()}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Streak bonus indicator */}
-        <Show when={dailyLimits()!.streakBonus > 0}>
-          <div class="text-[10px] text-amber-500 text-center">
-            🔥 Streak bonus: +{Math.round(dailyLimits()!.streakBonus * 100)}%
-          </div>
-        </Show>
-
-        {/* Cap reached warning */}
-        <Show when={xpPct() >= 100 || coinPct() >= 100}>
-          <div class="text-[10px] text-error text-center mt-0.5 animate-pulse">
-            Daily limit reached — come back tomorrow!
-          </div>
-        </Show>
-
-        {/* Tooltip with breakdown */}
-        <div
-          ref={tooltipRef}
-          class="hidden absolute left-full top-0 ml-2 z-50 w-48 p-2 bg-surface-elevated border border-surface-border rounded-lg shadow-lg text-xs"
-        >
-          <div class="font-medium text-ink-primary mb-1">Today's Rewards</div>
-          <div class="space-y-0.5 text-ink-secondary">
-            <div class="flex justify-between">
-              <span>XP earned:</span>
-              <span>{dailyLimits()!.xpEarned} / {dailyLimits()!.effectiveXpCap}</span>
+          <Show when={open()}>
+            <div class="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div class="absolute top-full right-0 mt-2 z-50 p-3 bg-surface-elevated border border-surface-border rounded-xl shadow-xl">
+              {fullContent()}
             </div>
-            <div class="flex justify-between">
-              <span>Coins earned:</span>
-              <span>{dailyLimits()!.coinsEarned} / {dailyLimits()!.effectiveCoinCap}</span>
-            </div>
-            <div class="border-t border-surface-border mt-1 pt-1">
-              <div class="flex justify-between">
-                <span>Resets at:</span>
-                <span>{new Date(dailyLimits()!.resetAt).toLocaleTimeString()}</span>
-              </div>
-            </div>
-          </div>
+          </Show>
         </div>
-      </div>
+      </Show>
     </Show>
   );
 }

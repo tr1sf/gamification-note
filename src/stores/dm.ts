@@ -70,6 +70,24 @@ export async function sendDM(receiverId: string, content: string): Promise<{ mes
   }
 }
 
+export async function sendDMToGroup(groupId: string, content: string): Promise<{ message: DMMessage; groupId: string } | null> {
+  try {
+    const res = await authFetch("/api/dms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupId, content }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      setDmMessages((prev) => [...prev, json.data.message]);
+      return json.data;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function createGroupDM(name: string, memberIds: string[]): Promise<string | null> {
   try {
     const res = await authFetch("/api/dms/groups", {
@@ -86,4 +104,18 @@ export async function createGroupDM(name: string, memberIds: string[]): Promise<
 
 export function addSocketDMMessage(message: DMMessage) {
   setDmMessages((prev) => [...prev, message]);
+}
+
+export async function startDirectConversation(receiverId: string): Promise<string | null> {
+  try {
+    const res = await authFetch("/api/dms/groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberIds: [receiverId] }),
+    });
+    const json = await res.json();
+    return json.success ? json.data.id : null;
+  } catch {
+    return null;
+  }
 }

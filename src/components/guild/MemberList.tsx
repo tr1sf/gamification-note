@@ -15,6 +15,7 @@ interface MemberListProps {
   onDemote?: (userId: string) => void;
   onTransfer?: (userId: string) => void;
   onKick?: (userId: string) => void;
+  onMessage?: (userId: string) => void;
 }
 
 export default function MemberList(props: MemberListProps) {
@@ -106,8 +107,17 @@ export default function MemberList(props: MemberListProps) {
                   </div>
                 </div>
 
-                <Show when={hasActions()}>
+                <Show when={hasActions() || (!isSelf() && props.onMessage)}>
                   <div class="flex items-center gap-1 shrink-0">
+                    <Show when={!isSelf() && props.onMessage}>
+                      <button
+                        onClick={() => props.onMessage?.(member.userId)}
+                        class="text-xs px-2 py-1 rounded border border-surface-border text-ink-secondary hover:border-accent hover:text-accent transition-colors"
+                        title="Send direct message"
+                      >
+                        {t("Message")}
+                      </button>
+                    </Show>
                     <Show when={canPromote()}>
                       <button
                         onClick={() => props.onPromote?.(member.userId)}

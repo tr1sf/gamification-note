@@ -20,8 +20,11 @@ async function getSocket(): Promise<Socket> {
   }
 
   initPromise = (async () => {
+    const isLocalDev = typeof window !== "undefined" && (
+      window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    );
     const socketUrl = typeof window !== "undefined"
-      ? `http://${window.location.hostname}:3001`
+      ? (isLocalDev ? `http://${window.location.hostname}:3001` : window.location.origin)
       : "";
     socket = io(socketUrl, {
       auth: { token: "" },

@@ -3,6 +3,20 @@ import { A } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
 import Nelar from "~/components/mascot/Nelar";
 
+function abilityColor(type: string) {
+  if (type?.startsWith("weak_")) return "border-emerald-500/30 bg-emerald-500/10 text-emerald-400";
+  if (type === "fog_shield") return "border-sky-500/30 bg-sky-500/10 text-sky-400";
+  if (type === "regen") return "border-purple-500/30 bg-purple-500/10 text-purple-400";
+  return "border-amber-500/30 bg-amber-500/10 text-amber-400";
+}
+
+function abilityTypeLabel(type: string) {
+  if (type?.startsWith("weak_")) return "WEAKNESS";
+  if (type === "fog_shield" || type === "thick_hide" || type === "void_immune") return "RESISTANCE";
+  if (type === "regen") return "PASSIVE";
+  return "ABILITY";
+}
+
 export default function BossActivePage() {
   const [bosses] = createResource(async () => {
     const res = await authFetch("/api/boss/active");
@@ -43,14 +57,24 @@ export default function BossActivePage() {
                     <Show when={boss.iconImageUrl} fallback={<span class="text-4xl">{boss.bossEmoji || "\u{1F47B}"}</span>}>
                       <img src={boss.iconImageUrl} alt={boss.bossName} class="w-16 h-16 object-cover rounded-xl ring-2 ring-error/20" />
                     </Show>
-                    <div class="flex-1">
-                      <div class="flex items-center justify-between mb-2">
-                        <h3 class="font-bold text-ink-primary">{boss.bossName || boss.title}</h3>
-                        <span class="text-xs px-2 py-0.5 rounded border border-error/20 bg-error/5 text-error">
-                          {boss.bossType?.toString().toUpperCase()}
-                        </span>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between mb-1 gap-2">
+                        <h3 class="font-bold text-ink-primary truncate">{boss.bossName || boss.title}</h3>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          <span class="text-xs px-2 py-0.5 rounded border border-error/20 bg-error/5 text-error">
+                            {boss.bossType?.toString().toUpperCase()}
+                          </span>
+                          <Show when={boss.bossAbility}>
+                            <span
+                              class={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${abilityColor((boss.bossAbility as any).type)}`}
+                              title={`${(boss.bossAbility as any).name}: ${(boss.bossAbility as any).description}`}
+                            >
+                              {(boss.bossAbility as any).icon} {(boss.bossAbility as any).name}
+                            </span>
+                          </Show>
+                        </div>
                       </div>
-                      <div class="h-3 bg-surface-border rounded-full overflow-hidden">
+                      <div class="h-3 bg-surface-border rounded-full overflow-hidden mb-1.5">
                         <div
                           class="h-full bg-error rounded-full transition-all"
                           style={{
@@ -58,9 +82,14 @@ export default function BossActivePage() {
                           }}
                         />
                       </div>
-                      <p class="text-xs text-ink-secondary mt-2">
-                        {boss.bossCurrentHp} / {boss.bossMaxHp} HP
-                      </p>
+                      <div class="flex items-center justify-between">
+                        <p class="text-xs text-ink-secondary">
+                          {boss.bossCurrentHp} / {boss.bossMaxHp} HP
+                        </p>
+                        <p class="text-[10px] text-ink-muted">
+                          ~{Math.max(1, Math.ceil((boss.bossCurrentHp ?? 0) / (boss.bossType === "daily" ? 50 : 60)))}d left
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </A>

@@ -11,6 +11,8 @@ import GratitudeGarden from "~/components/gratitude/GratitudeGarden";
 import FocusTimer from "~/components/focus/FocusTimer";
 import Nelar from "~/components/mascot/Nelar";
 import StreakCalendar from "~/components/gamification/StreakCalendar";
+import DailyCheckin from "~/components/gamification/DailyCheckin";
+import DailyDigest from "~/components/gamification/DailyDigest";
 
 // ── Dashboard stats API ──────────────────────────────────────────────────────
 interface DashboardData {
@@ -265,6 +267,12 @@ export default function TavernPage() {
                   <span aria-hidden="true">+</span> {t("New scroll")}
               </a>
             </div>
+
+            {/* Daily Check-in */}
+            <DailyCheckin />
+
+            {/* Daily Digest */}
+            <DailyDigest />
 
             {/* Streak Calendar */}
             <StreakCalendar />

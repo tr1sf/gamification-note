@@ -148,8 +148,7 @@ export async function POST({ request, params }: { request: Request; params: { id
   const payload = mapMessage(message);
 
   try {
-    const io = getIO();
-    io.to(`guild:${params.id}`).emit("guild:message", payload);
+    getIO().to(`guild:${params.id}`).emit("guild:message", payload);
   } catch {}
 
   return success(payload);

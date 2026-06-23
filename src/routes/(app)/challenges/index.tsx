@@ -185,79 +185,80 @@ export default function ChallengeListPage() {
           }
         >
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <For each={challenges()}>
+            <For each={(challenges() ?? []).filter((c) => c.bossType)}>
               {(challenge) => (
-                challenge.bossType ? (
-                  <A
-                    href={`/boss/${challenge.id}`}
-                    class="block bg-surface-elevated rounded-xl p-5 border border-surface-border hover:border-error/30 transition-all group"
-                  >
-                    <div class="flex items-start justify-between mb-3">
-                      <div class="flex items-center gap-2">
-                        <span class="text-2xl">{challenge.bossEmoji || "👻"}</span>
-                        <div>
-                          <h3 class="font-semibold text-ink-primary group-hover:text-error transition-colors">{challenge.bossName || challenge.title}</h3>
-                          <p class="text-xs text-ink-secondary mt-0.5">{challenge.bossType === "daily" ? t("Daily Minion") : challenge.bossType === "weekly" ? t("Weekly Elite") : challenge.bossType}</p>
-                        </div>
-                      </div>
-                      <span class={`text-xs px-1.5 py-0.5 rounded border ${challenge.status === "completed" ? "text-success bg-success/10 border-success/20" : "text-error bg-error/10 border-error/20"}`}>
-                        {challenge.status === "completed" ? t("Defeated") : challenge.bossType}
-                      </span>
-                    </div>
-                    <div class="space-y-1.5">
-                      <div class="flex items-center justify-between text-xs">
-                        <span class="text-ink-secondary">{t("HP")}</span>
-                        <span class="text-ink-secondary/60">{challenge.bossCurrentHp}/{challenge.bossMaxHp}</span>
-                      </div>
-                      <div class="h-2 bg-surface-border rounded-full overflow-hidden">
-                        <div
-                          class={`h-full rounded-full transition-all duration-500 ${((challenge.bossCurrentHp ?? 0) / (challenge.bossMaxHp ?? 1)) < 0.2 ? "bg-error animate-pulse" : "bg-error"}`}
-                          style={{ width: `${Math.round(((challenge.bossCurrentHp ?? 0) / (challenge.bossMaxHp ?? 1)) * 100)}%` }}
-                        />
+                <A
+                  href={`/boss/${challenge.id}`}
+                  class="block bg-surface-elevated rounded-xl p-5 border border-surface-border hover:border-error/30 transition-all group"
+                >
+                  <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-2xl">{challenge.bossEmoji || "👻"}</span>
+                      <div>
+                        <h3 class="font-semibold text-ink-primary group-hover:text-error transition-colors">{challenge.bossName || challenge.title}</h3>
+                        <p class="text-xs text-ink-secondary mt-0.5">{challenge.bossType === "daily" ? t("Daily Minion") : challenge.bossType === "weekly" ? t("Weekly Elite") : challenge.bossType}</p>
                       </div>
                     </div>
-                  </A>
-                ) : (
-                  <A
-                    href={`/challenges/${challenge.id}`}
-                    class="block bg-surface-elevated rounded-xl p-5 border border-surface-border hover:border-accent/30 hover:shadow-md transition-all group"
-                  >
-                    <div class="flex items-start justify-between mb-3">
-                      <div class="flex items-center gap-2">
-                        <span class="text-2xl">{challenge.iconEmoji || THEME_ICONS[challenge.theme] || "🎯"}</span>
-                        <div>
-                          <h3 class="font-semibold text-ink-primary group-hover:text-accent transition-colors">{challenge.title}</h3>
-                          <p class="text-xs text-ink-secondary mt-0.5">{challenge._count.actions} {t("actions")}</p>
-                        </div>
-                      </div>
-                      <span class={`text-xs px-1.5 py-0.5 rounded border ${DIFFICULTY_CLASSES[challenge.difficulty] || ""}`}>
-                        {challenge.difficulty}
-                      </span>
+                    <span class={`text-xs px-1.5 py-0.5 rounded border ${challenge.status === "completed" ? "text-success bg-success/10 border-success/20" : "text-error bg-error/10 border-error/20"}`}>
+                      {challenge.status === "completed" ? t("Defeated") : challenge.bossType}
+                    </span>
+                  </div>
+                  <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                      <span class="text-ink-secondary">{t("HP")}</span>
+                      <span class="text-ink-secondary/60">{challenge.bossCurrentHp}/{challenge.bossMaxHp}</span>
                     </div>
+                    <div class="h-2 bg-surface-border rounded-full overflow-hidden">
+                      <div
+                        class={`h-full rounded-full transition-all duration-500 ${((challenge.bossCurrentHp ?? 0) / (challenge.bossMaxHp ?? 1)) < 0.2 ? "bg-error animate-pulse" : "bg-error"}`}
+                        style={{ width: `${Math.round(((challenge.bossCurrentHp ?? 0) / (challenge.bossMaxHp ?? 1)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </A>
+              )}
+            </For>
+            <For each={(challenges() ?? []).filter((c) => !c.bossType)}>
+              {(challenge) => (
+                <A
+                  href={`/challenges/${challenge.id}`}
+                  class="block bg-surface-elevated rounded-xl p-5 border border-surface-border hover:border-accent/30 hover:shadow-md transition-all group"
+                >
+                  <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-2xl">{challenge.iconEmoji || THEME_ICONS[challenge.theme] || "🎯"}</span>
+                      <div>
+                        <h3 class="font-semibold text-ink-primary group-hover:text-accent transition-colors">{challenge.title}</h3>
+                        <p class="text-xs text-ink-secondary mt-0.5">{challenge._count.actions} {t("actions")}</p>
+                      </div>
+                    </div>
+                    <span class={`text-xs px-1.5 py-0.5 rounded border ${DIFFICULTY_CLASSES[challenge.difficulty] || ""}`}>
+                      {challenge.difficulty}
+                    </span>
+                  </div>
 
-                    <Show when={challenge.description}>
-                      <p class="text-sm text-ink-secondary mb-4 line-clamp-2">{challenge.description}</p>
-                    </Show>
+                  <Show when={challenge.description}>
+                    <p class="text-sm text-ink-secondary mb-4 line-clamp-2">{challenge.description}</p>
+                  </Show>
 
-                    <div class="space-y-1.5">
-                      <div class="flex items-center justify-between text-xs">
-                        <span class="text-ink-secondary">{pct(challenge)}%</span>
-                        <span class="text-ink-secondary/60">{challenge.currentProgress}/{challenge.targetProgress}</span>
-                      </div>
-                      <div class="h-2 bg-surface-border rounded-full overflow-hidden">
-                        <div
-                          class="h-full bg-accent rounded-full transition-all duration-500"
-                          style={{ width: `${pct(challenge)}%` }}
-                        />
-                      </div>
+                  <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                      <span class="text-ink-secondary">{pct(challenge)}%</span>
+                      <span class="text-ink-secondary/60">{challenge.currentProgress}/{challenge.targetProgress}</span>
                     </div>
+                    <div class="h-2 bg-surface-border rounded-full overflow-hidden">
+                      <div
+                        class="h-full bg-accent rounded-full transition-all duration-500"
+                        style={{ width: `${pct(challenge)}%` }}
+                      />
+                    </div>
+                  </div>
 
-                    <div class="flex items-center gap-3 mt-3 text-xs text-ink-secondary/60">
-                      <span>+{challenge.rewardXp} XP</span>
-                      <span>+{challenge.rewardCoins} coins</span>
-                    </div>
-                  </A>
-                )
+                  <div class="flex items-center gap-3 mt-3 text-xs text-ink-secondary/60">
+                    <span>+{challenge.rewardXp} XP</span>
+                    <span>+{challenge.rewardCoins} coins</span>
+                  </div>
+                </A>
               )}
             </For>
           </div>

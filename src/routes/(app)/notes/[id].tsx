@@ -165,7 +165,22 @@ export default function NoteDetailPage() {
       const res = await authFetch(`/api/notes/${params.id}`, { method: "DELETE" });
       const json = await res.json();
       if (json.success) {
-        addToast(t("Note moved to trash"), "info");
+        addToast(t("Note deleted"), "info", {
+          duration: 7000,
+          action: {
+            label: t("Undo"),
+            onClick: async () => {
+              const restoreRes = await authFetch(`/api/notes/${params.id}/restore`, { method: "POST" });
+              const restoreJson = await restoreRes.json();
+              if (restoreJson.success) {
+                addToast(t("Note restored!"), "success");
+                navigate(`/notes/${params.id}`);
+              } else {
+                addToast(restoreJson.error?.message || t("Restore failed"), "error");
+              }
+            },
+          },
+        });
         navigate("/notes");
       } else {
         addToast(json.error?.message || t("Delete failed"), "error");

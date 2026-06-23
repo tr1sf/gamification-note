@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import { uiStore, dismissToast } from "~/stores/ui";
 
 const ToastIcons: Record<string, string> = {
@@ -21,6 +21,17 @@ export function ToastContainer() {
               {ToastIcons[toast.type]}
             </span>
             <span class="flex-1 font-medium">{toast.message}</span>
+            <Show when={toast.action}>
+              <button
+                class="shrink-0 px-2 py-0.5 rounded text-xs font-bold bg-white/15 hover:bg-white/25 transition-colors"
+                onClick={() => {
+                  toast.action?.onClick();
+                  dismissToast(toast.id);
+                }}
+              >
+                {toast.action?.label}
+              </button>
+            </Show>
             <button
               class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors text-xs"
               onClick={() => dismissToast(toast.id)}

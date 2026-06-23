@@ -22,6 +22,7 @@ import {
   type GuildNote,
   type GuildGoal,
 } from "~/stores/guild";
+import { startDirectConversation } from "~/stores/dm";
 import { fetchTasks, type GuildTask } from "~/stores/tasks";
 import { useSocket } from "~/lib/socket/client";
 import GuildChat from "~/components/guild/GuildChat";
@@ -39,7 +40,7 @@ export default function GuildDetailPage() {
   const guildId = () => params.id as string;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { on, off, emit, ensureConnected } = useSocket();
+  const { socket, on, off, emit, ensureConnected } = useSocket();
 
   const [guild, setGuild] = createSignal<Guild | null>(null);
   const [members, setMembers] = createSignal<GuildMember[]>([]);
@@ -116,7 +117,14 @@ export default function GuildDetailPage() {
     const handleNewMessage = (msg: ChatMessage) => {
       if (msg.guildId === guildId()) {
         addSocketMessage(msg);
-        setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+        setMessages((prev) => {
+          if (msg.userId === currentUser()?.id && pendingTempId()) {
+            const tid = pendingTempId()!;
+            setPendingTempId(null);
+            return prev.map((m) => (m.id === tid ? { ...msg, reactions: msg.reactions || [] } : m));
+          }
+          return prev.some((m) => m.id === msg.id) ? prev : [...prev, msg];
+        });
       }
     };
 
@@ -191,22 +199,35 @@ export default function GuildDetailPage() {
     });
   });
 
-  const handleSendMessage = async (content: string) => {
-    // Use REST as the source of truth so messages work even when the standalone
-    // socket server is not running. Socket broadcasts are still emitted by the
-    // API for real-time updates when the socket server is available.
+  const [pendingTempId, setPendingTempId] = createSignal<string | null>(null);
+
+  const handleSendMessage = async (content: string): Promise<boolean> => {
     const tempId = `temp-${Date.now()}`;
     const me = currentUser();
+    if (!me) return false;
     const optimistic: ChatMessage = {
       id: tempId,
       guildId: guildId(),
-      userId: me?.id || "",
-      user: { id: me?.id || "", username: me?.username || "You", avatarUrl: me?.avatarUrl || null },
+      userId: me.id,
+      user: { id: me.id, username: me.username, avatarUrl: me.avatarUrl || null },
       content,
       createdAt: new Date().toISOString(),
       reactions: [],
     };
     setMessages((prev) => [...prev, optimistic]);
+
+    if (socket()?.connected) {
+      setPendingTempId(tempId);
+      emit("guild:send-message", { guildId: guildId(), content });
+      setTimeout(() => {
+        if (pendingTempId() === tempId) {
+          setMessages((prev) => prev.filter((m) => m.id !== tempId));
+          setPendingTempId(null);
+          addToast("Message may not have been delivered", "error");
+        }
+      }, 10000);
+      return true;
+    }
 
     const res = await authFetch(`/api/guilds/${guildId()}/messages`, {
       method: "POST",
@@ -362,6 +383,15 @@ export default function GuildDetailPage() {
       await refreshMembers();
     } else {
       addToast("Failed to remove member", "error");
+    }
+  };
+
+  const handleMessage = async (userId: string) => {
+    const groupId = await startDirectConversation(userId);
+    if (groupId) {
+      navigate(`/messages/${groupId}`);
+    } else {
+      addToast("Failed to start conversation", "error");
     }
   };
 
@@ -650,6 +680,7 @@ export default function GuildDetailPage() {
             onDemote={(uid) => handleRole(uid, "member", "Admin demoted to member")}
             onTransfer={(uid) => handleRole(uid, "owner", "Ownership transferred")}
             onKick={handleKick}
+            onMessage={handleMessage}
           />
         </Show>
       </Show>

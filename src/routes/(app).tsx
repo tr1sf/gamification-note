@@ -1,4 +1,4 @@
-import { Show, onMount, onCleanup, createEffect, type JSX } from "solid-js";
+import { Show, onMount, onCleanup, createEffect, createSignal, type JSX } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
 import { user, loading, initAuth, logout, authFetch } from "~/stores/auth";
 import { uiStore, toggleSidebar, setTheme } from "~/stores/ui";
@@ -24,12 +24,17 @@ import Nelar from "~/components/mascot/Nelar";
 import { toggleSound, soundEnabled, initSoundPref, playSound } from "~/lib/sound";
 import BossDefeatOverlay from "~/components/gamification/BossDefeatOverlay";
 import DailyRewardBar from "~/components/gamification/DailyRewardBar";
+import StreakCelebration from "~/components/gamification/StreakCelebration";
+import WelcomeTour, { hasSeenTour } from "~/components/onboarding/WelcomeTour";
+import { getTooltipForPath } from "~/components/onboarding/PageTips";
 
 export default function AppLayout(props: { children?: JSX.Element }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { } = useSocket();
   const isOnboarding = () => location.pathname === "/onboarding";
+  const [showTour, setShowTour] = createSignal(false);
+  const [showStreak, setShowStreak] = createSignal(false);
 
   onMount(() => {
     initAuth();
@@ -76,14 +81,26 @@ export default function AppLayout(props: { children?: JSX.Element }) {
     if (u) {
       syncFromUser({ xp: u.xp, coins: u.coins, level: u.level, title: u.title, streak: u.streak, gamificationStyle: u.gamificationStyle });
       fetchActiveQuests();
-      // Auto nudge after login
       authFetch("/api/auth/nudge").catch(() => {});
-      // Restore equipped theme
       restoreEquippedTheme().catch(() => {});
+      if (u.streak >= 3) setShowStreak(true);
+    }
+
+    // Show welcome tour on first tavern visit after onboarding
+    if (u && u.onboardingCompleted && !hasSeenTour() && location.pathname === "/tavern") {
+      setShowTour(true);
     }
   });
 
-  // Nudge heartbeat — periodic health check every 30 min
+  const [tip, setTip] = createSignal<{ title: string; message: string; icon: string } | null>(null);
+
+  createEffect(() => {
+    const u = user();
+    if (u && u.onboardingCompleted) {
+      const t = getTooltipForPath(location.pathname);
+      if (t) setTip(t);
+    }
+  });
   onMount(() => {
     const interval = setInterval(() => {
       if (user()) {
@@ -168,6 +185,7 @@ export default function AppLayout(props: { children?: JSX.Element }) {
               <NavItem href="/minigames/potion" icon="🧪" label={t("Potion Match")} />
             </Show>
             <NavItem href="/quests" icon="📋" label={t("Quests")} />
+            <NavItem href="/challenges" icon="🏆" label={t("Challenges")} />
             <NavItem href="/habits" icon="🌅" label={t("Daily Rituals")} />
             {/* Guilds: hidden for solo (by design) and minimal (reduce noise) */}
             <Show when={!isSolo() && !isMinimal()}>
@@ -259,6 +277,13 @@ export default function AppLayout(props: { children?: JSX.Element }) {
 
         {/* Main content */}
         <div class="flex-1 flex flex-col min-w-0">
+          <Show when={tip()}>
+            <div class="px-4 py-2 bg-accent/10 border-b border-accent/20 flex items-center justify-between gap-3 text-sm">
+              <span class="text-accent font-medium"><span class="mr-1">{tip()!.icon}</span> {tip()!.title} —</span>
+              <span class="text-ink-secondary flex-1">{tip()!.message}</span>
+              <button onClick={() => setTip(null)} class="text-ink-muted hover:text-ink-primary p-1">✕</button>
+            </div>
+          </Show>
           <header class="h-14 border-b border-surface-border bg-surface flex items-center gap-2 sm:gap-3 px-3 sm:px-4 shrink-0 relative">
             <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/10 to-transparent" aria-hidden="true" />
             <button
@@ -273,11 +298,10 @@ export default function AppLayout(props: { children?: JSX.Element }) {
             <div class="hidden sm:block" classList={{ "ring-2 ring-accent/20 rounded-lg px-1 py-0.5": isCompetitive() }}>
               <Show when={!isMinimal()}>
                 <XPBar xp={g().xp} level={g().level} compact />
-                <DailyRewardBar />
               </Show>
             </div>
 
-            <div class="flex-1" />
+            <div class="flex-1" /><Show when={!isMinimal()}><DailyRewardBar compact /></Show>
 
             {/* Style badge — visible confirmation of the user's gamification style */}
             <Show when={style() !== "balanced"}>
@@ -340,6 +364,12 @@ export default function AppLayout(props: { children?: JSX.Element }) {
         </>
       }>
         {props.children}
+      </Show>
+      <Show when={showTour()}>
+        <WelcomeTour onComplete={() => setShowTour(false)} />
+      </Show>
+      <Show when={showStreak()}>
+        <StreakCelebration onComplete={() => setShowStreak(false)} />
       </Show>
     </Show>
   );

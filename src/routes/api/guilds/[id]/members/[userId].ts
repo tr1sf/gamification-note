@@ -14,7 +14,16 @@ export async function PATCH({ request, params }: RouteCtx) {
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const body = await request.json().catch(() => ({}));
-  const roleId = body.roleId as string;
+  let roleId: string | undefined = body.roleId as string;
+
+  if (!roleId && body.role) {
+    const roleName = (body.role as string).charAt(0).toUpperCase() + (body.role as string).slice(1);
+    const foundRole = await prisma.guildRole.findFirst({
+      where: { guildId: params.id, name: roleName },
+    });
+    if (foundRole) roleId = foundRole.id;
+  }
+
   if (!roleId) {
     return error("VALIDATION_ERROR", "roleId is required", 400);
   }

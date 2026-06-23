@@ -1,6 +1,6 @@
 import { Show, For, onMount, createSignal, onCleanup } from "solid-js";
 import { useParams } from "@solidjs/router";
-import { dmMessages, fetchDMMessages, sendDM, addSocketDMMessage } from "~/stores/dm";
+import { dmMessages, fetchDMMessages, sendDMToGroup, addSocketDMMessage, type DMMessage } from "~/stores/dm";
 import { useSocket } from "~/lib/socket/client";
 import { user } from "~/stores/auth";
 
@@ -16,7 +16,7 @@ export default function DMChatPage() {
     const s = socket();
     if (s) {
       emit("dm:join", { groupId: params.id });
-      on("dm:message", (msg: any) => {
+      on("dm:message", (msg: DMMessage) => {
         if (msg.groupId === params.id) {
           addSocketDMMessage(msg);
         }
@@ -54,8 +54,14 @@ export default function DMChatPage() {
   const handleSend = async () => {
     const content = input().trim();
     if (!content) return;
-    await sendDM(params.id, content);
     setInput("");
+
+    if (socket()?.connected) {
+      emit("dm:send-message", { groupId: params.id, content });
+      return;
+    }
+
+    await sendDMToGroup(params.id, content);
   };
 
   return (
@@ -69,9 +75,9 @@ export default function DMChatPage() {
                   ? "bg-accent text-white"
                   : "bg-surface-border text-ink-primary"
               }`}>
-                <Show when={msg.senderId !== user()?.id && msg.sender}>
+                <Show when={msg.senderId !== user()?.id}>
                   <div class="text-xs font-medium mb-1 opacity-70">
-                    {msg.sender!.username}
+                    {msg.sender?.username || "Unknown"}
                   </div>
                 </Show>
                 <div>{msg.content}</div>

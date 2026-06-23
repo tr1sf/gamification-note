@@ -3,18 +3,22 @@ import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { grantReward } from "~/lib/gamification/engine";
 import { rateLimit } from "~/lib/rate-limit";
+import { getDifficultyForLevel } from "~/lib/minigames/vocab";
 
 export async function POST({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
-  // Rate limit: max 10 game completions per minute per user.
   if (!rateLimit(`potion_complete:${user.userId}`, 10, 60000)) {
     return error("RATE_LIMITED", "Too many games. Slow down!", 429);
   }
 
   const body = await request.json().catch(() => ({}));
-  // Validate and clamp client-supplied inputs to prevent XP farming.
+
+  const userLevel = Math.max(1, Number(body.level) || 1);
+  const diff = getDifficultyForLevel(userLevel);
+  const mult = diff.rewardMultiplier;
+
   const pairCount = Math.min(Math.max(Number(body.pairCount) || 0, 0), 12);
   const correctPairs = Math.min(Math.max(Number(body.correctPairs) || 0, 0), pairCount);
   const totalFlips = Math.min(Math.max(Number(body.totalFlips) || 0, 0), 1000);
@@ -27,36 +31,31 @@ export async function POST({ request }: { request: Request }) {
 
   let xp = 0, coins = 0, message = "";
   if (accuracy >= 1 && flipEfficiency >= 0.9) {
-    xp = 20; coins = 30; message = "Perfect! The potion sparkles with mastery!";
+    xp = Math.round(20 * mult); coins = Math.round(30 * mult); message = "Perfect! The potion sparkles with mastery!";
   } else if (accuracy >= 0.8) {
-    xp = 10; coins = 15; message = "Great work! The potion bubbles with success!";
+    xp = Math.round(10 * mult); coins = Math.round(15 * mult); message = "Great work! The potion bubbles with success!";
   } else if (accuracy >= 0.5) {
-    xp = 5; coins = 5; message = "Good effort! The potion is stable.";
+    xp = Math.round(5 * mult); coins = Math.round(5 * mult); message = "Good effort! The potion is stable.";
   } else {
     xp = 2; coins = 0; message = "Keep practicing, young alchemist!";
   }
 
-  // Always grant reward when xp > 0 OR coins > 0 (previously skipped the
-  // lowest tier because the gate was `coinEarned > 0`).
   if (xp > 0 || coins > 0) {
     await grantReward({
       userId: user.userId,
       xp,
       coins,
       actionType: "minigame_complete",
-      metadata: { game: "potion_match", correctPairs, totalFlips, accuracy: Math.round(accuracy * 100) },
+      metadata: { game: "potion_match", correctPairs, totalFlips, accuracy: Math.round(accuracy * 100), difficulty: diff.tier },
     });
   }
 
-  // Write minigame_perfect audit log for badge tracking (was missing — badge
-  // was unobtainable because no code wrote this actionType).
   if (accuracy >= 1) {
     await prisma.auditLog.create({
-      data: { userId: user.userId, actionType: "minigame_perfect", xpChange: 0, coinChange: 0, metadata: { game: "potion_match", category, accuracy: 100 } },
+      data: { userId: user.userId, actionType: "minigame_perfect", xpChange: 0, coinChange: 0, metadata: { game: "potion_match", category, accuracy: 100, difficulty: diff.tier } },
     });
   }
 
-  // Check for Master Alchemist badge (2+ perfect games).
   if (accuracy >= 1) {
     const perfects = await prisma.auditLog.count({
       where: { userId: user.userId, actionType: "minigame_perfect" },
@@ -75,8 +74,8 @@ export async function POST({ request }: { request: Request }) {
   }
 
   await prisma.auditLog.create({
-    data: { userId: user.userId, actionType: "minigame_complete", xpChange: xp, coinChange: coins, metadata: { game: "potion_match", category, correctPairs, totalFlips, accuracy: Math.round(accuracy * 100) } },
+    data: { userId: user.userId, actionType: "minigame_complete", xpChange: xp, coinChange: coins, metadata: { game: "potion_match", category, correctPairs, totalFlips, accuracy: Math.round(accuracy * 100), difficulty: diff.tier } },
   });
 
-  return success({ xp, coins, message, accuracy: Math.round(accuracy * 100), perfect: accuracy >= 1 });
+  return success({ xp, coins, message, accuracy: Math.round(accuracy * 100), perfect: accuracy >= 1, difficulty: diff.tier });
 }

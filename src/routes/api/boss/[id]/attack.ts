@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { calculateBossDamage } from "~/lib/boss/damage";
+import { applyBossAbility } from "~/lib/boss/abilities";
 import { rateLimit } from "~/lib/rate-limit";
 
 export async function POST({
@@ -42,15 +43,22 @@ export async function POST({
   const comboMultiplier = recentAttacks >= 3 ? 1.5 : 1.0;
 
   // Validate + clamp client-supplied params to prevent inflated damage.
-  const damage = Math.round(
-    calculateBossDamage({
-      actionType,
-      structureScore: typeof body.structureScore === "number" ? Math.min(body.structureScore, 100) : undefined,
-      quizAccuracy: typeof body.quizAccuracy === "number" ? Math.min(body.quizAccuracy, 1) : undefined,
-      quizStreak: typeof body.quizStreak === "number" ? Math.min(body.quizStreak, 20) : undefined,
-      habitStreak: typeof body.habitStreak === "number" ? Math.min(body.habitStreak, 50) : undefined,
-    }) * comboMultiplier
-  );
+  const baseResult = calculateBossDamage({
+    actionType,
+    structureScore: typeof body.structureScore === "number" ? Math.min(body.structureScore, 100) : undefined,
+    quizAccuracy: typeof body.quizAccuracy === "number" ? Math.min(body.quizAccuracy, 1) : undefined,
+    quizStreak: typeof body.quizStreak === "number" ? Math.min(body.quizStreak, 20) : undefined,
+    habitStreak: typeof body.habitStreak === "number" ? Math.min(body.habitStreak, 50) : undefined,
+  });
+
+  const ability = boss.bossAbility as any;
+  const result = applyBossAbility(ability, {
+    actionType,
+    damage: Math.round(baseResult.damage * comboMultiplier),
+    bossCurrentHp: boss.bossCurrentHp ?? 0,
+    bossMaxHp: boss.bossMaxHp ?? 100,
+  });
+  const damage = result.damage;
 
   const maxHp = boss.bossMaxHp ?? 100;
 
@@ -82,6 +90,7 @@ export async function POST({
           source: actionType,
           isDead,
           bossName: boss.bossName,
+          abilityMsg: result.message,
         },
       },
     });

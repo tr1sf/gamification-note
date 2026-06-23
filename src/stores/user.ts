@@ -92,8 +92,8 @@ export async function fetchDailyLimits() {
   try {
     const res = await fetch("/api/users/daily-limits");
     if (res.ok) {
-      const data = await res.json();
-      setDailyLimits(data);
+      const json = await res.json();
+      if (json.success) setDailyLimits(json.data);
     }
   } catch {
     // Silently fail — limits are server-enforced anyway

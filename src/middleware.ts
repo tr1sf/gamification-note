@@ -1,5 +1,5 @@
 import { createMiddleware } from "@solidjs/start/middleware";
-import { verifyAccessToken } from "~/lib/auth/jwt";
+import { verifyAccessToken, readAccessToken } from "~/lib/auth/jwt";
 
 export default createMiddleware({
   onRequest: [
@@ -36,10 +36,7 @@ export default createMiddleware({
       }
 
       const cookieHeader = event.request.headers.get('cookie') || '';
-      const token = cookieHeader
-        .split('; ')
-        .find(c => c.startsWith('access_token='))
-        ?.split('=')[1];
+      const token = readAccessToken(cookieHeader);
 
       if (!token) {
         return new Response(

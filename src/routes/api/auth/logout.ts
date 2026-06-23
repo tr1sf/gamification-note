@@ -1,13 +1,10 @@
 import { prisma } from "~/lib/db";
-import { clearAuthCookies, verifyAccessToken } from "~/lib/auth/jwt";
+import { clearAuthCookies, verifyAccessToken, readAccessToken } from "~/lib/auth/jwt";
 import { success, error } from "~/lib/api-response";
 
 export async function POST({ request }: { request: Request }) {
   const cookieHeader = request.headers.get("cookie") || "";
-  const token = cookieHeader
-    .split("; ")
-    .find((c) => c.startsWith("access_token="))
-    ?.split("=")[1];
+  const token = readAccessToken(cookieHeader);
 
   if (token) {
     try {

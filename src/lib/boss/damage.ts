@@ -1,3 +1,6 @@
+import type { BossAbility } from "./abilities";
+import { applyBossAbility } from "./abilities";
+
 export function calculateBossDamage(params: {
   actionType: "note" | "quiz" | "habit" | "focus";
   structureScore?: number;
@@ -6,14 +9,17 @@ export function calculateBossDamage(params: {
   habitStreak?: number;
   comboCount?: number;
   consecutiveDays?: number;
-}): number {
+  bossAbility?: BossAbility | null;
+  attacksToday?: number;
+  questCompletedToday?: boolean;
+  usedTypesToday?: Set<string>;
+}): { damage: number; message: string | null } {
   let damage = 0;
   switch (params.actionType) {
     case "note":
       damage = 5 * Math.max(1, (params.structureScore || 5) / 5);
       break;
     case "quiz":
-      // Clamp accuracy to [0, 1] and streak to [0, 20] to prevent inflated damage.
       damage = Math.round(
         10 * (1 + Math.min(params.quizAccuracy || 0, 1)) * (1 + Math.min(params.quizStreak || 0, 20) * 0.2)
       );
@@ -25,6 +31,29 @@ export function calculateBossDamage(params: {
       damage = 5;
       break;
   }
-  // Global damage cap prevents one-shot kills from any path.
-  return Math.min(damage, 200);
+  damage = Math.min(damage, 200);
+
+  if (params.bossAbility) {
+    return applyBossAbility(params.bossAbility, {
+      actionType: params.actionType,
+      damage,
+      bossCurrentHp: 0,
+      bossMaxHp: 0,
+      attacksToday: params.attacksToday,
+      questCompletedToday: params.questCompletedToday,
+      usedTypesToday: params.usedTypesToday,
+    });
+  }
+
+  return { damage, message: null };
+}
+
+export function calculateBossDamageRaw(params: {
+  actionType: "note" | "quiz" | "habit" | "focus";
+  structureScore?: number;
+  quizAccuracy?: number;
+  quizStreak?: number;
+  habitStreak?: number;
+}): number {
+  return calculateBossDamage(params).damage;
 }

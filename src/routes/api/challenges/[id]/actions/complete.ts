@@ -2,14 +2,21 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
+import { rateLimit } from "~/lib/rate-limit";
 
 const DIFFICULTY_XP: Record<string, number> = { easy: 50, medium: 100, hard: 200, epic: 500 };
 const DIFFICULTY_COINS: Record<string, number> = { easy: 10, medium: 20, hard: 50, epic: 100 };
+const MAX_CHALLENGE_COMPLETES_PER_DAY = 5;
 
 // POST — complete an action
 export async function POST({ request, params }: { request: Request; params: { id: string; aid: string } }) {
   const user = getUserFromRequest(request);
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
+
+  // Rate limit: 10 action completions per minute per user
+  if (!rateLimit(`challenge_action:${user.userId}`, 10, 60000)) {
+    return error("RATE_LIMITED", "Too many actions. Slow down!", 429);
+  }
 
   const challenge = await prisma.challenge.findUnique({
     where: { id: params.id },
@@ -24,6 +31,27 @@ export async function POST({ request, params }: { request: Request; params: { id
   if (!action) return error("NOT_FOUND", "Action not found", 404);
   if (action.status === "completed" && !action.isRepeatable) {
     return error("ALREADY_COMPLETED", "Action already completed", 400);
+  }
+
+  // Check max repeats for repeatable actions
+  if (action.isRepeatable && (action.maxRepeats ?? 0) > 0 && action.repeatCount >= (action.maxRepeats ?? 0)) {
+    return error("MAX_REPEATS", "Action reached max repeats", 400);
+  }
+
+  // Limit challenge completions per day to prevent reward farming
+  if (challenge.status === "active") {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const completedCount = await prisma.challenge.count({
+      where: {
+        userId: user.userId,
+        status: "completed",
+        completedAt: { gte: todayStart },
+      },
+    });
+    if (completedCount >= MAX_CHALLENGE_COMPLETES_PER_DAY && challenge.currentProgress + action.progressValue >= challenge.targetProgress) {
+      return error("DAILY_LIMIT", `Max ${MAX_CHALLENGE_COMPLETES_PER_DAY} challenge completions per day`, 429);
+    }
   }
 
   const rewardXp = challenge.rewardXp || DIFFICULTY_XP[challenge.difficulty] || 50;

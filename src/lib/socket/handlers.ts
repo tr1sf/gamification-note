@@ -129,7 +129,7 @@ export function registerHandlers(socket: Socket): void {
       });
 
       const [sender, inventory] = await Promise.all([
-        prisma.user.findUnique({ where: { id: userId }, select: { avatarUrl: true } }),
+        prisma.user.findUnique({ where: { id: userId }, select: { username: true, avatarUrl: true } }),
         prisma.userInventory.findMany({
           where: { userId, isEquipped: true },
           select: {
@@ -148,7 +148,7 @@ export function registerHandlers(socket: Socket): void {
         userId,
         user: {
           id: userId,
-          username,
+          username: sender?.username ?? username,
           avatarUrl: sender?.avatarUrl ?? null,
           equipped: getEquippedCosmetics(inventory),
         },
