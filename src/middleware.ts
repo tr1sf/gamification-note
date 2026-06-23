@@ -5,6 +5,7 @@ export default createMiddleware({
   onRequest: [
     async (event) => {
       const publicPaths = [
+        '/api/health',
         '/api/auth/login',
         '/api/auth/register',
         '/api/auth/refresh',

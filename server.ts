@@ -5,10 +5,15 @@ import { initSocket } from "./src/lib/socket/index";
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 async function main() {
-  const build = await import("./.output/server/index.mjs");
-  const handler = build.default || build.handler || build.listener;
-  if (!handler) {
-    console.error("Could not find handler export in build output");
+  let handler: http.RequestListener;
+
+  try {
+    const build = await import("./.output/server/index.mjs");
+    handler = build.default || build.handler || build.listener;
+    if (!handler) throw new Error("No handler export found");
+  } catch (err) {
+    console.error("[tavernotex] Failed to load build output:", (err as Error).message);
+    console.error("[tavernotex] Make sure you ran 'npm run build' first.");
     process.exit(1);
   }
 
