@@ -13,7 +13,7 @@ export async function GET({ request, params }: { request: Request; params: { id:
   const membership = await prisma.guildMember.findUnique({
     where: { guildId_userId: { guildId: params.id, userId: user.userId } },
   });
-  if (!membership && !guild.isPublic) {
+  if (!membership) {
     return error("FORBIDDEN", "Not a member of this guild", 403);
   }
 
@@ -24,7 +24,7 @@ export async function GET({ request, params }: { request: Request; params: { id:
 
   const members = await prisma.guildMember.findMany({
     where: { guildId: params.id },
-    orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+    orderBy: [{ guildRole: { position: "desc" } }, { joinedAt: "asc" }],
     take: take + 1,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     select: {

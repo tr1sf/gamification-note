@@ -1,5 +1,5 @@
 import { prisma } from "~/lib/db";
-import { getRandomAbility, getRegenAmount } from "./abilities";
+import { getRandomAbility, getRegenAmount, parseBossAbility } from "./abilities";
 
 const DAILY_BOSS_NAMES = [
   { name: "Shadow Procrastinator", emoji: "👻", image: "/assets/images/bosses/shadow-procrastinator.png" },
@@ -33,15 +33,26 @@ export async function spawnDailyBoss(
     },
   });
   if (existing) {
-    // Apply regen if boss has regen ability and it's a new day
-    if (existing.bossAbility && (existing.bossAbility as any).type === "regen") {
-      const regen = getRegenAmount(existing.bossAbility as any, existing.bossMaxHp ?? 100, existing.bossCurrentHp ?? 0);
-      if (regen > 0 && existing.bossCurrentHp! > 0) {
-        const newHp = Math.min(existing.bossMaxHp!, existing.bossCurrentHp! + regen);
-        await prisma.challenge.update({
-          where: { id: existing.id },
-          data: { bossCurrentHp: newHp },
-        });
+    // Apply regen only once per day — check if regen was already applied today
+    const ability = parseBossAbility(existing.bossAbility);
+    if (ability && ability.type === "regen") {
+      const lastRegen = existing.updatedAt;
+      const alreadyRegenToday = lastRegen && (() => {
+        const today = new Date();
+        const last = new Date(lastRegen);
+        return today.getUTCFullYear() === last.getUTCFullYear() &&
+               today.getUTCMonth() === last.getUTCMonth() &&
+               today.getUTCDate() === last.getUTCDate();
+      })();
+      if (!alreadyRegenToday) {
+        const regen = getRegenAmount(ability, existing.bossMaxHp ?? 100, existing.bossCurrentHp ?? 0);
+        if (regen > 0 && (existing.bossCurrentHp ?? 0) > 0) {
+          const newHp = Math.min(existing.bossMaxHp ?? 100, (existing.bossCurrentHp ?? 0) + regen);
+          await prisma.challenge.update({
+            where: { id: existing.id },
+            data: { bossCurrentHp: newHp },
+          });
+        }
       }
     }
     return existing.id;
@@ -111,10 +122,10 @@ export async function spawnWeeklyBoss(
       rewardCoins: 30,
       iconImageUrl: boss.image || null,
       lootTable: [
-        { itemType: "coins", dropChance: 0.7, amount: 30 },
-        { itemType: "consumable", dropChance: 0.2, name: "XP Booster (1h)" },
-        { itemType: "badge", dropChance: 0.08 },
-        { itemType: "frame", dropChance: 0.02 },
+        { type: "coins", dropChance: 0.7, amount: 30 },
+        { type: "consumable", dropChance: 0.2, name: "XP Booster (1h)" },
+        { type: "badge", dropChance: 0.08 },
+        { type: "frame", dropChance: 0.02 },
       ],
     },
   });

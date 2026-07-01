@@ -32,6 +32,7 @@ model User {
   dailyXpEarned      Int       @default(0)
   dailyCoinsEarned   Int       @default(0)
   lastRewardResetDate DateTime?
+  xpBoosterUntil     DateTime? // XP Catalyst: 2x daily XP cap until this time
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 

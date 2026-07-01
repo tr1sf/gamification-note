@@ -15,6 +15,7 @@ export async function GET({ request }: { request: Request }) {
       dailyXpEarned: true,
       dailyCoinsEarned: true,
       lastRewardResetDate: true,
+      xpBoosterUntil: true,
     },
   });
   if (!userData) return error("NOT_FOUND", "User not found", 404);
@@ -35,6 +36,11 @@ export async function GET({ request }: { request: Request }) {
 
   const caps = getDailyCaps(userData.level, userData.streak);
 
+  // Check XP Catalyst booster status
+  const now = new Date();
+  const boosterActive = userData.xpBoosterUntil !== null && now < userData.xpBoosterUntil;
+  const effectiveXpCap = boosterActive ? caps.effectiveXp * 2 : caps.effectiveXp;
+
   const resetAt = new Date();
   resetAt.setUTCHours(24, 0, 0, 0);
 
@@ -42,12 +48,14 @@ export async function GET({ request }: { request: Request }) {
     dailyXpCap: caps.baseXp,
     dailyCoinCap: caps.baseCoin,
     streakBonus: caps.streakMultiplier,
-    effectiveXpCap: caps.effectiveXp,
+    effectiveXpCap,
     effectiveCoinCap: caps.effectiveCoin,
     xpEarned,
     coinsEarned,
-    xpRemaining: Math.max(0, caps.effectiveXp - xpEarned),
+    xpRemaining: Math.max(0, effectiveXpCap - xpEarned),
     coinsRemaining: Math.max(0, caps.effectiveCoin - coinsEarned),
     resetAt: resetAt.toISOString(),
+    boosterActive,
+    boosterUntil: userData.xpBoosterUntil?.toISOString() || null,
   });
 }

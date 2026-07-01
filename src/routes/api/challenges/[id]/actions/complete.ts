@@ -39,19 +39,17 @@ export async function POST({ request, params }: { request: Request; params: { id
   }
 
   // Limit challenge completions per day to prevent reward farming
-  if (challenge.status === "active") {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const completedCount = await prisma.challenge.count({
-      where: {
-        userId: user.userId,
-        status: "completed",
-        completedAt: { gte: todayStart },
-      },
-    });
-    if (completedCount >= MAX_CHALLENGE_COMPLETES_PER_DAY && challenge.currentProgress + action.progressValue >= challenge.targetProgress) {
-      return error("DAILY_LIMIT", `Max ${MAX_CHALLENGE_COMPLETES_PER_DAY} challenge completions per day`, 429);
-    }
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const completedCount = await prisma.challenge.count({
+    where: {
+      userId: user.userId,
+      status: "completed",
+      completedAt: { gte: todayStart },
+    },
+  });
+  if (completedCount >= MAX_CHALLENGE_COMPLETES_PER_DAY && challenge.currentProgress + action.progressValue >= challenge.targetProgress) {
+    return error("DAILY_LIMIT", `Max ${MAX_CHALLENGE_COMPLETES_PER_DAY} challenge completions per day`, 429);
   }
 
   const rewardXp = challenge.rewardXp || DIFFICULTY_XP[challenge.difficulty] || 50;
@@ -87,12 +85,8 @@ export async function POST({ request, params }: { request: Request; params: { id
   // Gamification is fire-and-forget outside the transaction — it has its own
   // FOR UPDATE locking on the User row. If it fails the challenge progress is
   // still correct; the user can reclaim rewards manually if needed.
-  processAction({
-    userId: user.userId,
-    actionType: "complete_quest",
-    metadata: { challengeId: challenge.id, actionId: action.id },
-  }).catch(() => {});
-
+  // NOTE: Only fire the reward when the challenge completes — not on every
+  // action, to avoid double XP/coins from two processAction calls.
   if (result.isChallengeComplete) {
     const gamification = await processAction({
       userId: user.userId,

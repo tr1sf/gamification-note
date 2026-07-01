@@ -12,6 +12,8 @@ import {
   XP_SHARE_NOTE,
   XP_ADD_LINK,
   XP_QUALITY_BONUS,
+  XP_CREATE_GUILD,
+  XP_JOIN_GUILD,
   QUALITY_SCORE_THRESHOLD,
   QUALITY_BONUS_THRESHOLD,
 } from "../constants";
@@ -46,9 +48,9 @@ export function calculateXP(actionType: string, metadata?: Record<string, unknow
     case "unlock_achievement":
       return typeof metadata?.xpReward === "number" ? metadata.xpReward : 0;
     case "join_guild":
-      return 0;
+      return XP_JOIN_GUILD;
     case "create_guild":
-      return 0;
+      return XP_CREATE_GUILD;
     case "ai_summarize":
       return XP_AI_SUMMARIZE;
     case "review_note":

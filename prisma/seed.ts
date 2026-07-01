@@ -143,6 +143,14 @@ async function main() {
       rarity: 'common',
       category: { usageType: 'potion_ticket' },
     },
+    {
+      name: 'XP Catalyst',
+      description: 'Doubles your daily XP cap for 24 hours. Use wisely — this is rare and powerful.',
+      type: 'consumable',
+      coinCost: 80,
+      rarity: 'rare',
+      category: { usageType: 'xp_booster', durationHours: 24 },
+    },
     // New cosmetic items — Phase H
     {
       name: 'Dragon Frame',

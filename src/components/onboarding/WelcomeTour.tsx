@@ -13,8 +13,15 @@ const STORAGE_KEY = "tavernotex_welcome_tour_seen";
 const STEPS: TourStep[] = [
   {
     selector: 'a[href="/tavern"]',
+    title: "How TavernoteX Works",
+    description: "Write notes → Earn XP → Level up → Unlock features → Fight bosses. Better-structured notes earn more XP and deal more damage. This is your gamified learning loop!",
+    icon: "🔄",
+    side: "right",
+  },
+  {
+    selector: 'a[href="/tavern"]',
     title: "Tavern Hall",
-    description: "Your home base. See your stats, active quests, and bosses at a glance. This is where you start every day.",
+    description: "Your home base. See your stats, active quests, and daily limits. Check in daily to maintain your streak and boost your XP cap.",
     icon: "🏰",
     side: "right",
   },

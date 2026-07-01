@@ -2,7 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { calculateBossDamage } from "~/lib/boss/damage";
-import { applyBossAbility } from "~/lib/boss/abilities";
+import { applyBossAbility, parseBossAbility } from "~/lib/boss/abilities";
 import { rateLimit } from "~/lib/rate-limit";
 
 export async function POST({
@@ -42,6 +42,24 @@ export async function POST({
   });
   const comboMultiplier = recentAttacks >= 3 ? 1.5 : 1.0;
 
+  // Collect which action types were used today (for colossal ability)
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const todayLogs = await prisma.auditLog.findMany({
+    where: { userId: user.userId, actionType: "boss_damage", createdAt: { gte: todayStart } },
+    select: { metadata: true },
+  });
+  const usedTypesToday = new Set<string>();
+  for (const log of todayLogs) {
+    const src = (log.metadata as any)?.source;
+    if (typeof src === "string") usedTypesToday.add(src);
+  }
+
+  // Check if user completed any quests today (for procrastination_aura ability)
+  const questsCompletedToday = await prisma.userQuest.count({
+    where: { userId: user.userId, completedAt: { gte: todayStart } },
+  });
+
   // Validate + clamp client-supplied params to prevent inflated damage.
   const baseResult = calculateBossDamage({
     actionType,
@@ -51,19 +69,22 @@ export async function POST({
     habitStreak: typeof body.habitStreak === "number" ? Math.min(body.habitStreak, 50) : undefined,
   });
 
-  const ability = boss.bossAbility as any;
+  const ability = parseBossAbility(boss.bossAbility);
   const result = applyBossAbility(ability, {
     actionType,
     damage: Math.round(baseResult.damage * comboMultiplier),
     bossCurrentHp: boss.bossCurrentHp ?? 0,
     bossMaxHp: boss.bossMaxHp ?? 100,
+    attacksToday: recentAttacks,
+    usedTypesToday,
+    questCompletedToday: questsCompletedToday > 0,
   });
   const damage = result.damage;
 
   const maxHp = boss.bossMaxHp ?? 100;
 
   const actuallyDead = await prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${params.id}::uuid`;
+    await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${damage}) WHERE id = ${params.id}::uuid AND "status" = 'active'`;
 
     const updated = await tx.challenge.findUnique({
       where: { id: params.id },

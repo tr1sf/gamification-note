@@ -75,7 +75,10 @@ export async function PUT({ request, params }: { request: Request; params: { id:
   });
 
   try {
-    getIO().to(`guild:${params.id}`).emit("guild:updated", { id: params.id, name: parsed.data.name, description: parsed.data.description });
+    const updatePayload: Record<string, unknown> = { id: params.id };
+    if (parsed.data.name !== undefined) updatePayload.name = parsed.data.name;
+    if (parsed.data.description !== undefined) updatePayload.description = parsed.data.description;
+    getIO().to(`guild:${params.id}`).emit("guild:updated", updatePayload);
   } catch {}
 
   return success(guild);

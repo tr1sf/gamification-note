@@ -49,20 +49,44 @@ export async function POST({ request }: { request: Request }) {
   // Base reward + streak bonus
   const userData = await prisma.user.findUnique({
     where: { id: user.userId },
-    select: { streak: true },
+    select: { streak: true, lastRewardResetDate: true },
   });
 
-  const streak = userData?.streak ?? 0;
+  const oldStreak = userData?.streak ?? 0;
+  const lastReset = userData?.lastRewardResetDate;
+
+  // Calculate new streak
+  let newStreak = oldStreak;
+  if (!lastReset) {
+    newStreak = 1;
+  } else {
+    const lastDate = new Date(lastReset);
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    lastDate.setUTCHours(0, 0, 0, 0);
+    const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / 86400000);
+    if (diffDays === 1) {
+      newStreak = oldStreak + 1;
+    } else if (diffDays > 1) {
+      newStreak = 1;
+    }
+  }
+
   const baseXp = 10;
   const baseCoins = 5;
-  const streakBonus = Math.min(streak, 30); // +1 XP per streak day, max 30
+  const streakBonus = Math.min(newStreak, 30);
 
   const result = await grantReward({
     userId: user.userId,
     xp: baseXp + streakBonus,
     coins: baseCoins,
     actionType: "daily_checkin",
-    metadata: { streak, bonus: streakBonus },
+    metadata: { streak: newStreak, bonus: streakBonus },
+  });
+
+  await prisma.user.update({
+    where: { id: user.userId },
+    data: { streak: newStreak },
   });
 
   await prisma.auditLog.create({
@@ -71,14 +95,14 @@ export async function POST({ request }: { request: Request }) {
       actionType: "daily_checkin",
       xpChange: result.xpGained,
       coinChange: result.coinsGained,
-      metadata: { claimed: true, streak },
+      metadata: { claimed: true, streak: newStreak },
     },
   });
 
   return success({
     xpGained: result.xpGained,
     coinsGained: result.coinsGained,
-    streak,
+    streak: newStreak,
     streakBonus,
     leveledUp: result.leveledUp,
     newLevel: result.newLevel,

@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { processAction } from "~/lib/gamification/engine";
+import { parseBossAbility } from "~/lib/boss/abilities";
 
 // GET — challenge detail
 export async function GET({ request, params }: { request: Request; params: { id: string } }) {
@@ -77,7 +78,9 @@ export async function PATCH({ request, params }: { request: Request; params: { i
       bossMaxHp: challenge.bossMaxHp,
       bossCurrentHp: challenge.bossMaxHp, // Reset HP to full
       bossType: challenge.bossType,
+      bossAbility: parseBossAbility(challenge.bossAbility) as any,
       lootTable: challenge.lootTable as any,
+      iconImageUrl: challenge.iconImageUrl,
       actions: {
         create: challenge.actions.map((a, i) => ({
           title: a.title,

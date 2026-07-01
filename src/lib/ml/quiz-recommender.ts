@@ -42,6 +42,8 @@ export async function predictDifficulty(userId: string, quizId: string): Promise
 
 export async function getRecommendedQuizzes(userId: string): Promise<string[]> {
   const REVIEW_INTERVALS = [0, 3, 7, 30];
+  const group = getExperimentGroup(userId);
+
   const pending = await prisma.quiz.findMany({
     where: { userId, reviewCount: { lt: 4 } },
   });
@@ -54,13 +56,25 @@ export async function getRecommendedQuizzes(userId: string): Promise<string[]> {
 
   if (due.length === 0) return [];
 
+  // Control group: basic sort by oldest-first (no SVD personalization)
+  if (group === "control") {
+    return due
+      .sort((a, b) => (a.lastReviewedAt || a.generatedAt).getTime() - (b.lastReviewedAt || b.generatedAt).getTime())
+      .map(q => q.id);
+  }
+
+  // Personalized group: SVD-based priority scoring
   const m = await getModel();
   const scored = due.map(q => {
     const predDifficulty = m.predict(userId, q.id);
     const difficultyMatch = 1 - Math.abs(predDifficulty / 100 - 0.3);
     const daysSinceLast = (Date.now() - (q.lastReviewedAt || q.generatedAt).getTime()) / 86400000;
     const urgency = Math.min(10, daysSinceLast);
-    return { quizId: q.id, priority: difficultyMatch * 0.7 + urgency / 10 * 0.3 };
+    // Use adaptive interval based on Bjork's desirable difficulty principle
+    const baseInterval = REVIEW_INTERVALS[q.reviewCount] || 0;
+    const adaptiveInterval = getAdaptiveInterval(baseInterval, q.avgScore);
+    const intervalWeight = baseInterval > 0 ? adaptiveInterval / baseInterval : 1;
+    return { quizId: q.id, priority: difficultyMatch * 0.7 + urgency / 10 * 0.3 + (intervalWeight > 1 ? 0.1 : -0.1) };
   });
 
   return scored.sort((a, b) => b.priority - a.priority).map(s => s.quizId);
@@ -82,6 +96,11 @@ export function getAdaptiveInterval(baseDays: number, lastAccuracy: number | nul
 }
 
 export function getExperimentGroup(userId: string): "control" | "personalized" {
-  const hash = userId.split("").reduce((h, c) => h + c.charCodeAt(0), 0);
+  // FNV-1a hash for consistent group assignment (matches evaluation script)
+  let hash = 2166136261;
+  for (let i = 0; i < userId.length; i++) {
+    hash ^= userId.charCodeAt(i);
+    hash = (hash * 16777619) >>> 0;
+  }
   return hash % 2 === 0 ? "control" : "personalized";
 }

@@ -852,6 +852,22 @@ const vi: Record<string, string> = {
   "Getting Started": "Bắt đầu",
   "BOSS DEFEATED": "ĐÃ HẠ GỤC BOSS",
   "Click \"Claim Loot\" to collect your rewards!": "Nhấn \"Nhặt chiến lợi phẩm\" để nhận thưởng!",
+
+  // ═══ Daily Limits Bar ═══
+  "Today's Rewards": "Phần Thưởng Hôm Nay",
+  "No more XP today": "Hết KN hôm nay",
+  "XP left today": "KN còn lại hôm nay",
+  "Daily cap reached — write tomorrow for full XP!": "Đã hết hạn mức — viết ghi chú ngày mai để nhận đầy đủ KN!",
+  "2x XP Active": "2x KN Đang Hoạt Động",
+  "XP Catalyst active": "XP Catalyst đangactive",
+  "remaining": "còn lại",
+  "coins": "xu",
+
+  // ═══ Anti-spam notifications ═══
+  "Daily XP cap reached. Create notes tomorrow for full XP!": "Đã hết KN hôm nay. Viết ghi chú ngày mai để nhận đầy đủ KN!",
+  "Daily XP cap almost reached. XP reduced for this note.": "Sắp hết KN hôm nay. KN bị giảm cho ghi chú này.",
+  "Content too similar to recent notes. Try writing something different for full XP.": "Nội dung trùng với ghi chú gần đây. Hãy viết khác đi để nhận đầy đủ KN.",
+  "Note too short or lacks structure. Add more detail for full XP.": "Ghi chú quá ngắn hoặc thiếu cấu trúc. Thêm chi tiết để nhận đầy đủ KN.",
 };
 
 // Reactive language signal so consumers of `t()` re-render when the language

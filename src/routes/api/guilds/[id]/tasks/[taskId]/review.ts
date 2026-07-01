@@ -58,11 +58,35 @@ export async function POST({ request, params }: { request: Request; params: { id
       { guildId: params.id, taskId: task.id }
     ).catch(() => {});
 
-    // Auto-increment guild goal progress
-    await prisma.guildGoal.updateMany({
+    // Auto-increment guild goal progress (atomic, with completion check)
+    const goals = await prisma.guildGoal.findMany({
       where: { guildId: params.id, isCompleted: false },
-      data: { currentCount: { increment: 1 } },
     });
+    for (const goal of goals) {
+      const result = await prisma.guildGoal.updateMany({
+        where: { id: goal.id, isCompleted: false, currentCount: { lt: goal.targetCount } },
+        data: { currentCount: { increment: 1 } },
+      });
+      if (result.count > 0) {
+        const updated = await prisma.guildGoal.findUnique({ where: { id: goal.id } });
+        if (updated && updated.currentCount >= goal.targetCount) {
+          await prisma.guildGoal.update({
+            where: { id: goal.id },
+            data: { isCompleted: true },
+          });
+          const members = await prisma.guildMember.findMany({ where: { guildId: params.id }, select: { userId: true } });
+          for (const m of members) {
+            await grantReward({
+              userId: m.userId,
+              xp: goal.rewardXp,
+              coins: goal.rewardCoins,
+              actionType: "guild_goal_complete",
+              metadata: { guildId: params.id, goalId: goal.id, goalTitle: goal.title },
+            });
+          }
+        }
+      }
+    }
 
     return success({ status: "approved" });
   }

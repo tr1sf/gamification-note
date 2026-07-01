@@ -6,6 +6,22 @@ export interface BossAbility {
   data?: Record<string, number>;
 }
 
+/**
+ * Safely parse a bossAbility value from the database.
+ * Returns null if the value is missing, malformed, or double-stringified.
+ */
+export function parseBossAbility(raw: unknown): BossAbility | null {
+  if (!raw) return null;
+  // Handle double-stringified JSON (string within JSON string)
+  if (typeof raw === "string") {
+    try { raw = JSON.parse(raw); } catch { return null; }
+  }
+  if (typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.type !== "string" || typeof obj.name !== "string") return null;
+  return raw as BossAbility;
+}
+
 interface AbilityResult {
   damage: number;
   blocked: boolean;

@@ -2,13 +2,14 @@ import { getUserFromRequest } from "~/lib/auth/get-user";
 import { prisma } from "~/lib/db";
 import { createNoteSchema } from "~/validators/note";
 import { success, error } from "~/lib/api-response";
-import { processAction } from "~/lib/gamification/engine";
+import { processAction, getDailyCaps } from "~/lib/gamification/engine";
 import { computeWordCount, isBlockContent, parseBlocks, blockExcerpt } from "~/lib/blocks";
 import { track } from "~/lib/analytics/tracker";
 import { calculateStructureScore, scorePlainText } from "~/lib/analytics/quality-scorer";
-import { DUPLICATE_SIMILARITY_THRESHOLD } from "~/lib/gamification/constants";
+import { DUPLICATE_SIMILARITY_THRESHOLD, QUALITY_SCORE_THRESHOLD } from "~/lib/gamification/constants";
 import { generateQuiz } from "~/lib/quiz/generator";
-import { applyBossAbility } from "~/lib/boss/abilities";
+import { isAiAvailable } from "~/lib/ai/openai";
+import { applyBossDamageToAll } from "~/lib/boss/apply-damage";
 
 export async function GET({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
@@ -45,7 +46,7 @@ export async function GET({ request }: { request: Request }) {
 }
 
 function tokenize(text: string): Set<string> {
-  return new Set(text.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+  return new Set(text.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => w.length > 2));
 }
 function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   const intersection = new Set([...a].filter(x => b.has(x)));
@@ -107,6 +108,28 @@ export async function POST({ request }: { request: Request }) {
     metadata: { noteId: note.id, wordCount: note.wordCount, structureScore, dailyNoteCount, isSpam: isDuplicate },
   });
 
+  // Build anti-spam reasons for user transparency
+  const xpReasons: string[] = [];
+  if (isDuplicate) {
+    xpReasons.push("content_duplicate");
+  }
+  if (typeof structureScore === "number" && structureScore < QUALITY_SCORE_THRESHOLD) {
+    xpReasons.push("low_quality");
+  }
+  // Check daily cap impact
+  const userData = await prisma.user.findUnique({
+    where: { id: user.userId },
+    select: { level: true, streak: true, dailyXpEarned: true },
+  });
+  if (userData) {
+    const caps = getDailyCaps(userData.level, userData.streak);
+    if (userData.dailyXpEarned >= caps.effectiveXp) {
+      xpReasons.push("daily_cap_reached");
+    } else if (userData.dailyXpEarned + gamification.xpGained >= caps.effectiveXp) {
+      xpReasons.push("daily_cap_partial");
+    }
+  }
+
   // If the note is created as public, also fire the make_public action so
   // "Open Book" / "Knowledge Sharer" quests can progress. Previously this
   // only fired on PUT (editing a private note to public), not on creation.
@@ -156,53 +179,39 @@ export async function POST({ request }: { request: Request }) {
     metadata: { noteId: note.id, noteTitle: note.title, ...qualityMeta },
   });
 
+  // Auto-generate quiz (fire-and-forget, but track result for header)
+  let quizStatus: "generated" | "skipped_short" | "skipped_no_ai" | "failed" = "skipped_short";
   if (note.wordCount >= 100) {
-    generateQuiz(note.content, note.wordCount)
-      .then(async (questions) => {
-        await prisma.quiz.upsert({
-          where: { noteId: note.id },
-          create: { noteId: note.id, userId: user.userId, questions: questions as any },
-          update: {},
+    if (!isAiAvailable()) {
+      quizStatus = "skipped_no_ai";
+    } else {
+      quizStatus = await generateQuiz(note.content, note.wordCount)
+        .then(async (questions) => {
+          await prisma.quiz.upsert({
+            where: { noteId: note.id },
+            create: { noteId: note.id, userId: user.userId, questions: questions as any },
+            update: {},
+          });
+          const { createNotification } = await import("~/lib/socket/notifications");
+          createNotification(user.userId, "quiz_generated", "Quiz Ready!", "Your note has been turned into a quiz. Review it to test your knowledge!", { metadata: { noteId: note.id } }).catch(() => {});
+          return "generated" as const;
+        })
+        .catch(e => {
+          console.error("[quiz] auto-generation failed:", e?.message || e);
+          return "failed" as const;
         });
-        const { createNotification } = await import("~/lib/socket/notifications");
-        createNotification(user.userId, "quiz_generated", "Quiz Ready!", "Your note has been turned into a quiz. Review it to test your knowledge!", { metadata: { noteId: note.id } }).catch(() => {});
-      })
-      .catch(e => console.error("[quiz] auto-generation failed:", e?.message || e));
+    }
   }
 
-  // Apply boss damage to ALL active bosses
-  const activeBosses = await prisma.challenge.findMany({
-    where: { userId: user.userId, bossType: { in: ["daily", "weekly"] }, status: "active" },
-  });
-  for (const boss of activeBosses) {
-    const ability = boss.bossAbility as any;
-    const baseDmg = 5 * Math.max(1, (structureScore || 5) / 5);
-    const result = applyBossAbility(ability, {
-      actionType: "note",
-      damage: baseDmg,
-      bossCurrentHp: boss.bossCurrentHp ?? 0,
-      bossMaxHp: boss.bossMaxHp ?? 100,
+  // Apply boss damage to ALL active bosses (use shared formula with 200 cap)
+  const { calculateBossDamage } = await import("~/lib/boss/damage");
+  const baseDmgResult = calculateBossDamage({ actionType: "note", structureScore: structureScore ?? undefined });
+  const baseDmg = baseDmgResult.damage;
+  try {
+    await prisma.$transaction(async (tx) => {
+      await applyBossDamageToAll(tx, user.userId, "note", baseDmg, { structureScore: structureScore ?? null });
     });
-    const dmg = result.damage;
-    try {
-      await prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${dmg}) WHERE id = ${boss.id}::uuid`;
-        const updated = await tx.challenge.findUnique({ where: { id: boss.id }, select: { bossCurrentHp: true } });
-        if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
-          await tx.challenge.update({ where: { id: boss.id }, data: { status: "completed", completedAt: new Date() } });
-        }
-        await tx.auditLog.create({
-          data: {
-            userId: user.userId,
-            actionType: "boss_damage",
-            xpChange: 0,
-            coinChange: 0,
-            metadata: { bossId: boss.id, damage: dmg, source: "note", bossName: boss.bossName, abilityMsg: result.message },
-          },
-        });
-      });
-    } catch (e) { console.error("[boss] auto-damage failed:", e); }
-  }
+  } catch (e) { console.error("[boss] auto-damage failed:", e); }
 
   // Auto-increment guild goal progress for all guilds the user belongs to
   const memberships = await prisma.guildMember.findMany({
@@ -216,5 +225,5 @@ export async function POST({ request }: { request: Request }) {
     });
   }
 
-  return success({ note, gamification });
+  return success({ note, gamification, quizStatus, xpReasons });
 }

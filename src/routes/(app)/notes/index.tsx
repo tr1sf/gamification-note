@@ -18,16 +18,37 @@ interface NoteItem {
   updatedAt: string;
 }
 
+interface DailyLimits {
+  effectiveXpCap: number;
+  effectiveCoinCap: number;
+  xpEarned: number;
+  coinsEarned: number;
+  xpRemaining: number;
+  coinsRemaining: number;
+  boosterActive: boolean;
+  boosterUntil: string | null;
+}
+
 async function fetchNotes(): Promise<NoteItem[]> {
-  if (typeof document === "undefined") return []; // SSR — don't fetch
+  if (typeof document === "undefined") return [];
   const res = await authFetch("/api/notes?take=20");
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message || "Failed to load notes");
   return json.data?.items || [];
 }
 
+async function fetchDailyLimits(): Promise<DailyLimits | null> {
+  if (typeof document === "undefined") return null;
+  try {
+    const res = await authFetch("/api/users/daily-limits");
+    const json = await res.json();
+    return json.success ? json.data : null;
+  } catch { return null; }
+}
+
 export default function NotesPage() {
   const [notes, { refetch }] = createResource(fetchNotes);
+  const [dailyLimits] = createResource(fetchDailyLimits);
   const [search, setSearch] = createSignal("");
   const [searchResults, setSearchResults] = createSignal<NoteItem[] | null>(null);
   const [searching, setSearching] = createSignal(false);
@@ -73,6 +94,62 @@ export default function NotesPage() {
           {t("+ New Note")}
         </A>
       </div>
+
+      {/* ── Daily Reward Budget ──────────────────────────────── */}
+      <Show when={dailyLimits()}>
+        {(limits) => {
+          const xpPct = () => Math.min(100, (limits().xpEarned / limits().effectiveXpCap) * 100);
+          const xpExhausted = () => limits().xpRemaining <= 0;
+          const xpLow = () => limits().xpRemaining <= limits().effectiveXpCap * 0.2 && !xpExhausted();
+          const boosterTimeLeft = () => {
+            if (!limits().boosterActive || !limits().boosterUntil) return null;
+            const until = limits().boosterUntil;
+            if (!until) return null;
+            const diff = new Date(until).getTime() - Date.now();
+            if (diff <= 0) return null;
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            return `${h}h ${m}m`;
+          };
+          return (
+            <div class={`mb-6 p-3 rounded-lg border bg-surface-elevated ${limits().boosterActive ? "border-accent/40 shadow-sm shadow-accent/10" : "border-surface-border"}`}>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-medium text-ink-primary">
+                  {t("Today's Rewards")}
+                  <Show when={limits().boosterActive}>
+                    <span class="ml-1.5 text-accent font-semibold">&#x26A1; {t("2x XP Active")}</span>
+                  </Show>
+                </span>
+                <Show when={!xpExhausted()}>
+                  <span class="text-xs text-ink-secondary">
+                    {limits().xpRemaining} {t("XP left today")}
+                  </span>
+                </Show>
+              </div>
+              <div class="h-2.5 rounded-full bg-surface-border overflow-hidden mb-1.5">
+                <div
+                  class={`h-full rounded-full transition-all duration-500 ${
+                    xpExhausted() ? "bg-error" : xpLow() ? "bg-warning" : "bg-accent"
+                  }`}
+                  style={{ width: `${xpPct()}%` }}
+                />
+              </div>
+              <div class="flex items-center justify-between text-[11px] text-ink-secondary/60">
+                <span>{limits().xpEarned} / {limits().effectiveXpCap} XP</span>
+                <span>{limits().coinsEarned} / {limits().effectiveCoinCap} {t("coins")}</span>
+              </div>
+              <Show when={limits().boosterActive && boosterTimeLeft()}>
+                <p class="text-[11px] text-accent mt-1.5 font-medium">
+                  {t("XP Catalyst active")} — {boosterTimeLeft()} {t("remaining")}
+                </p>
+              </Show>
+              <Show when={xpExhausted()}>
+                <p class="text-[11px] text-error mt-1.5">{t("Daily cap reached — write tomorrow for full XP!")}</p>
+              </Show>
+            </div>
+          );
+        }}
+      </Show>
 
       {/* ── Search ────────────────────────────────────────────── */}
       <div class="mb-6">

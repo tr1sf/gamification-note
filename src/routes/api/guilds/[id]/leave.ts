@@ -3,6 +3,7 @@ import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { getIO } from "~/lib/socket";
 import { track } from "~/lib/analytics/tracker";
+import { processAction } from "~/lib/gamification/engine";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
   const user = getUserFromRequest(request);
@@ -31,6 +32,10 @@ export async function POST({ request, params }: { request: Request; params: { id
         } else {
           const newOwner = otherMembers[0];
           newOwnerUserId = newOwner.userId;
+          // Fetch the "Owner" role ID for the new owner
+          const ownerRole = await tx.guildRole.findUnique({
+            where: { guildId_name: { guildId: params.id, name: "Owner" } },
+          });
           await tx.guild.update({
             where: { id: params.id },
             data: {
@@ -38,7 +43,7 @@ export async function POST({ request, params }: { request: Request; params: { id
               members: {
                 update: {
                   where: { id: newOwner.id },
-                  data: { role: "owner" },
+                  data: { role: "owner", roleId: ownerRole?.id ?? newOwner.roleId },
                 },
               },
             },
@@ -73,6 +78,12 @@ export async function POST({ request, params }: { request: Request; params: { id
     actionType: "guild_leave",
     metadata: { guildId: params.id },
   });
+
+  processAction({
+    userId: user.userId,
+    actionType: "join_guild",
+    metadata: { guildId: params.id, action: "leave" },
+  }).catch(() => {});
 
   return success(null);
 }

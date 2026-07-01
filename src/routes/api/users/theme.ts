@@ -63,20 +63,29 @@ export async function PUT({ request }: { request: Request }) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const currentUser = await tx.user.findUniqueOrThrow({
-        where: { id: user.userId },
-        select: { coins: true },
-      });
-      if (currentUser.coins < theme.coinCost) throw new Error("INSUFFICIENT_COINS");
-
-      await tx.user.update({
-        where: { id: user.userId },
+      // Atomic coin check + decrement (prevents TOCTOU double-spend)
+      const coinResult = await tx.user.updateMany({
+        where: { id: user.userId, coins: { gte: theme.coinCost } },
         data: { coins: { decrement: theme.coinCost } },
       });
+      if (coinResult.count === 0) throw new Error("INSUFFICIENT_COINS");
 
-      const userTheme = await tx.userTheme.create({
-        data: { userId: user.userId, themeId },
-      });
+      let userTheme;
+      try {
+        userTheme = await tx.userTheme.create({
+          data: { userId: user.userId, themeId },
+        });
+      } catch (e: any) {
+        // P2002 = concurrent purchase raced ahead — refund coins
+        if (e?.code === "P2002") {
+          await tx.user.update({
+            where: { id: user.userId },
+            data: { coins: { increment: theme.coinCost } },
+          });
+          throw new Error("ALREADY_OWNED");
+        }
+        throw e;
+      }
 
       const updatedUser = await tx.user.findUniqueOrThrow({
         where: { id: user.userId },
@@ -90,6 +99,9 @@ export async function PUT({ request }: { request: Request }) {
   } catch (e: any) {
     if (e?.message === "INSUFFICIENT_COINS") {
       return error("INSUFFICIENT_COINS", "Not enough coins", 400);
+    }
+    if (e?.message === "ALREADY_OWNED") {
+      return error("ALREADY_OWNED", "You already own this theme", 409);
     }
     throw e;
   }

@@ -81,17 +81,23 @@ export interface ActionResult {
 
 export async function processAction(ctx: ActionContext): Promise<ActionResult> {
   const result = await (db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const rows = await tx.$queryRaw<Array<{ xp: number; coins: number; level: number }>>`
-      SELECT xp, coins, level FROM "User" WHERE id = ${ctx.userId}::uuid FOR UPDATE
+    // Single atomic read with FOR UPDATE to prevent race conditions on daily caps
+    const rows = await tx.$queryRaw<Array<{
+      xp: number; coins: number; level: number;
+      streak: number; dailyXpEarned: number; dailyCoinsEarned: number;
+      lastRewardResetDate: Date | null; xpBoosterUntil: Date | null;
+    }>>`
+      SELECT xp, coins, level, streak, "dailyXpEarned", "dailyCoinsEarned", "lastRewardResetDate", "xpBoosterUntil"
+      FROM "User" WHERE id = ${ctx.userId}::uuid FOR UPDATE
     `;
     const user = rows[0];
-
-    // Fetch daily reward data
-    const dailyRows = await tx.$queryRaw<Array<{ streak: number; dailyXpEarned: number; dailyCoinsEarned: number; lastRewardResetDate: Date | null }>>`
-      SELECT streak, "dailyXpEarned", "dailyCoinsEarned", "lastRewardResetDate" FROM "User" WHERE id = ${ctx.userId}::uuid
-    `;
-    const dailyData = dailyRows[0];
+    const dailyData = user;
     const caps = getDailyCaps(user.level, dailyData.streak);
+
+    // Check XP Catalyst booster: 2x daily XP cap for 24h
+    const now = new Date();
+    const hasXpCatalyst = dailyData.xpBoosterUntil && now < dailyData.xpBoosterUntil;
+    const effectiveXpCap = hasXpCatalyst ? caps.effectiveXp * 2 : caps.effectiveXp;
 
     // Reset if new day
     if (isNewDay(dailyData.lastRewardResetDate)) {
@@ -121,8 +127,8 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
 
     const coinsGained = calculateCoins(ctx.actionType, ctx.metadata);
 
-    // Enforce daily reward caps
-    const xpAfterCap = Math.max(0, Math.min(xpGained, caps.effectiveXp - dailyData.dailyXpEarned));
+    // Enforce daily reward caps (uses effectiveXpCap which accounts for XP Catalyst)
+    const xpAfterCap = Math.max(0, Math.min(xpGained, effectiveXpCap - dailyData.dailyXpEarned));
     const coinsAfterCap = Math.max(0, Math.min(coinsGained, caps.effectiveCoin - dailyData.dailyCoinsEarned));
 
     // Update daily counters
@@ -199,17 +205,23 @@ export async function grantReward(opts: {
   const coinsGained = Math.max(0, Math.round(opts.coins || 0));
 
   const result = await (db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const rows = await tx.$queryRaw<Array<{ xp: number; level: number }>>`
-      SELECT xp, level FROM "User" WHERE id = ${opts.userId}::uuid FOR UPDATE
+    // Single atomic read with FOR UPDATE — mirrors processAction
+    const rows = await tx.$queryRaw<Array<{
+      xp: number; level: number;
+      streak: number; dailyXpEarned: number; dailyCoinsEarned: number;
+      lastRewardResetDate: Date | null; xpBoosterUntil: Date | null;
+    }>>`
+      SELECT xp, level, streak, "dailyXpEarned", "dailyCoinsEarned", "lastRewardResetDate", "xpBoosterUntil"
+      FROM "User" WHERE id = ${opts.userId}::uuid FOR UPDATE
     `;
     const user = rows[0];
-
-    // Fetch daily reward data
-    const dailyRows = await tx.$queryRaw<Array<{ streak: number; dailyXpEarned: number; dailyCoinsEarned: number; lastRewardResetDate: Date | null }>>`
-      SELECT streak, "dailyXpEarned", "dailyCoinsEarned", "lastRewardResetDate" FROM "User" WHERE id = ${opts.userId}::uuid
-    `;
-    const dailyData = dailyRows[0];
+    const dailyData = user;
     const caps = getDailyCaps(user.level, dailyData.streak);
+
+    // Check XP Catalyst booster: 2x daily XP cap for 24h
+    const now = new Date();
+    const hasXpCatalyst = dailyData.xpBoosterUntil !== null && now < dailyData.xpBoosterUntil;
+    const effectiveXpCap = hasXpCatalyst ? caps.effectiveXp * 2 : caps.effectiveXp;
 
     // Reset if new day
     if (isNewDay(dailyData.lastRewardResetDate)) {
@@ -221,8 +233,8 @@ export async function grantReward(opts: {
       dailyData.dailyCoinsEarned = 0;
     }
 
-    // Enforce daily reward caps
-    const xpAfterCap = Math.max(0, Math.min(xpGained, caps.effectiveXp - dailyData.dailyXpEarned));
+    // Enforce daily reward caps (uses effectiveXpCap which accounts for XP Catalyst)
+    const xpAfterCap = Math.max(0, Math.min(xpGained, effectiveXpCap - dailyData.dailyXpEarned));
     const coinsAfterCap = Math.max(0, Math.min(coinsGained, caps.effectiveCoin - dailyData.dailyCoinsEarned));
 
     // Update daily counters

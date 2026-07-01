@@ -14,6 +14,7 @@ export const XP_SHARE_NOTE = 5;
 export const XP_ADD_LINK = 3;
 
 export const COIN_DAILY_LOGIN = 5;
+export const COIN_CREATE_NOTE = 2;
 export const COIN_AI_SUMMARIZE = 3;
 export const COIN_REVIEW_NOTE = 1;
 export const COIN_EXPORT_NOTE = 1;
@@ -22,6 +23,8 @@ export const COIN_SHARE_NOTE = 2;
 // Challenge system
 export const XP_COMPLETE_CHALLENGE_ACTION = 5;
 export const XP_CREATE_CHALLENGE = 5;
+export const XP_CREATE_GUILD = 10;
+export const XP_JOIN_GUILD = 5;
 export const COIN_COMPLETE_CHALLENGE_ACTION = 1;
 
 export const LEVEL_BASE_XP = 100;

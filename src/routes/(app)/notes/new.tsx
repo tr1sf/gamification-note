@@ -70,6 +70,8 @@ export default function NewNotePage() {
         addToast(t("Note created!"), "success");
         const note = json.data.note;
         const g = json.data.gamification;
+        const quizStatus = json.data.quizStatus as string | undefined;
+        const xpReasons = json.data.xpReasons as string[] | undefined;
         if (g) {
           applyReward(g);
           showReward({
@@ -85,6 +87,26 @@ export default function NewNotePage() {
               showReward({ achievement: ach.title });
             });
           }
+          // Anti-spam notifications
+          if (xpReasons && xpReasons.length > 0) {
+            if (xpReasons.includes("daily_cap_reached")) {
+              addToast(t("Daily XP cap reached. Create notes tomorrow for full XP!"), "info");
+            } else if (xpReasons.includes("daily_cap_partial")) {
+              addToast(t("Daily XP cap almost reached. XP reduced for this note."), "info");
+            } else if (xpReasons.includes("content_duplicate")) {
+              addToast(t("Content too similar to recent notes. Try writing something different for full XP."), "info");
+            } else if (xpReasons.includes("low_quality")) {
+              addToast(t("Note too short or lacks structure. Add more detail for full XP."), "info");
+            }
+          }
+        }
+        // Quiz status feedback
+        if (quizStatus === "generated") {
+          addToast(t("Quiz generated from your note!"), "success");
+        } else if (quizStatus === "failed") {
+          addToast(t("Quiz generation failed. AI returned invalid format. You can retry from the note."), "error");
+        } else if (quizStatus === "skipped_no_ai") {
+          addToast(t("Quiz skipped: AI service not configured."), "info");
         }
         navigate(`/notes/${note.id}`);
       } else {

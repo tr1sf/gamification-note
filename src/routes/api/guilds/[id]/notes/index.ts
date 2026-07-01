@@ -2,6 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { isBlockContent, parseBlocks, blockExcerpt } from "~/lib/blocks";
+import { processAction } from "~/lib/gamification/engine";
 
 type RouteCtx = { request: Request; params: { id: string } };
 
@@ -85,6 +86,12 @@ export async function POST({ request, params }: RouteCtx) {
     where: { id: noteId },
     data: { guildId: params.id },
   });
+
+  await processAction({
+    userId: user.userId,
+    actionType: "share_note",
+    metadata: { noteId, guildId: params.id },
+  }).catch(() => {});
 
   return success({ noteId, guildId: params.id });
 }

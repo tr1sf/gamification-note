@@ -164,6 +164,9 @@ export default function QuizPage() {
                             </span>
                           )}
                         </div>
+                        {q.note?.title && (
+                          <p class="text-xs text-accent truncate mt-0.5">from: {q.note.title}</p>
+                        )}
                         <p class="text-xs text-ink-secondary">
                           {(q.questions as any)?.length ?? 3} questions · Review{" "}
                           {q.reviewCount + 1} of 4

@@ -9,7 +9,13 @@ export async function POST({ request, params }: { request: Request; params: { id
   const template = await prisma.challengeTemplate.findUnique({ where: { id: params.id } });
   if (!template) return error("NOT_FOUND", "Template not found", 404);
 
-  const actions = template.defaultActions as Array<{
+  const rawActions = template.defaultActions;
+  if (!Array.isArray(rawActions)) {
+    return error("INVALID_TEMPLATE", "Template has invalid defaultActions format", 500);
+  }
+  const actions = rawActions.filter(
+    (a: any) => a && typeof a.title === "string" && a.title.length > 0
+  ) as Array<{
     title: string; description?: string; iconEmoji?: string; progressValue?: number;
     linkedActionType?: string; isRepeatable?: boolean; maxRepeats?: number;
   }>;

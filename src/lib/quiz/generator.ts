@@ -82,10 +82,10 @@ Format: [{"question": "...", "options": ["A","B","C","D"], "correctIndex": 0, "e
       },
     ],
     temperature: 0.7,
-    // kimi-k2.5 emits lengthy internal reasoning; 1500 tokens is consumed by
-    // reasoning alone, leaving no budget for the actual JSON answer. 4000 is
-    // enough for the quiz + a typical reasoning trace.
-    max_tokens: 4000,
+    // kimi-k2.5 emits lengthy internal reasoning that can consume 2000-4000
+    // tokens before producing any visible output. 8000 gives enough headroom
+    // for the reasoning trace plus the actual JSON quiz response.
+    max_tokens: 8000,
   });
 
   const text = response.choices[0]?.message?.content || "";

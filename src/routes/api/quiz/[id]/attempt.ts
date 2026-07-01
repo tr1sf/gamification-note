@@ -2,7 +2,7 @@ import { prisma } from "~/lib/db";
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { success, error } from "~/lib/api-response";
 import { calculateBossDamage } from "~/lib/boss/damage";
-import { applyBossAbility } from "~/lib/boss/abilities";
+import { applyBossDamageToAll } from "~/lib/boss/apply-damage";
 import { getExperimentGroup } from "~/lib/ml/quiz-recommender";
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }) {
@@ -76,32 +76,7 @@ export async function POST({ request, params }: { request: Request; params: { id
     const { damage: baseDamage } = calculateBossDamage({ actionType: "quiz", quizAccuracy: accuracy, quizStreak: Math.min(quiz.reviewCount, 20) });
     try {
       await prisma.$transaction(async (tx) => {
-        const bosses = await tx.challenge.findMany({
-          where: { userId: user.userId, bossType: { in: ["daily", "weekly"] }, status: "active" },
-        });
-        for (const boss of bosses) {
-          const ability = boss.bossAbility as any;
-          const result = applyBossAbility(ability, {
-            actionType: "quiz",
-            damage: baseDamage,
-            bossCurrentHp: boss.bossCurrentHp ?? 0,
-            bossMaxHp: boss.bossMaxHp ?? 100,
-          });
-          await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${result.damage}) WHERE id = ${boss.id}::uuid`;
-          const updated = await tx.challenge.findUnique({ where: { id: boss.id }, select: { bossCurrentHp: true } });
-          if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
-            await tx.challenge.update({ where: { id: boss.id }, data: { status: "completed", completedAt: new Date() } });
-          }
-          await tx.auditLog.create({
-            data: {
-              userId: user.userId,
-              actionType: "boss_damage",
-              xpChange: 0,
-              coinChange: 0,
-              metadata: { bossId: boss.id, damage: result.damage, source: "quiz", isDead: (updated?.bossCurrentHp ?? 0) <= 0, bossName: boss.bossName, abilityMsg: result.message },
-            },
-          });
-        }
+        await applyBossDamageToAll(tx, user.userId, "quiz", baseDamage, {});
       });
     } catch (e) { console.error("[boss] auto-damage failed:", e); }
   }

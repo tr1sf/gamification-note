@@ -10,6 +10,8 @@ export function calculateBossDamage(params: {
   comboCount?: number;
   consecutiveDays?: number;
   bossAbility?: BossAbility | null;
+  bossCurrentHp?: number;
+  bossMaxHp?: number;
   attacksToday?: number;
   questCompletedToday?: boolean;
   usedTypesToday?: Set<string>;
@@ -37,8 +39,8 @@ export function calculateBossDamage(params: {
     return applyBossAbility(params.bossAbility, {
       actionType: params.actionType,
       damage,
-      bossCurrentHp: 0,
-      bossMaxHp: 0,
+      bossCurrentHp: params.bossCurrentHp ?? 0,
+      bossMaxHp: params.bossMaxHp ?? 100,
       attacksToday: params.attacksToday,
       questCompletedToday: params.questCompletedToday,
       usedTypesToday: params.usedTypesToday,

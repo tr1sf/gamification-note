@@ -23,7 +23,14 @@ export async function summarizeNote(content: string): Promise<string> {
     messages: [
       {
         role: "system",
-        content: "You are a helpful note summarizer. Summarize the following note in 3-5 concise bullet points. Capture only the key ideas. Keep each bullet under 20 words. Respond in the same language as the input.",
+        content: `You are a helpful note summarizer. Summarize the following note in 3-5 concise bullet points. Capture only the key ideas. Keep each bullet under 20 words. Respond in the same language as the input.
+
+IMPORTANT: Each bullet MUST start with "- " (dash + space) and each bullet MUST be on its own line. No numbering, no bold, no extra formatting. Just plain text with "- " prefix per line.
+
+Example format:
+- First key idea here
+- Second key idea here
+- Third key idea here`,
       },
       { role: "user", content: text.slice(0, 6000) },
     ],

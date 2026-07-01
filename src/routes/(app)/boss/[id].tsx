@@ -3,6 +3,7 @@ import { useParams, A } from "@solidjs/router";
 import { authFetch } from "~/stores/auth";
 import { showReward, addToast } from "~/stores/ui";
 import { applyReward } from "~/stores/user";
+import { t } from "~/lib/i18n";
 
 function abilityMeta(type: string) {
   if (type?.startsWith("weak_"))
@@ -120,6 +121,18 @@ export default function BossPage() {
                 </div>
               </div>
 
+              {/* Reward preview */}
+              <Show when={!isDead()}>
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-surface-border text-xs text-ink-secondary mb-4">
+                  <span class="font-semibold text-ink-primary">{t("Defeat reward:")}</span>
+                  <span class="text-accent font-mono">{b().rewardXp ?? 20} XP</span>
+                  <span class="text-coin font-mono">{b().rewardCoins ?? 10} coins</span>
+                  <Show when={(b().bossType === "weekly")}>
+                    <span class="text-amber-400">+ Loot box</span>
+                  </Show>
+                </div>
+              </Show>
+
               <Show when={isDead()}>
                 <div class="text-center py-4">
                   <p class="text-xl font-bold text-success mb-2">🎉 Boss Defeated!</p>
@@ -164,6 +177,7 @@ export default function BossPage() {
                         <div class="flex justify-between py-1 border-b border-surface-border/30">
                           <span>
                             {a.metadata?.source === "quiz" ? "🧠 Quiz" : a.metadata?.source === "habit" ? "🔥 Habit" : "📝 Note"}
+                            {a.metadata?.source === "note" && a.metadata?.structureScore != null ? ` (Quality: ${a.metadata.structureScore}/15)` : ""}
                             : -{a.metadata?.damage ?? 0} HP
                           </span>
                           <span>{new Date(a.createdAt).toLocaleTimeString()}</span>

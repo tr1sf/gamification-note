@@ -46,6 +46,25 @@ export async function POST({ request, params }: { request: Request; params: { it
         expiresAt = new Date(Date.now() + category.durationMin * 60 * 1000);
       }
 
+      // Handle XP Catalyst: extend (not overwrite) xpBoosterUntil on User
+      if (category?.usageType === "xp_booster" && category?.durationHours) {
+        const durationMs = (category.durationHours as number) * 60 * 60 * 1000;
+        const nowMs = Date.now();
+        // If already active, extend from current expiry; otherwise start from now
+        const currentBooster = await tx.user.findUnique({
+          where: { id: user.userId },
+          select: { xpBoosterUntil: true },
+        });
+        const baseTime = currentBooster?.xpBoosterUntil && currentBooster.xpBoosterUntil.getTime() > nowMs
+          ? currentBooster.xpBoosterUntil.getTime()
+          : nowMs;
+        const boosterUntil = new Date(baseTime + durationMs);
+        await tx.user.update({
+          where: { id: user.userId },
+          data: { xpBoosterUntil: boosterUntil },
+        });
+      }
+
       try {
         if (item.type === "consumable" && existing) {
           // Stack consumables by incrementing quantity.

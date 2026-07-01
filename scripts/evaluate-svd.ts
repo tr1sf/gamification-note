@@ -51,6 +51,31 @@ function bar(count: number, total: number, width = 20): string {
   return "█".repeat(filled) + "░".repeat(width - filled);
 }
 
+/** Approximate CDF of t-distribution (for p-value calculation). */
+function tCDF(t: number, df: number): number {
+  // Using the regularized incomplete beta function approximation
+  const x = df / (df + t * t);
+  const a = df / 2;
+  const b = 0.5;
+  // Simple numerical approximation via continued fraction
+  let result = 0;
+  let term = 1;
+  for (let n = 0; n < 200; n++) {
+    if (n === 0) {
+      term = 1;
+    } else {
+      const m = n % 2 === 1 ? (n - 1) / 2 : n / 2;
+      const num = n % 2 === 1 ? m * b * x : (a + m) * x;
+      term *= num / (a + n);
+    }
+    result += term;
+    if (Math.abs(term) < 1e-10) break;
+  }
+  const betaInc = (Math.pow(x, a) * Math.pow(1 - x, b) / a) * result;
+  const ibeta = betaInc; // incomplete beta approximation
+  return 1 - 0.5 * Math.min(1, Math.max(0, ibeta));
+}
+
 async function main() {
   console.log("\n═══════════════════════════════════════════");
   console.log("  SVD Model Evaluation Report");
@@ -258,6 +283,72 @@ async function main() {
   }
   console.log("═══════════════════════════════════════════\n");
 
+  // 8. K-Fold Cross-Validation (k=5, shuffled for non-temporal evaluation)
+  console.log("───────────────────────────────────────────");
+  console.log("5-Fold Cross-Validation:");
+  console.log("───────────────────────────────────────────");
+
+  const k = 5;
+  // Shuffle to avoid temporal leakage (data is ordered by completedAt)
+  const shuffled = [...attempts].sort(() => Math.random() - 0.5);
+  const foldSize = Math.floor(shuffled.length / k);
+  const cvRmses: number[] = [];
+  const cvMaes: number[] = [];
+
+  for (let fold = 0; fold < k; fold++) {
+    const testStart = fold * foldSize;
+    const testEnd = testStart + foldSize;
+    const cvTest = shuffled.slice(testStart, testEnd);
+    const cvTrain = [...shuffled.slice(0, testStart), ...shuffled.slice(testEnd)];
+
+    const cvModel = new SVD({ factors: 8, epochs: 40, lr: 0.01, reg: 0.02 });
+    cvModel.train(cvTrain);
+
+    const preds: number[] = [];
+    const acts: number[] = [];
+    for (const a of cvTest) {
+      preds.push(cvModel.predict(a.userId, a.quizId));
+      acts.push(a.score);
+    }
+    const foldRmse = rmse(preds, acts);
+    const foldMae = mae(preds, acts);
+    cvRmses.push(foldRmse);
+    cvMaes.push(foldMae);
+    console.log(`  Fold ${fold + 1}: RMSE=${foldRmse.toFixed(2)}, MAE=${foldMae.toFixed(2)}`);
+  }
+
+  const meanRmse = cvRmses.reduce((s, v) => s + v, 0) / k;
+  const stdRmse = Math.sqrt(cvRmses.reduce((s, v) => s + (v - meanRmse) ** 2, 0) / k);
+  const meanMae = cvMaes.reduce((s, v) => s + v, 0) / k;
+  const stdMae = Math.sqrt(cvMaes.reduce((s, v) => s + (v - meanMae) ** 2, 0) / k);
+
+  console.log(`\n  Mean RMSE: ${meanRmse.toFixed(2)} ± ${stdRmse.toFixed(2)}`);
+  console.log(`  Mean MAE:  ${meanMae.toFixed(2)} ± ${stdMae.toFixed(2)}`);
+
+  // 9. Paired t-test: SVD predictions vs baseline (global mean)
+  console.log("\n───────────────────────────────────────────");
+  console.log("Statistical Significance (Paired t-test):");
+  console.log("───────────────────────────────────────────");
+
+  const diffs: number[] = [];
+  for (let i = 0; i < svdPredictions.length; i++) {
+    // Negative diff = SVD better (lower error)
+    diffs.push(Math.abs(svdPredictions[i] - actuals[i]) - Math.abs(baselinePredictions[i] - actuals[i]));
+  }
+  const meanDiff = diffs.reduce((s, v) => s + v, 0) / diffs.length;
+  const stdDiff = Math.sqrt(diffs.reduce((s, v) => s + (v - meanDiff) ** 2, 0) / (diffs.length - 1));
+  const tStat = stdDiff > 0 ? meanDiff / (stdDiff / Math.sqrt(diffs.length)) : 0;
+  // Two-tailed p-value approximation using t-distribution
+  const df = diffs.length - 1;
+  const pValue = df > 0 ? 2 * (1 - tCDF(Math.abs(tStat), df)) : 1;
+
+  console.log(`  Mean error difference: ${meanDiff.toFixed(3)}`);
+  console.log(`  t-statistic:           ${tStat.toFixed(3)}`);
+  console.log(`  Degrees of freedom:    ${df}`);
+  console.log(`  p-value (approx):      ${pValue < 0.001 ? "< 0.001" : pValue.toFixed(4)}`);
+  console.log(`  Significant at α=0.05: ${pValue < 0.05 ? "YES ✓" : "NO ✗"}`);
+  console.log(`  Significant at α=0.01: ${pValue < 0.01 ? "YES ✓" : "NO ✗"}`);
+
   // Save results as JSON for easy import into thesis
   const results = {
     timestamp: new Date().toISOString(),
@@ -298,6 +389,22 @@ async function main() {
       controlImprovement: parseFloat(controlImpAvg.toFixed(1)),
       personalizedImprovement: parseFloat(personalizedImpAvg.toFixed(1)),
       improvementDelta: parseFloat((personalizedImpAvg - controlImpAvg).toFixed(1)),
+    },
+    crossValidation: {
+      k,
+      meanRMSE: parseFloat(meanRmse.toFixed(2)),
+      stdRMSE: parseFloat(stdRmse.toFixed(2)),
+      meanMAE: parseFloat(meanMae.toFixed(2)),
+      stdMAE: parseFloat(stdMae.toFixed(2)),
+      foldRMSEs: cvRmses.map(v => parseFloat(v.toFixed(2))),
+    },
+    significance: {
+      meanErrorDiff: parseFloat(meanDiff.toFixed(3)),
+      tStatistic: parseFloat(tStat.toFixed(3)),
+      degreesOfFreedom: df,
+      pValue: pValue < 0.001 ? "<0.001" : parseFloat(pValue.toFixed(4)),
+      significantAt05: pValue < 0.05,
+      significantAt01: pValue < 0.01,
     },
   };
 

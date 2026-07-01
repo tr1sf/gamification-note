@@ -46,11 +46,11 @@ export async function GET({ request }: { request: Request }) {
   // the user's last quiz accuracy. High accuracy → longer interval (less
   // frequent review); low accuracy → shorter interval (more frequent).
   // This implements the "desirable difficulty" principle (Bjork 1994).
-  const quizzes = await prisma.quiz.findMany({
-    where: { userId: user.userId, reviewCount: { lt: 4 } },
-    orderBy: { lastReviewedAt: { sort: "asc", nulls: "first" } },
-    include: { attempts: { orderBy: { completedAt: "desc" }, take: 1, select: { score: true } } },
-  });
+    const quizzes = await prisma.quiz.findMany({
+      where: { userId: user.userId, reviewCount: { lt: 4 } },
+      orderBy: { lastReviewedAt: { sort: "asc", nulls: "first" } },
+      include: { attempts: { orderBy: { completedAt: "desc" }, take: 1, select: { score: true } }, note: { select: { id: true, title: true } } },
+    });
 
   const pending = quizzes.filter(q => {
     const baseInterval = REVIEW_INTERVALS[q.reviewCount] || 0;

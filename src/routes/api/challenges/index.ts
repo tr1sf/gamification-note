@@ -12,7 +12,15 @@ export async function POST({ request }: { request: Request }) {
   if (!user) return error("UNAUTHORIZED", "Not authenticated", 401);
 
   const body = await request.json();
-  const { title, description, theme, difficulty, iconEmoji, targetProgress, rewardXp, rewardCoins, isPublic, actions } = body;
+  const { title, description, theme, difficulty, iconEmoji, iconImageUrl, targetProgress, rewardXp, rewardCoins, isPublic, actions } = body;
+
+  // Reject unknown fields for defense-in-depth
+  const allowedFields = new Set(["title", "description", "theme", "difficulty", "iconEmoji", "iconImageUrl", "targetProgress", "rewardXp", "rewardCoins", "isPublic", "actions"]);
+  for (const key of Object.keys(body)) {
+    if (!allowedFields.has(key)) {
+      return error("VALIDATION_ERROR", `Unknown field: ${key}`, 400);
+    }
+  }
 
   if (!title || typeof title !== "string" || title.length < 2 || title.length > 100) {
     return error("VALIDATION_ERROR", "Title must be 2-100 characters", 400);
@@ -26,6 +34,7 @@ export async function POST({ request }: { request: Request }) {
       theme: theme || "growth",
       difficulty: difficulty || "medium",
       iconEmoji: iconEmoji || null,
+      iconImageUrl: iconImageUrl || null,
       targetProgress: targetProgress || 100,
       rewardXp: rewardXp || DIFFICULTY_XP[difficulty] || 50,
       rewardCoins: rewardCoins || DIFFICULTY_COINS[difficulty] || 10,

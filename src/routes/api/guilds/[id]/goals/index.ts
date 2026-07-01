@@ -42,8 +42,8 @@ export async function PATCH({ request, params }: { request: Request; params: { i
     }
 
     const updated = await tx.guildGoal.findUniqueOrThrow({ where: { id: goalId } });
-    currentCount = updated.currentCount;
-    isComplete = currentCount >= goal.targetCount;
+    currentCount = Math.min(updated.currentCount, goal.targetCount);
+    isComplete = updated.currentCount >= goal.targetCount;
 
     if (isComplete) {
       // Use conditional updateMany again — only the first caller to reach

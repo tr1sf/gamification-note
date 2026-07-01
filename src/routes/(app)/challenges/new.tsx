@@ -66,14 +66,33 @@ export default function ChallengeCreatePage() {
     if (found) setIconEmoji(found.icon);
   };
 
-  const handleImageUpload = (e: Event) => {
+  const handleImageUpload = async (e: Event) => {
     const input = e.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
+    // Show local preview immediately
     const previewUrl = URL.createObjectURL(file);
     setImagePreviewUrl(previewUrl);
-    setIconImageUrl(previewUrl);
+
+    // Upload to server to get a persisted data URL
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await authFetch("/api/challenges/upload-image", { method: "POST", body: formData });
+      const json = await res.json();
+      if (json.success && json.data?.url) {
+        setIconImageUrl(json.data.url);
+      } else {
+        addToast(json.error?.message || "Image upload failed", "error");
+        setImagePreviewUrl(null);
+        setIconImageUrl(null);
+      }
+    } catch {
+      addToast("Image upload failed", "error");
+      setImagePreviewUrl(null);
+      setIconImageUrl(null);
+    }
   };
 
   const handleSubmit = async () => {
