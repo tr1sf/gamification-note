@@ -174,13 +174,13 @@ model GuildMember {
   id       String   @id @default(uuid()) @db.Uuid
   guildId  String   @db.Uuid
   userId   String   @db.Uuid
-  roleId   String   @db.Uuid
+  roleId   String?  @db.Uuid
   role     String   @default("member") // kept for backwards compatibility during migration
   joinedAt DateTime @default(now())
 
   guild    Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guildRole GuildRole @relation(fields: [roleId], references: [id])
+  guildRole GuildRole? @relation(fields: [roleId], references: [id])
 
   @@unique([guildId, userId])
   @@index([guildId])
