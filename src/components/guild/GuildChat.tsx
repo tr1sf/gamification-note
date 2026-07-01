@@ -54,20 +54,20 @@ export default function GuildChat(props: GuildChatProps) {
     };
     s.on("guild:typing", handler);
     onCleanup(() => s.off("guild:typing", handler));
-  });
 
-  // Auto-clear typing indicators
-  const interval = setInterval(() => {
-    setTypingUsers((prev) => {
-      const now = Date.now();
-      const next = new Map<string, number>();
-      for (const [uid, expires] of prev) {
-        if (expires > now) next.set(uid, expires);
-      }
-      return next;
-    });
-  }, 1000);
-  onCleanup(() => clearInterval(interval));
+    // Auto-clear typing indicators (inside onMount to avoid SSR leak)
+    const interval = setInterval(() => {
+      setTypingUsers((prev) => {
+        const now = Date.now();
+        const next = new Map<string, number>();
+        for (const [uid, expires] of prev) {
+          if (expires > now) next.set(uid, expires);
+        }
+        return next;
+      });
+    }, 1000);
+    onCleanup(() => clearInterval(interval));
+  });
 
   let scrollContainer: HTMLDivElement | undefined;
   // Track whether the user is near the bottom so we don't yank them back

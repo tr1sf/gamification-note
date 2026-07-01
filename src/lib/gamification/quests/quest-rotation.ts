@@ -146,10 +146,14 @@ async function rotateQuestType(
   }
 }
 
+/**
+ * Rotate quests for the user. Returns true if AI quest generation is needed
+ * (caller should invoke generateAiQuestsAfterCommit outside the transaction).
+ */
 export async function rotateQuestsIfNeeded(
   tx: Prisma.TransactionClient,
   userId: string
-): Promise<void> {
+): Promise<boolean> {
   await rotateQuestType(tx, userId, "daily", startOfToday(), endOfToday());
   await rotateQuestType(tx, userId, "weekly", startOfWeek(), endOfWeek());
   await rotateQuestType(tx, userId, "monthly", startOfMonth(), endOfMonth());
@@ -164,24 +168,37 @@ export async function rotateQuestsIfNeeded(
       select: { createdAt: true },
     });
     if (!lastGen || (Date.now() - lastGen.createdAt.getTime()) > 86400000) {
-      const { generateQuests } = await import("~/lib/ai-quests/generator");
-      const generated = await generateQuests(userId);
-      for (const q of generated) {
-        await tx.aIQuest.create({
-          data: {
-            userId,
-            title: q.title,
-            description: q.description,
-            actionType: q.actionType,
-            target: q.target,
-            xpReward: q.xpReward,
-            coinReward: q.coinReward,
-            source: q.source,
-            ruleId: q.ruleId,
-            reason: q.reason,
-          },
-        });
-      }
+      // Signal to caller: AI quest generation needed, but must happen OUTSIDE
+      // this transaction to avoid holding a FOR UPDATE row lock during API call.
+      return true;
     }
+  }
+  return false;
+}
+
+/**
+ * Generate AI quests for a user. Must be called OUTSIDE any transaction
+ * that holds a FOR UPDATE lock on the User row.
+ */
+export async function generateAiQuestsAfterCommit(userId: string): Promise<void> {
+  const { generateQuests } = await import("~/lib/ai-quests/generator");
+  const generated = await generateQuests(userId);
+  // Use a separate transaction for the writes
+  const { prisma } = await import("~/lib/db");
+  for (const q of generated) {
+    await prisma.aIQuest.create({
+      data: {
+        userId,
+        title: q.title,
+        description: q.description,
+        actionType: q.actionType,
+        target: q.target,
+        xpReward: q.xpReward,
+        coinReward: q.coinReward,
+        source: q.source,
+        ruleId: q.ruleId,
+        reason: q.reason,
+      },
+    });
   }
 }

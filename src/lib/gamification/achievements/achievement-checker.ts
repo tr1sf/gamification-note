@@ -53,24 +53,23 @@ export async function checkAchievements(
     const newProgress = currentProgress + increment;
     const newlyUnlocked = newProgress >= target;
 
-    if (existing) {
-      await tx.userAchievement.update({
-        where: { id: existing.id },
-        data: {
-          progress: { current: newProgress },
-          ...(newlyUnlocked ? { unlockedAt: new Date() } : {}),
-        },
-      });
-    } else {
-      await tx.userAchievement.create({
-        data: {
-          userId,
-          achievementId: achievement.id,
-          progress: { current: newProgress },
-          ...(newlyUnlocked ? { unlockedAt: new Date() } : {}),
-        },
-      });
-    }
+    // Use upsert for true idempotency — prevents race conditions when
+    // checkAchievements is called outside a locked transaction.
+    await tx.userAchievement.upsert({
+      where: {
+        userId_achievementId: { userId, achievementId: achievement.id },
+      },
+      create: {
+        userId,
+        achievementId: achievement.id,
+        progress: { current: newProgress },
+        ...(newlyUnlocked ? { unlockedAt: new Date() } : {}),
+      },
+      update: {
+        progress: { current: newProgress },
+        ...(newlyUnlocked && !existing?.unlockedAt ? { unlockedAt: new Date() } : {}),
+      },
+    });
 
     if (newlyUnlocked) {
       unlocked.push({ id: achievement.id, title: achievement.title });

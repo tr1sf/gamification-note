@@ -4,7 +4,7 @@ import { calculateXP } from "./calculators/xp-calculator";
 import { calculateCoins } from "./calculators/coin-calculator";
 import { calculateLevel, getLevelTitle } from "./calculators/level-calculator";
 import { checkQuestProgress } from "./quests/quest-checker";
-import { rotateQuestsIfNeeded } from "./quests/quest-rotation";
+import { rotateQuestsIfNeeded, generateAiQuestsAfterCommit } from "./quests/quest-rotation";
 import { checkAchievements } from "./achievements/achievement-checker";
 import { createNotification } from "~/lib/socket/notifications";
 import type { AuditMetadata } from "~/lib/analytics/types";
@@ -91,6 +91,9 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
       FROM "User" WHERE id = ${ctx.userId}::uuid FOR UPDATE
     `;
     const user = rows[0];
+    if (!user) {
+      throw new Error(`User ${ctx.userId} not found in database`);
+    }
     const dailyData = user;
     const caps = getDailyCaps(user.level, dailyData.streak);
 
@@ -153,8 +156,8 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
     });
 
     const enrichedMeta: Record<string, unknown> = {
-      ...(ctx.metadata ?? {}),
       ...(ctx.analyticsMeta ?? {}),
+      ...(ctx.metadata ?? {}),
       levelBefore: user.level,
       levelAfter: leveledUp ? newLevel : user.level,
     };
@@ -169,24 +172,36 @@ export async function processAction(ctx: ActionContext): Promise<ActionResult> {
       },
     });
 
-    await rotateQuestsIfNeeded(tx, ctx.userId);
+    const needsAiQuests = await rotateQuestsIfNeeded(tx, ctx.userId);
 
     const questProgress = await checkQuestProgress(tx, ctx.userId, ctx.actionType, ctx.metadata);
 
     const unlockedAchievements = await checkAchievements(tx, ctx.userId, ctx.actionType, ctx.metadata);
 
     return {
-      message: getActionMessage(ctx.actionType, { xp: xpAfterCap, coins: coinsAfterCap, ...ctx.metadata }),
-      xpGained: xpAfterCap,
-      coinsGained: coinsAfterCap,
-      leveledUp,
-      newLevel: leveledUp ? newLevel : undefined,
-      newTitle: leveledUp ? getLevelTitle(newLevel) : undefined,
-      unlockedAchievements,
-      questProgress,
+      result: {
+        message: getActionMessage(ctx.actionType, { xp: xpAfterCap, coins: coinsAfterCap, ...ctx.metadata }),
+        xpGained: xpAfterCap,
+        coinsGained: coinsAfterCap,
+        leveledUp,
+        newLevel: leveledUp ? newLevel : undefined,
+        newTitle: leveledUp ? getLevelTitle(newLevel) : undefined,
+        unlockedAchievements,
+        questProgress,
+      } as ActionResult,
+      needsAiQuests,
     };
-  }) as Promise<ActionResult>);
+  }));
 
+  // AI quest generation happens AFTER the transaction commits to avoid
+  // holding a FOR UPDATE row lock during an external API call.
+  if (txResult.needsAiQuests) {
+    generateAiQuestsAfterCommit(ctx.userId).catch((err) => {
+      console.error("[engine] AI quest generation failed:", err);
+    });
+  }
+
+  const result = txResult.result;
   triggerNotifications(ctx.userId, result);
   return result;
 }
@@ -215,6 +230,9 @@ export async function grantReward(opts: {
       FROM "User" WHERE id = ${opts.userId}::uuid FOR UPDATE
     `;
     const user = rows[0];
+    if (!user) {
+      throw new Error(`User ${opts.userId} not found in database`);
+    }
     const dailyData = user;
     const caps = getDailyCaps(user.level, dailyData.streak);
 

@@ -70,19 +70,23 @@ export async function POST({ request, params }: { request: Request; params: { id
       if (result.count > 0) {
         const updated = await prisma.guildGoal.findUnique({ where: { id: goal.id } });
         if (updated && updated.currentCount >= goal.targetCount) {
-          await prisma.guildGoal.update({
-            where: { id: goal.id },
+          // Use conditional updateMany to prevent double-payout race
+          const completeResult = await prisma.guildGoal.updateMany({
+            where: { id: goal.id, isCompleted: false },
             data: { isCompleted: true },
           });
-          const members = await prisma.guildMember.findMany({ where: { guildId: params.id }, select: { userId: true } });
-          for (const m of members) {
-            await grantReward({
-              userId: m.userId,
-              xp: goal.rewardXp,
-              coins: goal.rewardCoins,
-              actionType: "guild_goal_complete",
-              metadata: { guildId: params.id, goalId: goal.id, goalTitle: goal.title },
-            });
+          if (completeResult.count > 0) {
+            // Only the first caller to complete this goal grants rewards
+            const members = await prisma.guildMember.findMany({ where: { guildId: params.id }, select: { userId: true } });
+            for (const m of members) {
+              await grantReward({
+                userId: m.userId,
+                xp: goal.rewardXp,
+                coins: goal.rewardCoins,
+                actionType: "guild_goal_complete",
+                metadata: { guildId: params.id, goalId: goal.id, goalTitle: goal.title },
+              });
+            }
           }
         }
       }

@@ -1,5 +1,6 @@
 import { createMiddleware } from "@solidjs/start/middleware";
 import { verifyAccessToken, readAccessToken } from "~/lib/auth/jwt";
+import { prisma } from "~/lib/db";
 
 export default createMiddleware({
   onRequest: [
@@ -10,6 +11,8 @@ export default createMiddleware({
         '/api/auth/register',
         '/api/auth/refresh',
         '/api/auth/logout',
+        '/api/auth/forgot-password/question',
+        '/api/auth/forgot-password/reset',
         '/api/notes/public',
         '/api/users',
         '/login',
@@ -51,6 +54,22 @@ export default createMiddleware({
 
       try {
         const payload = verifyAccessToken(token);
+
+        // Check if user is banned
+        const dbUser = await prisma.user.findUnique({
+          where: { id: payload.userId },
+          select: { isBanned: true },
+        });
+        if (dbUser?.isBanned) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: { code: 'UNAUTHORIZED', message: 'Account suspended' },
+            }),
+            { status: 401, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+
         (event as any).locals = { ...(event as any).locals, user: payload };
         Object.defineProperty(event.request, 'locals', {
           value: { ...(event.request as any).locals, user: payload },

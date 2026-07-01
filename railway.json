@@ -7,6 +7,6 @@
     "startCommand": "node .output/server/index.mjs",
     "healthcheckPath": "/api/health",
     "restartPolicyType": "ON_FAILURE",
-    "preDeployCommand": "npx prisma db push"
+    "preDeployCommand": "npx prisma db push && npx prisma db seed"
   }
 }

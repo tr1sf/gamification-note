@@ -859,7 +859,7 @@ const vi: Record<string, string> = {
   "XP left today": "KN còn lại hôm nay",
   "Daily cap reached — write tomorrow for full XP!": "Đã hết hạn mức — viết ghi chú ngày mai để nhận đầy đủ KN!",
   "2x XP Active": "2x KN Đang Hoạt Động",
-  "XP Catalyst active": "XP Catalyst đangactive",
+  "XP Catalyst active": "Catalyst XP đang hoạt động",
   "remaining": "còn lại",
   "coins": "xu",
 

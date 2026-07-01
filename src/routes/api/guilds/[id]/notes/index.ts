@@ -81,6 +81,9 @@ export async function POST({ request, params }: RouteCtx) {
   if (note.guildId === params.id) {
     return error("CONFLICT", "This scroll is already shared with the guild", 409);
   }
+  if (note.guildId && note.guildId !== params.id) {
+    return error("CONFLICT", "This scroll is already shared with another guild", 409);
+  }
 
   await prisma.note.update({
     where: { id: noteId },

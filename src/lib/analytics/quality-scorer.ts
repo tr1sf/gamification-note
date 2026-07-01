@@ -60,12 +60,13 @@ export function scorePlainText(
   category: string | null,
 ): { score: number; metadata: AuditMetadata; breakdown: ScoreBreakdown } {
   const wordCount = content.split(/\s+/).filter(Boolean).length;
-  const hasH1 = /^#\s/m.test(content);
-  const hasH2 = /^##\s/m.test(content);
-  const hasList = /^[-*]\s/m.test(content);
-  const hasCode = /```/.test(content);
-  const hasImage = /!\[/.test(content);
-  const linkCount = (content.match(/\[.*?\]\(.*?\)/g) || []).length;
+  // Detect Markdown structure (also handle HTML tags)
+  const hasH1 = /^#\s/m.test(content) || /<h1[>\s]/i.test(content);
+  const hasH2 = /^##\s/m.test(content) || /<h2[>\s]/i.test(content);
+  const hasList = /^[-*]\s/m.test(content) || /<[uo]l[>\s]/i.test(content);
+  const hasCode = /```/.test(content) || /<pre[>\s]/i.test(content);
+  const hasImage = /!\[/.test(content) || /<img[>\s]/i.test(content);
+  const linkCount = (content.match(/\[.*?\]\(.*?\)/g) || []).length + (content.match(/<a[>\s]/gi) || []).length;
 
   return computeScore({
     wordCount, hasH1, hasH2, hasList, hasCode,

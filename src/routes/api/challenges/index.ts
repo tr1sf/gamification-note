@@ -35,9 +35,9 @@ export async function POST({ request }: { request: Request }) {
       difficulty: difficulty || "medium",
       iconEmoji: iconEmoji || null,
       iconImageUrl: iconImageUrl || null,
-      targetProgress: targetProgress || 100,
-      rewardXp: rewardXp || DIFFICULTY_XP[difficulty] || 50,
-      rewardCoins: rewardCoins || DIFFICULTY_COINS[difficulty] || 10,
+      targetProgress: targetProgress ?? 100,
+      rewardXp: rewardXp ?? DIFFICULTY_XP[difficulty] ?? 50,
+      rewardCoins: rewardCoins ?? DIFFICULTY_COINS[difficulty] ?? 10,
       isPublic: isPublic || false,
       actions: actions?.length > 0
         ? {

@@ -8,7 +8,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   login: z.string().min(1, "Email or username required"),
-  password: z.string(),
+  password: z.string().min(1, "Password is required"),
 });
 
 // ── Security-question password recovery (no email) ──────────────────────────

@@ -75,6 +75,14 @@ export async function POST({ request }: { request: Request }) {
     return error("VALIDATION_ERROR", "Invalid conversation", 400);
   }
 
+  // Verify membership before sending
+  const membership = await prisma.directMessageGroupMember.findUnique({
+    where: { groupId_userId: { groupId: targetGroupId, userId: user.userId } },
+  });
+  if (!membership) {
+    return error("FORBIDDEN", "Not a member of this conversation", 403);
+  }
+
   const message = await prisma.directMessage.create({
     data: {
       senderId: user.userId,

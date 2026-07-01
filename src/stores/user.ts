@@ -90,7 +90,7 @@ export function applyReward(result: {
 
 export async function fetchDailyLimits() {
   try {
-    const res = await fetch("/api/users/daily-limits");
+    const res = await fetch("/api/users/daily-limits", { credentials: "include" });
     if (res.ok) {
       const json = await res.json();
       if (json.success) setDailyLimits(json.data);

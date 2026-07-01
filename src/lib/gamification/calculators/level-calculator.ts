@@ -19,12 +19,8 @@ const TITLE_THRESHOLDS = Object.keys(LEVEL_TITLES)
   .sort((a, b) => b - a);
 
 export function calculateLevel(xp: number): number {
-  // Use a gentler cube-root curve for early levels: Level = floor(cbrt(xp / 10)).
-  // This makes Levels 1-4 reachable in 1-3 notes, keeping new users engaged.
-  // - Level 2: 80 XP (~1 note with bonus)
-  // - Level 3: 270 XP (~3 notes)
-  // - Level 4: 640 XP (~7 notes)
-  // - Level 5+: transitions to sqrt-like growth
+  // Use sqrt(xp / 50) for a gentler curve.
+  // Level 2: 200 XP (~2 notes), Level 3: 450 XP, Level 4: 800 XP
   if (xp <= 0) return 1;
 
   // Use sqrt(xp / 50) — half the base XP requirement for faster early leveling.

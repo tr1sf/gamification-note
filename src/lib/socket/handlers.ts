@@ -176,7 +176,16 @@ export function registerHandlers(socket: Socket): void {
     socket.to(`dm:${conversationId}`).emit("dm:typing", { userId, conversationId });
   });
 
-  socket.on("dm:join", ({ groupId }: { groupId: string }) => {
+  socket.on("dm:join", async ({ groupId }: { groupId: string }) => {
+    if (!groupId) return;
+    // Verify membership before joining the room
+    const membership = await prisma.directMessageGroupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!membership) {
+      socket.emit("error", { code: "FORBIDDEN", message: "Not a member of this conversation" });
+      return;
+    }
     socket.join(`dm:${groupId}`);
   });
 

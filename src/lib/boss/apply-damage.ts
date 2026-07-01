@@ -5,6 +5,8 @@ type TxClient = Parameters<Parameters<import("@prisma/client").PrismaClient["$tr
 /**
  * Apply boss damage from any action (note, quiz, habit, focus) to ALL active bosses.
  * Shared logic used by notes/index.ts, habits/checkin.ts, quiz/attempt.ts, and boss/attack.ts.
+ *
+ * IMPORTANT: fog_shield and colossal track per-boss, not globally.
  */
 export async function applyBossDamageToAll(
   tx: TxClient,
@@ -19,31 +21,39 @@ export async function applyBossDamageToAll(
 
   if (activeBosses.length === 0) return;
 
-  // Count all boss attacks today (for fog_shield ability)
   const todayStart = new Date();
   todayStart.setUTCHours(0, 0, 0, 0);
-  const attacksToday = await tx.auditLog.count({
-    where: { userId, actionType: "boss_damage", createdAt: { gte: todayStart } },
-  });
 
   // Check if user completed any quests today (for procrastination_aura ability)
   const questsCompletedToday = await tx.userQuest.count({
     where: { userId, completedAt: { gte: todayStart } },
   });
 
-  // Collect which action types were used today (for colossal ability)
-  const todayLogs = await tx.auditLog.findMany({
-    where: { userId, actionType: "boss_damage", createdAt: { gte: todayStart } },
-    select: { metadata: true },
-  });
-  const usedTypesToday = new Set<string>();
-  for (const log of todayLogs) {
-    const src = (log.metadata as any)?.source;
-    if (typeof src === "string") usedTypesToday.add(src);
-  }
-
   for (const boss of activeBosses) {
     const ability = parseBossAbility(boss.bossAbility);
+
+    // Per-boss attack tracking: fog_shield and colossal only count attacks on THIS boss
+    let attacksToday = 0;
+    let usedTypesToday = new Set<string>();
+
+    if (ability && (ability.type === "fog_shield" || ability.type === "colossal")) {
+      const bossLogs = await tx.auditLog.findMany({
+        where: {
+          userId,
+          actionType: "boss_damage",
+          createdAt: { gte: todayStart },
+          metadata: { path: ["bossId"], equals: boss.id },
+        },
+        select: { metadata: true },
+      });
+      attacksToday = bossLogs.length;
+      usedTypesToday = new Set<string>();
+      for (const log of bossLogs) {
+        const src = (log.metadata as any)?.source;
+        if (typeof src === "string") usedTypesToday.add(src);
+      }
+    }
+
     const result = applyBossAbility(ability, {
       actionType,
       damage: baseDamage,
@@ -56,11 +66,21 @@ export async function applyBossDamageToAll(
     const dmg = result.damage;
 
     try {
-      await tx.$executeRaw`UPDATE "Challenge" SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${dmg}) WHERE id = ${boss.id}::uuid AND "status" = 'active'`;
-      const updated = await tx.challenge.findUnique({ where: { id: boss.id }, select: { bossCurrentHp: true } });
-      if (updated && (updated.bossCurrentHp ?? 0) <= 0) {
-        await tx.challenge.update({ where: { id: boss.id }, data: { status: "completed", completedAt: new Date() } });
+      // Atomic: update HP and check completion in one step to avoid TOCTOU
+      const updated = await tx.$queryRaw<Array<{ bossCurrentHp: number }>>`
+        UPDATE "Challenge"
+        SET "bossCurrentHp" = GREATEST(0, "bossCurrentHp" - ${dmg})
+        WHERE id = ${boss.id}::uuid AND "status" = 'active'
+        RETURNING "bossCurrentHp"
+      `;
+
+      if (updated.length > 0 && updated[0].bossCurrentHp <= 0) {
+        await tx.challenge.update({
+          where: { id: boss.id },
+          data: { status: "completed", completedAt: new Date() },
+        });
       }
+
       await tx.auditLog.create({
         data: {
           userId,

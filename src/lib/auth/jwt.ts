@@ -24,12 +24,12 @@ function refreshCookieName() { return `refresh_token${COOKIE_SUFFIX}`; }
 
 export function readAccessToken(cookieHeader: string): string | null {
   const name = accessCookieName();
-  return cookieHeader.split("; ").find((c) => c.startsWith(`${name}=`))?.split("=")[1] || null;
+  return cookieHeader.split("; ").find((c) => c.startsWith(`${name}=`))?.substring(name.length + 1) || null;
 }
 
 export function readRefreshToken(cookieHeader: string): string | null {
   const name = refreshCookieName();
-  return cookieHeader.split("; ").find((c) => c.startsWith(`${name}=`))?.split("=")[1] || null;
+  return cookieHeader.split("; ").find((c) => c.startsWith(`${name}=`))?.substring(name.length + 1) || null;
 }
 
 export function signAccessToken(payload: TokenPayload): string {

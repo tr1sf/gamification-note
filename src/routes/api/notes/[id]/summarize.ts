@@ -21,7 +21,7 @@ export async function POST({ request, params }: { request: Request; params: { id
   }
 
   const note = await prisma.note.findUnique({
-    where: { id: params.id },
+    where: { id: params.id, isDeleted: false },
     select: { id: true, title: true, userId: true, content: true, aiSummary: true },
   });
 

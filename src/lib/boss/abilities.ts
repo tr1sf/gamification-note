@@ -214,7 +214,7 @@ export function applyBossAbility(
       break;
   }
 
-  return { damage: Math.min(damage, 200), message };
+  return { damage, message };
 }
 
 /**
