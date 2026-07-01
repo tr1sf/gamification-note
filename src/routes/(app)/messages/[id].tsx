@@ -16,25 +16,42 @@ export default function DMChatPage() {
     const s = socket();
     if (s) {
       emit("dm:join", { groupId: params.id });
-      on("dm:message", (msg: DMMessage) => {
+
+      const handleMessage = (msg: DMMessage) => {
         if (msg.groupId === params.id) {
           addSocketDMMessage(msg);
         }
-      });
-      on("dm:typing", ({ userId }: { userId: string }) => {
+      };
+      const handleTyping = ({ userId }: { userId: string }) => {
         if (userId !== user()?.id) {
           setTyping(true);
           if (typingTimeout) clearTimeout(typingTimeout);
           typingTimeout = setTimeout(() => setTyping(false), 3000);
         }
-      });
+      };
+
+      on("dm:message", handleMessage);
+      on("dm:typing", handleTyping);
+
+      // Store refs for cleanup
+      (s as any).__dmMessageHandler = handleMessage;
+      (s as any).__dmTypingHandler = handleTyping;
     }
   });
 
   onCleanup(() => {
     emit("dm:leave", { groupId: params.id });
-    off("dm:message", () => {});
-    off("dm:typing", () => {});
+    const s = socket();
+    if (s) {
+      if ((s as any).__dmMessageHandler) {
+        off("dm:message", (s as any).__dmMessageHandler);
+        (s as any).__dmMessageHandler = null;
+      }
+      if ((s as any).__dmTypingHandler) {
+        off("dm:typing", (s as any).__dmTypingHandler);
+        (s as any).__dmTypingHandler = null;
+      }
+    }
     if (typingTimeout) clearTimeout(typingTimeout);
   });
 

@@ -1,6 +1,7 @@
 import { getUserFromRequest } from "~/lib/auth/get-user";
 import { prisma } from "~/lib/db";
 import { success, error } from "~/lib/api-response";
+import { getIO } from "~/lib/socket/index";
 
 export async function GET({ request }: { request: Request }) {
   const user = getUserFromRequest(request);
@@ -93,6 +94,21 @@ export async function POST({ request }: { request: Request }) {
       sender: { select: { id: true, username: true, avatarUrl: true } },
     },
   });
+
+  // Broadcast via Socket.IO so other members receive the message in real-time.
+  try {
+    const io = getIO();
+    io.to(`dm:${targetGroupId}`).emit("dm:message", {
+      id: message.id,
+      senderId: user.userId,
+      groupId: targetGroupId,
+      content: message.content,
+      sender: message.sender,
+      createdAt: message.createdAt.toISOString(),
+    });
+  } catch {
+    // Socket not initialized (dev without socket server) — silent fail.
+  }
 
   return success({ message, groupId: targetGroupId });
 }

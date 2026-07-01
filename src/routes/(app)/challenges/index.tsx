@@ -1,9 +1,10 @@
 import { createResource, createSignal, For, Show } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
-import { authFetch } from "~/stores/auth";
+import { authFetch, user } from "~/stores/auth";
 import { applyReward, gamification } from "~/stores/user";
 import { showReward } from "~/stores/ui";
 import { t } from "~/lib/i18n";
+import { PATH_UNLOCKS, type UserPath } from "~/lib/path-unlocks";
 
 interface ChallengeItem {
   id: string;
@@ -56,6 +57,12 @@ const THEME_ICONS: Record<string, string> = {
   scholar: "📚",
 };
 
+function getBossUnlockLevel(path: UserPath | null): number {
+  if (!path) return 7;
+  const unlocks = PATH_UNLOCKS[path];
+  return unlocks.find((u) => u.feature === "Boss Fight")?.level ?? 7;
+}
+
 async function fetchChallenges(status: string): Promise<ChallengeItem[]> {
   const res = await authFetch(`/api/challenges?status=${status}`);
   const json = await res.json();
@@ -83,6 +90,15 @@ export default function ChallengeListPage() {
   const [challenges, { refetch }] = createResource(tab, fetchChallenges);
   const [templates] = createResource(fetchTemplates);
   const [showTemplates, setShowTemplates] = createSignal(false);
+
+  const userPath = () => (user()?.path as UserPath) || "student";
+  const bossLocked = () => {
+    const path = userPath();
+    const level = gamification().level;
+    const unlockLevel = getBossUnlockLevel(path);
+    return level < unlockLevel;
+  };
+  const bossUnlockLevel = () => getBossUnlockLevel(userPath());
 
   const pct = (challenge: ChallengeItem) =>
     Math.min(100, Math.round((challenge.currentProgress / challenge.targetProgress) * 100));
@@ -187,35 +203,65 @@ export default function ChallengeListPage() {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <For each={(challenges() ?? []).filter((c) => c.bossType)}>
               {(challenge) => (
-                <A
-                  href={`/boss/${challenge.id}`}
-                  class="block bg-surface-elevated rounded-xl p-5 border border-surface-border hover:border-error/30 transition-all group"
+                <Show
+                  when={!bossLocked()}
+                  fallback={
+                    <div class="block bg-surface-elevated rounded-xl p-5 border border-surface-border opacity-60 cursor-not-allowed">
+                      <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                          <span class="text-2xl grayscale">{challenge.bossEmoji || "👻"}</span>
+                          <div>
+                            <h3 class="font-semibold text-ink-secondary">{challenge.bossName || challenge.title}</h3>
+                            <p class="text-xs text-ink-muted mt-0.5">{challenge.bossType === "daily" ? t("Daily Minion") : challenge.bossType === "weekly" ? t("Weekly Elite") : challenge.bossType}</p>
+                          </div>
+                        </div>
+                        <span class="text-xs px-1.5 py-0.5 rounded border border-surface-border bg-surface text-ink-muted">
+                          🔒 {t("Lv")} {bossUnlockLevel()}+
+                        </span>
+                      </div>
+                      <div class="space-y-1.5">
+                        <div class="flex items-center justify-between text-xs">
+                          <span class="text-ink-muted">{t("HP")}</span>
+                          <span class="text-ink-muted">{challenge.bossCurrentHp}/{challenge.bossMaxHp}</span>
+                        </div>
+                        <div class="h-2 bg-surface-border rounded-full overflow-hidden">
+                          <div class="h-full bg-surface-border rounded-full" style={{ width: "100%" }} />
+                        </div>
+                      </div>
+                      <p class="text-xs text-ink-muted mt-2 text-center">{t("Boss Fight unlocks at Lv")} {bossUnlockLevel()}</p>
+                    </div>
+                  }
                 >
-                  <div class="flex items-start justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                      <span class="text-2xl">{challenge.bossEmoji || "👻"}</span>
-                      <div>
-                        <h3 class="font-semibold text-ink-primary group-hover:text-error transition-colors">{challenge.bossName || challenge.title}</h3>
-                        <p class="text-xs text-ink-secondary mt-0.5">{challenge.bossType === "daily" ? t("Daily Minion") : challenge.bossType === "weekly" ? t("Weekly Elite") : challenge.bossType}</p>
+                  <A
+                    href={`/boss/${challenge.id}`}
+                    class="block bg-surface-elevated rounded-xl p-5 border border-surface-border hover:border-error/30 transition-all group"
+                  >
+                    <div class="flex items-start justify-between mb-3">
+                      <div class="flex items-center gap-2">
+                        <span class="text-2xl">{challenge.bossEmoji || "👻"}</span>
+                        <div>
+                          <h3 class="font-semibold text-ink-primary group-hover:text-error transition-colors">{challenge.bossName || challenge.title}</h3>
+                          <p class="text-xs text-ink-secondary mt-0.5">{challenge.bossType === "daily" ? t("Daily Minion") : challenge.bossType === "weekly" ? t("Weekly Elite") : challenge.bossType}</p>
+                        </div>
+                      </div>
+                      <span class={`text-xs px-1.5 py-0.5 rounded border ${challenge.status === "completed" ? "text-success bg-success/10 border-success/20" : "text-error bg-error/10 border-error/20"}`}>
+                        {challenge.status === "completed" ? t("Defeated") : challenge.bossType}
+                      </span>
+                    </div>
+                    <div class="space-y-1.5">
+                      <div class="flex items-center justify-between text-xs">
+                        <span class="text-ink-secondary">{t("HP")}</span>
+                        <span class="text-ink-secondary/60">{challenge.bossCurrentHp}/{challenge.bossMaxHp}</span>
+                      </div>
+                      <div class="h-2 bg-surface-border rounded-full overflow-hidden">
+                        <div
+                          class={`h-full rounded-full transition-all duration-500 ${((challenge.bossCurrentHp ?? 0) / (challenge.bossMaxHp ?? 1)) < 0.2 ? "bg-error animate-pulse" : "bg-error"}`}
+                          style={{ width: `${Math.round(((challenge.bossCurrentHp ?? 0) / (challenge.bossMaxHp ?? 1)) * 100)}%` }}
+                        />
                       </div>
                     </div>
-                    <span class={`text-xs px-1.5 py-0.5 rounded border ${challenge.status === "completed" ? "text-success bg-success/10 border-success/20" : "text-error bg-error/10 border-error/20"}`}>
-                      {challenge.status === "completed" ? t("Defeated") : challenge.bossType}
-                    </span>
-                  </div>
-                  <div class="space-y-1.5">
-                    <div class="flex items-center justify-between text-xs">
-                      <span class="text-ink-secondary">{t("HP")}</span>
-                      <span class="text-ink-secondary/60">{challenge.bossCurrentHp}/{challenge.bossMaxHp}</span>
-                    </div>
-                    <div class="h-2 bg-surface-border rounded-full overflow-hidden">
-                      <div
-                        class={`h-full rounded-full transition-all duration-500 ${((challenge.bossCurrentHp ?? 0) / (challenge.bossMaxHp ?? 1)) < 0.2 ? "bg-error animate-pulse" : "bg-error"}`}
-                        style={{ width: `${Math.round(((challenge.bossCurrentHp ?? 0) / (challenge.bossMaxHp ?? 1)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </A>
+                  </A>
+                </Show>
               )}
             </For>
             <For each={(challenges() ?? []).filter((c) => !c.bossType)}>

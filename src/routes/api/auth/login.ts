@@ -141,7 +141,7 @@ async function handleLogin({ request }: { request: Request }) {
 
   startSession(user.id).catch(() => {});
   runNudgeEngine(user.id).catch(() => {});
-  spawnDailyBoss(user.id, updatedUser?.level ?? 1).then(async (bossId) => {
+  spawnDailyBoss(user.id, updatedUser?.level ?? 1, updatedUser?.path as any).then(async (bossId) => {
     if (bossId) {
       const boss = await prisma.challenge.findUnique({ where: { id: bossId }, select: { bossName: true } });
       if (boss) {
@@ -149,7 +149,7 @@ async function handleLogin({ request }: { request: Request }) {
       }
     }
   }).catch(() => {});
-  spawnWeeklyBoss(user.id, updatedUser?.level ?? 1).then(async (bossId) => {
+  spawnWeeklyBoss(user.id, updatedUser?.level ?? 1, updatedUser?.path as any).then(async (bossId) => {
     if (bossId) {
       const boss = await prisma.challenge.findUnique({ where: { id: bossId }, select: { bossName: true } });
       if (boss) {

@@ -16,7 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npx tsc --noEmit && npx vitest run",
-    "start:prod": "node .output/server/index.mjs",
+    "start:prod": "npx tsx server.ts",
     "db:migrate:prod": "prisma migrate deploy && prisma db execute --file prisma/fts-setup.sql",
     "db:seed:prod": "prisma db seed",
     "db:setup:fts": "prisma db execute --file prisma/fts-setup.sql"

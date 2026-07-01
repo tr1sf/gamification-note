@@ -80,7 +80,7 @@ export interface ActionResult {
 }
 
 export async function processAction(ctx: ActionContext): Promise<ActionResult> {
-  const result = await (db.$transaction(async (tx: Prisma.TransactionClient) => {
+  const txResult = await (db.$transaction(async (tx: Prisma.TransactionClient) => {
     // Single atomic read with FOR UPDATE to prevent race conditions on daily caps
     const rows = await tx.$queryRaw<Array<{
       xp: number; coins: number; level: number;

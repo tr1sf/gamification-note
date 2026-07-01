@@ -1,5 +1,6 @@
 import { prisma } from "~/lib/db";
 import { getRandomAbility, getRegenAmount, parseBossAbility } from "./abilities";
+import { PATH_UNLOCKS, type UserPath } from "~/lib/path-unlocks";
 
 const DAILY_BOSS_NAMES = [
   { name: "Shadow Procrastinator", emoji: "👻", image: "/assets/images/bosses/shadow-procrastinator.png" },
@@ -16,10 +17,20 @@ const WEEKLY_BOSS_NAMES = [
   { name: "Void Colossus", emoji: "🗿", image: "/assets/images/bosses/void_colossus.png" },
 ];
 
+function getBossUnlockLevel(path: UserPath | null): number {
+  if (!path) return 7;
+  const unlocks = PATH_UNLOCKS[path];
+  return unlocks.find((u) => u.feature === "Boss Fight")?.level ?? 7;
+}
+
 export async function spawnDailyBoss(
   userId: string,
-  level: number
+  level: number,
+  path?: UserPath | null
 ): Promise<string | null> {
+  const unlockLevel = getBossUnlockLevel(path ?? "student");
+  if (level < unlockLevel) return null;
+
   return prisma.$transaction(async (tx) => {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -88,8 +99,12 @@ export async function spawnDailyBoss(
 
 export async function spawnWeeklyBoss(
   userId: string,
-  level: number
+  level: number,
+  path?: UserPath | null
 ): Promise<string | null> {
+  const unlockLevel = getBossUnlockLevel(path ?? "student");
+  if (level < unlockLevel) return null;
+
   return prisma.$transaction(async (tx) => {
     const now = new Date();
     const mondayStart = new Date(now);
