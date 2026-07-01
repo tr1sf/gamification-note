@@ -4,9 +4,9 @@
     "buildCommand": "npx prisma generate && npm run build"
   },
   "deploy": {
-    "startCommand": "node .output/server/index.mjs",
+    "startCommand": "npx tsx server.ts",
     "healthcheckPath": "/api/health",
     "restartPolicyType": "ON_FAILURE",
-    "preDeployCommand": "npx prisma db push && npx prisma db seed"
+    "preDeployCommand": "npx prisma db push"
   }
 }
