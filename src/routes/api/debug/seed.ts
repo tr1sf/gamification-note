@@ -16,30 +16,40 @@ const ITEM_DEFS = [
   { name: "Obsidian Frame", description: "A frame carved from the void itself — whispers included", type: "avatar_frame", coinCost: 250, rarity: "legendary" },
 ];
 
+async function runSeed() {
+  let created = 0;
+  let skipped = 0;
+  const results: string[] = [];
+
+  for (const def of ITEM_DEFS) {
+    const exists = await prisma.cosmeticItem.findFirst({ where: { name: def.name }, select: { id: true } });
+    if (exists) {
+      skipped++;
+      results.push(`SKIP: ${def.name}`);
+    } else {
+      await prisma.cosmeticItem.create({ data: def as any });
+      created++;
+      results.push(`CREATED: ${def.name}`);
+    }
+  }
+
+  return { created, skipped, total: ITEM_DEFS.length, results };
+}
+
 export async function POST() {
   try {
-    let created = 0;
-    let skipped = 0;
-    const results: string[] = [];
-
-    for (const def of ITEM_DEFS) {
-      const exists = await prisma.cosmeticItem.findFirst({ where: { name: def.name }, select: { id: true } });
-      if (exists) {
-        skipped++;
-        results.push(`SKIP: ${def.name} (already exists)`);
-      } else {
-        await prisma.cosmeticItem.create({ data: def as any });
-        created++;
-        results.push(`CREATED: ${def.name}`);
-      }
-    }
-
-    return success({ created, skipped, total: ITEM_DEFS.length, results });
+    const result = await runSeed();
+    return success(result);
   } catch (e) {
     return error("SEED_ERROR", "Seed failed: " + (e as Error).message, 500);
   }
 }
 
 export async function GET() {
-  return POST();
+  try {
+    const result = await runSeed();
+    return success(result);
+  } catch (e) {
+    return error("SEED_ERROR", "Seed failed: " + (e as Error).message, 500);
+  }
 }
