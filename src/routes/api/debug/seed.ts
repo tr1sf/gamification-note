@@ -36,7 +36,7 @@ export async function POST() {
 
     return success({ created, skipped, total: ITEM_DEFS.length, results });
   } catch (e) {
-    return error("Seed failed: " + (e as Error).message);
+    return error("SEED_ERROR", "Seed failed: " + (e as Error).message, 500);
   }
 }
 
